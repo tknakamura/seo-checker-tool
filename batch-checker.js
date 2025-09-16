@@ -14,9 +14,10 @@ class BatchChecker {
    * バッチチェックの実行
    * @param {Array} urls - チェック対象のURL配列
    * @param {Object} options - チェックオプション
+   * @param {Array} keywords - 重要なキーワード配列
    * @returns {Object} バッチチェック結果
    */
-  async checkBatch(urls, options = {}) {
+  async checkBatch(urls, options = {}, keywords = []) {
     const startTime = Date.now();
     const results = {
       timestamp: new Date().toISOString(),
@@ -39,7 +40,7 @@ class BatchChecker {
         const batch = batches[i];
         console.log(`バッチ ${i + 1}/${batches.length} 処理中 (${batch.length}件)`);
         
-        const batchPromises = batch.map(url => this.checkSingleUrl(url, options));
+        const batchPromises = batch.map(url => this.checkSingleUrl(url, options, keywords));
         const batchResults = await Promise.allSettled(batchPromises);
         
         batchResults.forEach((result, index) => {
@@ -88,12 +89,12 @@ class BatchChecker {
    * @param {Object} options - チェックオプション
    * @returns {Object} チェック結果
    */
-  async checkSingleUrl(url, options = {}) {
+  async checkSingleUrl(url, options = {}, keywords = []) {
     const checker = new SEOChecker();
     
     try {
       const result = await Promise.race([
-        checker.checkSEO(url),
+        checker.checkSEO(url, null, keywords),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('タイムアウト')), this.timeout)
         )

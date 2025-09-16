@@ -86,9 +86,10 @@ class SEOChecker {
    * @param {string} html - オプションのHTMLコンテンツ
    * @returns {Object} SEOチェック結果
    */
-  async checkSEO(url, html = null) {
+  async checkSEO(url, html = null, keywords = []) {
     try {
       logger.info(`SEOチェック開始: ${url || 'HTMLコンテンツ'}`);
+      logger.info(`対象キーワード: ${keywords.join(', ')}`);
       
       let pageContent = '';
       if (html) {
@@ -247,8 +248,8 @@ class SEOChecker {
       logger.info(`cheerio解析後のHTML長: ${$.html().length}`);
       logger.info(`title要素の存在確認: ${$('title').length > 0}`);
       
-      const titleTagResult = this.checkTitleTag($);
-      const metaDescriptionResult = this.checkMetaDescription($);
+      const titleTagResult = this.checkTitleTag($, keywords);
+      const metaDescriptionResult = this.checkMetaDescription($, keywords);
       
       logger.info(`タイトルタグ結果: ${JSON.stringify(titleTagResult)}`);
       logger.info(`メタディスクリプション結果: ${JSON.stringify(metaDescriptionResult)}`);
@@ -343,7 +344,7 @@ class SEOChecker {
   /**
    * タイトルタグのチェック
    */
-  checkTitleTag($) {
+  checkTitleTag($, keywords = []) {
     let title = $('title').text().trim();
     
     // 文字化けチェックと修正
@@ -440,6 +441,26 @@ class SEOChecker {
         issues.push('タイトルが汎用的すぎます');
         recommendations.push('ページの内容を具体的に表すユニークなタイトルにしてください');
       }
+
+      // キーワード含有チェック
+      if (keywords && keywords.length > 0) {
+        const titleLower = title.toLowerCase();
+        const foundKeywords = keywords.filter(keyword => 
+          titleLower.includes(keyword.toLowerCase())
+        );
+        
+        if (foundKeywords.length === 0) {
+          issues.push('タイトルに重要なキーワードが含まれていません');
+          recommendations.push(`タイトルに以下のキーワードを含めることを検討してください: ${keywords.join(', ')}`);
+        } else if (foundKeywords.length < keywords.length) {
+          const missingKeywords = keywords.filter(keyword => 
+            !titleLower.includes(keyword.toLowerCase())
+          );
+          recommendations.push(`タイトルに以下のキーワードも含めることを検討してください: ${missingKeywords.join(', ')}`);
+        } else {
+          recommendations.push(`✅ タイトルにすべての重要なキーワードが含まれています: ${foundKeywords.join(', ')}`);
+        }
+      }
     }
 
     return {
@@ -447,14 +468,14 @@ class SEOChecker {
       length: titleLength,
       issues: issues,
       recommendations: recommendations,
-      score: this.calculateTitleScore(title, titleLength)
+      score: this.calculateTitleScore(title, titleLength, keywords)
     };
   }
 
   /**
    * メタディスクリプションのチェック
    */
-  checkMetaDescription($) {
+  checkMetaDescription($, keywords = []) {
     // デバッグログ：メタディスクリプションの検索開始
     logger.info(`メタディスクリプション検索開始`);
     logger.info(`HTMLの長さ: ${$.html().length}`);
@@ -667,6 +688,26 @@ class SEOChecker {
       if (description.includes('このページ') || description.includes('こちら') || description.includes('詳細は')) {
         recommendations.push('より具体的で魅力的な内容に変更することを検討してください');
       }
+
+      // キーワード含有チェック
+      if (keywords && keywords.length > 0) {
+        const descriptionLower = description.toLowerCase();
+        const foundKeywords = keywords.filter(keyword => 
+          descriptionLower.includes(keyword.toLowerCase())
+        );
+        
+        if (foundKeywords.length === 0) {
+          issues.push('メタディスクリプションに重要なキーワードが含まれていません');
+          recommendations.push(`メタディスクリプションに以下のキーワードを含めることを検討してください: ${keywords.join(', ')}`);
+        } else if (foundKeywords.length < keywords.length) {
+          const missingKeywords = keywords.filter(keyword => 
+            !descriptionLower.includes(keyword.toLowerCase())
+          );
+          recommendations.push(`メタディスクリプションに以下のキーワードも含めることを検討してください: ${missingKeywords.join(', ')}`);
+        } else {
+          recommendations.push(`✅ メタディスクリプションにすべての重要なキーワードが含まれています: ${foundKeywords.join(', ')}`);
+        }
+      }
     }
 
     const result = {
@@ -674,7 +715,7 @@ class SEOChecker {
       length: descriptionLength,
       issues: issues,
       recommendations: recommendations,
-      score: this.calculateDescriptionScore(description, descriptionLength)
+      score: this.calculateDescriptionScore(description, descriptionLength, keywords)
     };
     
     logger.info(`メタディスクリプション結果: ${JSON.stringify(result)}`);
@@ -1524,7 +1565,7 @@ class SEOChecker {
   /**
    * スコア計算メソッド群
    */
-  calculateTitleScore(title, length) {
+  calculateTitleScore(title, length, keywords = []) {
     if (!title) return 0;
     
     let score = 0;
@@ -1538,22 +1579,32 @@ class SEOChecker {
       score += 5; // 長すぎる
     }
     
+    // キーワード含有チェック（最重要）
+    if (keywords && keywords.length > 0) {
+      const titleLower = title.toLowerCase();
+      const foundKeywords = keywords.filter(keyword => 
+        titleLower.includes(keyword.toLowerCase())
+      );
+      const keywordScore = Math.round((foundKeywords.length / keywords.length) * 30);
+      score += keywordScore;
+    }
+    
     // キーワードの先出しチェック（参考サイト推奨）
     const firstWords = title.split(/\s+|・|｜|【|】/)[0];
     const importantKeywords = ['SEO', '対策', '方法', 'コツ', '解説', '完全版', '初心者', '上級者'];
     const hasImportantKeyword = importantKeywords.some(keyword => 
       firstWords.includes(keyword) || title.toLowerCase().indexOf(keyword.toLowerCase()) === 0
     );
-    if (hasImportantKeyword) score += 25;
+    if (hasImportantKeyword) score += 15;
     
     // 数字や記号の使用チェック（参考サイト推奨：クリック率向上）
     const hasNumbers = /\d/.test(title);
     const hasSymbols = /[【】「」！？]/.test(title);
-    if (hasNumbers || hasSymbols) score += 20;
+    if (hasNumbers || hasSymbols) score += 15;
     
     // パイプ（|）の適切な使用
     const pipeCount = (title.match(/\|/g) || []).length;
-    if (pipeCount <= 2) score += 15;
+    if (pipeCount <= 2) score += 10;
     
     // キーワードの重複チェック
     const words = title.toLowerCase().split(/\s+|・|｜|【|】/);
@@ -1565,7 +1616,7 @@ class SEOChecker {
     return Math.min(score, 100);
   }
 
-  calculateDescriptionScore(description, length) {
+  calculateDescriptionScore(description, length, keywords = []) {
     if (!description) return 0;
     
     let score = 0;
@@ -1579,25 +1630,35 @@ class SEOChecker {
       score += 5; // 長すぎる
     }
     
+    // キーワード含有チェック（最重要）
+    if (keywords && keywords.length > 0) {
+      const descriptionLower = description.toLowerCase();
+      const foundKeywords = keywords.filter(keyword => 
+        descriptionLower.includes(keyword.toLowerCase())
+      );
+      const keywordScore = Math.round((foundKeywords.length / keywords.length) * 30);
+      score += keywordScore;
+    }
+    
     // キーワードの先出しチェック（参考サイト推奨）
     const firstWords = description.split(/\s+|・|｜|【|】/).slice(0, 3).join(' ');
     const importantKeywords = ['SEO', '対策', '方法', 'コツ', '解説', '完全版', '初心者', '上級者', 'おすすめ', '人気'];
     const hasImportantKeyword = importantKeywords.some(keyword => 
       firstWords.toLowerCase().includes(keyword.toLowerCase())
     );
-    if (hasImportantKeyword) score += 25;
+    if (hasImportantKeyword) score += 15;
     
     // 検索ニーズの反映チェック（参考サイト推奨）
     const searchIntentKeywords = ['とは', '方法', 'やり方', 'コツ', 'おすすめ', '比較', 'ランキング', '初心者', '上級者'];
     const hasSearchIntent = searchIntentKeywords.some(keyword => 
       description.includes(keyword)
     );
-    if (hasSearchIntent) score += 20;
+    if (hasSearchIntent) score += 15;
     
     // 数字や記号の使用チェック（参考サイト推奨：クリック率向上）
     const hasNumbers = /\d/.test(description);
     const hasSymbols = /[【】「」！？]/.test(description);
-    if (hasNumbers || hasSymbols) score += 15;
+    if (hasNumbers || hasSymbols) score += 10;
     
     // キーワードの重複チェック
     const words = description.toLowerCase().split(/\s+|・|｜|【|】/);
@@ -2255,7 +2316,7 @@ app.get('/', (req, res) => {
 // SEOチェックエンドポイント
 app.post('/api/check/seo', async (req, res) => {
   try {
-    const { url, html } = req.body;
+    const { url, html, keywords } = req.body;
     
     if (!url && !html) {
       return res.status(400).json({
@@ -2264,8 +2325,15 @@ app.post('/api/check/seo', async (req, res) => {
       });
     }
 
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '重要なキーワードが必要です'
+      });
+    }
+
     const checker = new SEOChecker();
-    const results = await checker.checkSEO(url, html);
+    const results = await checker.checkSEO(url, html, keywords);
     
     res.json({
       success: true,
@@ -2378,12 +2446,19 @@ app.post('/api/check/performance', async (req, res) => {
 // バッチチェックエンドポイント
 app.post('/api/check/batch', async (req, res) => {
   try {
-    const { urls, options } = req.body;
+    const { urls, options, keywords } = req.body;
     
     if (!urls || !Array.isArray(urls) || urls.length === 0) {
       return res.status(400).json({
         success: false,
         error: 'URLの配列が必要です'
+      });
+    }
+
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '重要なキーワードが必要です'
       });
     }
 
@@ -2395,7 +2470,7 @@ app.post('/api/check/batch', async (req, res) => {
     }
 
     const batchChecker = new BatchChecker();
-    const results = await batchChecker.checkBatch(urls, options);
+    const results = await batchChecker.checkBatch(urls, options, keywords);
     const report = batchChecker.generateBatchReport(results);
     
     res.json({
