@@ -1,0 +1,64 @@
+{
+  "name": "mercari-seo-checker-tool",
+  "version": "1.0.0",
+  "description": "Mercari Japan SEOチェックツール - 日本語文字化け対応版",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "seo",
+    "checker",
+    "tool",
+    "mercari",
+    "optimization",
+    "japanese",
+    "character-encoding"
+  ],
+  "author": "Mercari Japan Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "cron": "^3.1.6",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "googleapis": "^128.0.0",
+    "helmet": "^7.1.0",
+    "iconv-lite": "^0.7.0",
+    "lighthouse": "^12.8.1",
+    "mongoose": "^8.0.0",
+    "natural": "^8.1.0",
+    "nodemailer": "^6.9.7",
+    "puppeteer": "^24.17.0",
+    "redis": "^4.6.10",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.5",
+    "@babel/preset-env": "^7.23.5",
+    "babel-loader": "^9.1.3",
+    "eslint": "^8.54.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.1",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mercari/mercari-seo-checker-tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mercari/mercari-seo-checker-tool/issues"
+  },
+  "homepage": "https://github.com/mercari/mercari-seo-checker-tool#readme"
+}
