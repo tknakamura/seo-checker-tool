@@ -1889,6 +1889,52 @@ app.get('/api/statistics', async (req, res) => {
   }
 });
 
+// ルートパス - HTMLファイルを提供
+app.get('/', (req, res) => {
+  try {
+    const htmlPath = path.join(__dirname, 'public', 'index.html');
+    res.sendFile(htmlPath);
+  } catch (error) {
+    logger.error(`HTMLファイル提供エラー: ${error.message}`);
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SEOチェッカーツール</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+          .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          h1 { color: #333; text-align: center; }
+          .error { color: #e74c3c; background: #fdf2f2; padding: 20px; border-radius: 4px; margin: 20px 0; }
+          .info { color: #3498db; background: #f0f8ff; padding: 20px; border-radius: 4px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>🔍 SEOチェッカーツール</h1>
+          <div class="error">
+            <h3>⚠️ エラーが発生しました</h3>
+            <p>HTMLファイルの読み込みに失敗しました。APIは正常に動作しています。</p>
+          </div>
+          <div class="info">
+            <h3>📡 API エンドポイント</h3>
+            <ul>
+              <li><strong>SEOチェック:</strong> POST /api/check/seo</li>
+              <li><strong>バッチチェック:</strong> POST /api/check/batch</li>
+              <li><strong>ダッシュボード:</strong> GET /api/dashboard</li>
+              <li><strong>履歴:</strong> GET /api/history</li>
+              <li><strong>統計:</strong> GET /api/statistics</li>
+            </ul>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+});
+
 // サーバー起動
 app.listen(port, () => {
   logger.info(`SEOチェックサーバー起動: ポート ${port}`);
