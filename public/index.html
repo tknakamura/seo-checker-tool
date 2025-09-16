@@ -370,11 +370,11 @@
         <div class="results" id="results" style="display: none;">
             <h2>チェック結果</h2>
             <div id="resultsContent"></div>
-        </div>
-    </div>
+            </div>
+            </div>
     <script>
         document.getElementById('seoCheckForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+                    e.preventDefault();
             runSEOCheck();
         });
 
@@ -409,10 +409,10 @@
             }
 
             // 入力検証
-            if (!url && !urls && !html) {
+                if (!url && !urls && !html) {
                 alert('URL、複数URL、またはHTMLコンテンツのいずれかを入力してください。');
-                return;
-            }
+                    return;
+                }
 
             if (url && urls) {
                 alert('単一URLと複数URLは同時に使用できません。');
@@ -433,34 +433,34 @@
             document.getElementById('loading').style.display = 'block';
             document.getElementById('results').style.display = 'none';
 
-            try {
-                let response;
+                try {
+                    let response;
                 let data;
-
+                    
                 if (urls) {
-                    // バッチチェック
+                        // バッチチェック
                     const urlList = urls.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-                    if (urlList.length === 0) {
+                        if (urlList.length === 0) {
                         throw new Error('有効なURLが入力されていません。');
-                    }
+                        }
 
-                    response = await fetch('/api/check/batch', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        response = await fetch('/api/check/batch', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
                         body: JSON.stringify({
                             urls: urlList,
                             keywords: keywordList
                         })
-                    });
-                } else {
-                    // 単一チェック
-                    response = await fetch('/api/check/seo', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        });
+                    } else {
+                        // 単一チェック
+                        response = await fetch('/api/check/seo', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
                         body: JSON.stringify({
                             url: url || null,
                             html: html || null,
@@ -476,7 +476,7 @@
                 }
 
                 displayResults(data);
-            } catch (error) {
+                } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('resultsContent').innerHTML = `
                     <div class="error">
@@ -485,7 +485,7 @@
                     </div>
                 `;
                 document.getElementById('results').style.display = 'block';
-            } finally {
+                } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
@@ -507,23 +507,24 @@
                             <h3>${result.url}</h3>
                             <span class="status ${statusClass}">${statusText}</span>
                             ${result.success ? formatSingleResult(result.data) : `<p>エラー: ${result.error}</p>`}
-                        </div>
-                    `;
-                });
-                
+                            </div>
+                        `;
+                    });
+                    
                 html += '</div>';
                 resultsContent.innerHTML = html;
             } else {
-                // 単一結果の表示
-                resultsContent.innerHTML = formatSingleResult(data);
+                // 単一結果の表示 - APIレスポンスの構造に合わせて修正
+                const resultData = data.data || data;
+                resultsContent.innerHTML = formatSingleResult(resultData);
             }
             
             document.getElementById('results').style.display = 'block';
         }
 
         function formatSingleResult(data) {
-            let html = '';
-
+                let html = '';
+                
             // 基本情報
             if (data.url) {
                 html += `<div class="metric">
@@ -532,149 +533,174 @@
                 </div>`;
             }
 
+            // 全体スコア
+            if (data.overallScore !== undefined) {
+                const overallClass = data.overallScore >= 80 ? 'good' : data.overallScore >= 60 ? 'warning' : 'error';
+                    html += `
+                    <div class="metric ${overallClass}">
+                        <span class="metric-label">総合スコア</span>
+                        <span class="metric-value">${data.overallScore}/100</span>
+                        </div>
+                    `;
+            }
+
             // タイトルタグ
-            if (data.titleTag) {
-                const titleClass = data.titleTag.score >= 80 ? 'good' : data.titleTag.score >= 60 ? 'warning' : 'error';
+            if (data.checks && data.checks.titleTag) {
+                const titleTag = data.checks.titleTag;
+                const titleClass = titleTag.score >= 80 ? 'good' : titleTag.score >= 60 ? 'warning' : 'error';
                 html += `
                     <div class="metric ${titleClass}">
                         <span class="metric-label">タイトルタグ</span>
-                        <span class="metric-value">${data.titleTag.score}/100</span>
+                        <span class="metric-value">${titleTag.score}/100</span>
                     </div>
                     <div class="metric">
                         <span class="metric-label">タイトル</span>
-                        <span class="metric-value">${data.titleTag.title || 'なし'}</span>
+                        <span class="metric-value">${titleTag.current || 'なし'}</span>
                     </div>
                     <div class="metric">
                         <span class="metric-label">文字数</span>
-                        <span class="metric-value">${data.titleTag.length}文字</span>
+                        <span class="metric-value">${titleTag.length}文字</span>
                     </div>
                 `;
-
-                if (data.titleTag.issues && data.titleTag.issues.length > 0) {
+                
+                if (titleTag.issues && titleTag.issues.length > 0) {
                     html += `
                         <div class="issues">
                             <h3>タイトルタグの問題</h3>
                             <ul>
-                                ${data.titleTag.issues.map(issue => `<li>${issue}</li>`).join('')}
-                            </ul>
+                                ${titleTag.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                    </ul>
                         </div>
                     `;
                 }
 
-                if (data.titleTag.recommendations && data.titleTag.recommendations.length > 0) {
+                if (titleTag.recommendations && titleTag.recommendations.length > 0) {
                     html += `
                         <div class="recommendations">
                             <h3>タイトルタグの推奨事項</h3>
                             <ul>
-                                ${data.titleTag.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                            </ul>
+                                ${titleTag.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
                         </div>
                     `;
                 }
             }
 
             // メタディスクリプション
-            if (data.metaDescription) {
-                const descClass = data.metaDescription.score >= 80 ? 'good' : data.metaDescription.score >= 60 ? 'warning' : 'error';
-                html += `
+            if (data.checks && data.checks.metaDescription) {
+                const metaDesc = data.checks.metaDescription;
+                const descClass = metaDesc.score >= 80 ? 'good' : metaDesc.score >= 60 ? 'warning' : 'error';
+                        html += `
                     <div class="metric ${descClass}">
                         <span class="metric-label">メタディスクリプション</span>
-                        <span class="metric-value">${data.metaDescription.score}/100</span>
-                    </div>
+                        <span class="metric-value">${metaDesc.score}/100</span>
+                                    </div>
                     <div class="metric">
                         <span class="metric-label">ディスクリプション</span>
-                        <span class="metric-value">${data.metaDescription.description || 'なし'}</span>
-                    </div>
+                        <span class="metric-value">${metaDesc.current || 'なし'}</span>
+                                    </div>
                     <div class="metric">
                         <span class="metric-label">文字数</span>
-                        <span class="metric-value">${data.metaDescription.length}文字</span>
-                    </div>
-                `;
+                        <span class="metric-value">${metaDesc.length}文字</span>
+                                </div>
+                            `;
 
-                if (data.metaDescription.issues && data.metaDescription.issues.length > 0) {
-                    html += `
+                if (metaDesc.issues && metaDesc.issues.length > 0) {
+                        html += `
                         <div class="issues">
                             <h3>メタディスクリプションの問題</h3>
                             <ul>
-                                ${data.metaDescription.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                ${metaDesc.issues.map(issue => `<li>${issue}</li>`).join('')}
                             </ul>
-                        </div>
-                    `;
-                }
+                            </div>
+                        `;
+                    }
 
-                if (data.metaDescription.recommendations && data.metaDescription.recommendations.length > 0) {
-                    html += `
+                if (metaDesc.recommendations && metaDesc.recommendations.length > 0) {
+                html += `
                         <div class="recommendations">
                             <h3>メタディスクリプションの推奨事項</h3>
                             <ul>
-                                ${data.metaDescription.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
+                                ${metaDesc.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                                        </ul>
+                    </div>
+                `;
                 }
             }
 
             // h1タグ
-            if (data.headingStructure) {
-                const h1Class = data.headingStructure.h1Count === 1 ? 'good' : data.headingStructure.h1Count === 0 ? 'error' : 'warning';
-                html += `
+            if (data.checks && data.checks.headingStructure) {
+                const heading = data.checks.headingStructure;
+                const h1Class = heading.h1Count === 1 ? 'good' : heading.h1Count === 0 ? 'error' : 'warning';
+                    html += `
                     <div class="metric ${h1Class}">
                         <span class="metric-label">h1タグ数</span>
-                        <span class="metric-value">${data.headingStructure.h1Count}個</span>
-                    </div>
-                `;
-
-                if (data.headingStructure.h1Tags && data.headingStructure.h1Tags.length > 0) {
+                        <span class="metric-value">${heading.h1Count}個</span>
+                            </div>
+                        `;
+                    
+                if (heading.h1Texts && heading.h1Texts.length > 0) {
                     html += `
                         <div class="metric">
                             <span class="metric-label">h1タグ内容</span>
-                            <span class="metric-value">${data.headingStructure.h1Tags.join(', ')}</span>
+                            <span class="metric-value">${heading.h1Texts.join(', ')}</span>
                         </div>
                     `;
                 }
-
-                if (data.headingStructure.issues && data.headingStructure.issues.length > 0) {
+                
+                if (heading.issues && heading.issues.length > 0) {
                     html += `
                         <div class="issues">
                             <h3>見出し構造の問題</h3>
                             <ul>
-                                ${data.headingStructure.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                ${heading.issues.map(issue => `<li>${issue}</li>`).join('')}
                             </ul>
                         </div>
                     `;
                 }
 
-                if (data.headingStructure.recommendations && data.headingStructure.recommendations.length > 0) {
-                    html += `
+                if (heading.recommendations && heading.recommendations.length > 0) {
+                html += `
                         <div class="recommendations">
                             <h3>見出し構造の推奨事項</h3>
                             <ul>
-                                ${data.headingStructure.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                ${heading.recommendations.map(rec => `<li>${rec}</li>`).join('')}
                             </ul>
-                        </div>
-                    `;
+                    </div>
+                `;
                 }
             }
 
             // パフォーマンス
             if (data.performance) {
-                const perfClass = data.performance.score >= 90 ? 'good' : data.performance.score >= 50 ? 'warning' : 'error';
-                html += `
-                    <div class="metric ${perfClass}">
-                        <span class="metric-label">パフォーマンススコア</span>
-                        <span class="metric-value">${data.performance.score}/100</span>
-                    </div>
-                `;
+                if (data.performance.score !== undefined) {
+                    const perfClass = data.performance.score >= 90 ? 'good' : data.performance.score >= 50 ? 'warning' : 'error';
+                    html += `
+                        <div class="metric ${perfClass}">
+                            <span class="metric-label">パフォーマンススコア</span>
+                            <span class="metric-value">${data.performance.score}/100</span>
+                        </div>
+                    `;
+                }
 
                 if (data.performance.metrics) {
                     Object.entries(data.performance.metrics).forEach(([key, value]) => {
-                        html += `
+                    html += `
                             <div class="metric">
                                 <span class="metric-label">${key}</span>
                                 <span class="metric-value">${value}</span>
-                            </div>
-                        `;
-                    });
+                        </div>
+                    `;
+                });
+                }
+
+                if (data.performance.error) {
+                html += `
+                        <div class="error">
+                            <h3>パフォーマンスチェックエラー</h3>
+                            <p>${data.performance.error}</p>
+                        </div>
+                    `;
                 }
             }
 
