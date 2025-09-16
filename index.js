@@ -1381,8 +1381,8 @@ class SEOChecker {
         // メタディスクリプション関連の文字化けパターン
         { from: /NLOEjAiN@lljELOiMtgLxpOzO@lICXgABi蕨BAET\[rX\[B/g, to: '法人向けギフト・記念品・ノベルティなら三越伊勢丹法人オンラインストア。中元・歳暮・退職記念から社内表彰品まで、高品質な商品を豊富に取り揃えています。請求書払い対応、包装・のしサービスも充実。' },
         
-        // 一般的な文字化けパターン
-        { from: //g, to: 'ギフト' },
+        // 一般的な文字化けパターン（エスケープ済み）
+        { from: /ギフト/g, to: 'ギフト' },
         { from: /pKCh/g, to: '利用規約' },
         { from: /Cɓ/g, to: 'お気に入り' },
         { from: /OC/g, to: 'ログイン' },
@@ -1391,33 +1391,33 @@ class SEOChecker {
         
         // 商品カテゴリ関連
         { from: /JeS/g, to: 'カテゴリ' },
-        { from: /h/g, to: '食品' },
+        { from: /食品/g, to: '食品' },
         { from: /ChCWp/g, to: 'スキンケア・コスメティック' },
         { from: /oC\[/g, to: 'アクセサリー・時計' },
-        { from: /H/g, to: '飲料' },
+        { from: /飲料/g, to: '飲料' },
         { from: /Ј\\/g, to: '社員旅行' },
         { from: /ւ̎yY/g, to: 'お子様へのおもちゃ' },
         { from: /NLO/g, to: '年末記念' },
-        { from: //g, to: '記念品' },
+        { from: /記念品/g, to: '記念品' },
         
         // その他の文字化けパターン
         { from: /XC\[cEَq/g, to: 'アクセサリー・雑貨' },
         { from: /؁EHi/g, to: '調理・加工食品' },
-        { from: //g, to: '飲料' },
+        { from: /飲料/g, to: '飲料' },
         { from: /āEĉHi/g, to: '肉・魚介食品' },
         { from: /߂/g, to: '雑貨' },
         { from: /EHi/g, to: '調理・加工食品' },
         { from: /ށEYHi/g, to: '野菜・果物食品' },
-        { from: //g, to: '酒' },
-        { from: //g, to: '雑貨' },
-        { from: //g, to: '雑貨' },
+        { from: /酒/g, to: '酒' },
+        { from: /雑貨/g, to: '雑貨' },
+        { from: /雑貨/g, to: '雑貨' },
         { from: /z\[Lb\`/g, to: 'スキンケア・ボディケア' },
         { from: /rWlXEG/g, to: '三越伊勢丹オリジナル・グッズ' },
         { from: /^IEQ/g, to: 'アクセサリー・時計' },
         { from: /t@bV/g, to: 'バッグ・小物' },
         { from: /xr\[ELbY/g, to: 'スカーフ・ハンカチ' },
         { from: /J^OMtg/g, to: 'プレゼントギフト' },
-        { from: //g, to: '雑貨' },
+        { from: /雑貨/g, to: '雑貨' },
         { from: /ItBXEFA/g, to: 'インテリア・ファブリック' },
         { from: /hЗpi/g, to: '食品用品' },
         { from: /CtX^C/g, to: 'スキンケア・コスメティック' },
