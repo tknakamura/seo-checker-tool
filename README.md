@@ -228,4 +228,4 @@ CMD ["npm", "start"]
 
 ---
 
-**Mercari Japan Team** - SEOチェックツール
+**Mercari Japan Team** - SEOチェックツール# Force deploy Wed Sep 17 07:50:17 JST 2025
