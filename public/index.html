@@ -295,6 +295,118 @@
             color: #721c24;
         }
 
+        /* タブスタイル */
+        .tab-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .tab-header {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 2rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-section {
+            margin-bottom: 2rem;
+        }
+
+        .tab-section h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .score-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .score-card.good {
+            border-left-color: #28a745;
+        }
+
+        .score-card.warning {
+            border-left-color: #ffc107;
+        }
+
+        .score-card.error {
+            border-left-color: #dc3545;
+        }
+
+        .score-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: #555;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .score-card .score {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .score-card .score.good {
+            color: #28a745;
+        }
+
+        .score-card .score.warning {
+            color: #ffc107;
+        }
+
+        .score-card .score.error {
+            color: #dc3545;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -369,8 +481,37 @@
 
         <div class="results" id="results" style="display: none;">
             <h2>チェック結果</h2>
-            <div id="resultsContent"></div>
+            <div class="tab-container">
+                <div class="tab-header">
+                    <button class="tab-button active" data-tab="overview">総合評価</button>
+                    <button class="tab-button" data-tab="seo">SEO</button>
+                    <button class="tab-button" data-tab="aio">AIO</button>
+                </div>
+                
+                <div class="tab-content active" id="overview-tab">
+                    <div id="overviewContent"></div>
+                </div>
+                
+                <div class="tab-content" id="seo-tab">
+                    <div class="tab-section">
+                        <h3>タイトル・ディスクリプション</h3>
+                        <div id="titleDescContent"></div>
+                    </div>
+                    <div class="tab-section">
+                        <h3>見出し</h3>
+                        <div id="headingContent"></div>
+                    </div>
+                    <div class="tab-section">
+                        <h3>構造化データ</h3>
+                        <div id="structuredDataContent"></div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="aio-tab">
+                    <div id="aioContent"></div>
+                </div>
             </div>
+        </div>
             </div>
     <script>
         document.getElementById('seoCheckForm').addEventListener('submit', function(e) {
@@ -382,6 +523,21 @@
             document.getElementById('seoCheckForm').reset();
             document.getElementById('results').style.display = 'none';
             document.getElementById('loading').style.display = 'none';
+        });
+
+        // タブ機能
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                // すべてのタブボタンとコンテンツからactiveクラスを削除
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // クリックされたタブをアクティブにする
+                this.classList.add('active');
+                document.getElementById(tabId + '-tab').classList.add('active');
+            });
         });
 
         async function runSEOCheck() {
@@ -491,8 +647,6 @@
         }
 
         function displayResults(data) {
-            const resultsContent = document.getElementById('resultsContent');
-            
             if (data.batchResults) {
                 // バッチ結果の表示
                 let html = '<div class="batch-results">';
@@ -506,24 +660,338 @@
                         <div class="url-result">
                             <h3>${result.url}</h3>
                             <span class="status ${statusClass}">${statusText}</span>
-                            ${result.success ? formatSingleResult(result.data) : `<p>エラー: ${result.error}</p>`}
-                            </div>
-                        `;
-                    });
-                    
+                            ${result.success ? formatTabbedResult(result.data) : `<p>エラー: ${result.error}</p>`}
+                        </div>
+                    `;
+                });
+                
                 html += '</div>';
-                resultsContent.innerHTML = html;
+                document.getElementById('overviewContent').innerHTML = html;
             } else {
-                // 単一結果の表示 - APIレスポンスの構造に合わせて修正
+                // 単一結果の表示 - タブ形式で表示
                 const resultData = data.data || data;
-                resultsContent.innerHTML = formatSingleResult(resultData);
+                displayTabbedResults(resultData);
             }
             
             document.getElementById('results').style.display = 'block';
         }
 
+        function displayTabbedResults(data) {
+            // 総合評価タブ
+            document.getElementById('overviewContent').innerHTML = formatOverviewTab(data);
+            
+            // SEOタブ
+            document.getElementById('titleDescContent').innerHTML = formatTitleDescriptionSection(data);
+            document.getElementById('headingContent').innerHTML = formatHeadingSection(data);
+            document.getElementById('structuredDataContent').innerHTML = formatStructuredDataSection(data);
+            
+            // AIOタブ
+            document.getElementById('aioContent').innerHTML = formatAioTab(data);
+        }
+
+        function formatOverviewTab(data) {
+            let html = '';
+            
+            // 基本情報
+            if (data.url) {
+                html += `<div class="metric">
+                    <span class="metric-label">URL</span>
+                    <span class="metric-value">${data.url}</span>
+                </div>`;
+            }
+
+            // スコアサマリー
+            html += '<div class="score-summary">';
+            
+            if (data.overallScore !== undefined) {
+                const overallClass = data.overallScore >= 80 ? 'good' : data.overallScore >= 60 ? 'warning' : 'error';
+                html += `
+                    <div class="score-card ${overallClass}">
+                        <h4>総合スコア</h4>
+                        <p class="score ${overallClass}">${data.overallScore}/100</p>
+                    </div>
+                `;
+            }
+
+            if (data.checks && data.checks.titleTag) {
+                const titleClass = data.checks.titleTag.score >= 80 ? 'good' : data.checks.titleTag.score >= 60 ? 'warning' : 'error';
+                html += `
+                    <div class="score-card ${titleClass}">
+                        <h4>タイトルタグ</h4>
+                        <p class="score ${titleClass}">${data.checks.titleTag.score}/100</p>
+                    </div>
+                `;
+            }
+
+            if (data.checks && data.checks.metaDescription) {
+                const descClass = data.checks.metaDescription.score >= 80 ? 'good' : data.checks.metaDescription.score >= 60 ? 'warning' : 'error';
+                html += `
+                    <div class="score-card ${descClass}">
+                        <h4>メタディスクリプション</h4>
+                        <p class="score ${descClass}">${data.checks.metaDescription.score}/100</p>
+                    </div>
+                `;
+            }
+
+            if (data.checks && data.checks.headingStructure) {
+                const headingClass = data.checks.headingStructure.score >= 80 ? 'good' : data.checks.headingStructure.score >= 60 ? 'warning' : 'error';
+                html += `
+                    <div class="score-card ${headingClass}">
+                        <h4>見出し構造</h4>
+                        <p class="score ${headingClass}">${data.checks.headingStructure.score}/100</p>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+
+            // 主要な推奨事項
+            if (data.recommendations && data.recommendations.length > 0) {
+                html += '<div class="tab-section">';
+                html += '<h3>主要な推奨事項</h3>';
+                html += '<div class="recommendations">';
+                html += '<ul>';
+                data.recommendations.slice(0, 5).forEach(rec => {
+                    html += `<li>${rec.recommendations[0]}</li>`;
+                });
+                html += '</ul>';
+                html += '</div>';
+                html += '</div>';
+            }
+
+            return html;
+        }
+
+        function formatTitleDescriptionSection(data) {
+            let html = '';
+            
+            // タイトルタグ
+            if (data.checks && data.checks.titleTag) {
+                const titleTag = data.checks.titleTag;
+                const titleClass = titleTag.score >= 80 ? 'good' : titleTag.score >= 60 ? 'warning' : 'error';
+                
+                html += `
+                    <div class="metric ${titleClass}">
+                        <span class="metric-label">タイトルタグスコア</span>
+                        <span class="metric-value">${titleTag.score}/100</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">タイトル</span>
+                        <span class="metric-value">${titleTag.current || 'なし'}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">文字数</span>
+                        <span class="metric-value">${titleTag.length}文字</span>
+                    </div>
+                `;
+
+                if (titleTag.issues && titleTag.issues.length > 0) {
+                    html += `
+                        <div class="issues">
+                            <h4>タイトルタグの問題</h4>
+                            <ul>
+                                ${titleTag.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (titleTag.recommendations && titleTag.recommendations.length > 0) {
+                    html += `
+                        <div class="recommendations">
+                            <h4>タイトルタグの推奨事項</h4>
+                            <ul>
+                                ${titleTag.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
+            // メタディスクリプション
+            if (data.checks && data.checks.metaDescription) {
+                const metaDesc = data.checks.metaDescription;
+                const descClass = metaDesc.score >= 80 ? 'good' : metaDesc.score >= 60 ? 'warning' : 'error';
+                
+                html += `
+                    <div class="metric ${descClass}">
+                        <span class="metric-label">メタディスクリプションスコア</span>
+                        <span class="metric-value">${metaDesc.score}/100</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">ディスクリプション</span>
+                        <span class="metric-value">${metaDesc.current || 'なし'}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">文字数</span>
+                        <span class="metric-value">${metaDesc.length}文字</span>
+                    </div>
+                `;
+
+                if (metaDesc.issues && metaDesc.issues.length > 0) {
+                    html += `
+                        <div class="issues">
+                            <h4>メタディスクリプションの問題</h4>
+                            <ul>
+                                ${metaDesc.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (metaDesc.recommendations && metaDesc.recommendations.length > 0) {
+                    html += `
+                        <div class="recommendations">
+                            <h4>メタディスクリプションの推奨事項</h4>
+                            <ul>
+                                ${metaDesc.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
+            return html;
+        }
+
+        function formatHeadingSection(data) {
+            let html = '';
+            
+            if (data.checks && data.checks.headingStructure) {
+                const heading = data.checks.headingStructure;
+                const h1Class = heading.h1Count === 1 ? 'good' : heading.h1Count === 0 ? 'error' : 'warning';
+                
+                html += `
+                    <div class="metric ${h1Class}">
+                        <span class="metric-label">h1タグ数</span>
+                        <span class="metric-value">${heading.h1Count}個</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">h2タグ数</span>
+                        <span class="metric-value">${heading.h2Count}個</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">h3タグ数</span>
+                        <span class="metric-value">${heading.h3Count}個</span>
+                    </div>
+                `;
+
+                if (heading.h1Texts && heading.h1Texts.length > 0) {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">h1タグ内容</span>
+                            <span class="metric-value">${heading.h1Texts.join(', ')}</span>
+                        </div>
+                    `;
+                }
+
+                if (heading.issues && heading.issues.length > 0) {
+                    html += `
+                        <div class="issues">
+                            <h4>見出し構造の問題</h4>
+                            <ul>
+                                ${heading.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (heading.recommendations && heading.recommendations.length > 0) {
+                    html += `
+                        <div class="recommendations">
+                            <h4>見出し構造の推奨事項</h4>
+                            <ul>
+                                ${heading.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
+            return html;
+        }
+
+        function formatStructuredDataSection(data) {
+            let html = '';
+            
+            if (data.checks && data.checks.structuredData) {
+                const structured = data.checks.structuredData;
+                const structClass = structured.score >= 80 ? 'good' : structured.score >= 60 ? 'warning' : 'error';
+                
+                html += `
+                    <div class="metric ${structClass}">
+                        <span class="metric-label">構造化データスコア</span>
+                        <span class="metric-value">${structured.score}/100</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">JSON-LD</span>
+                        <span class="metric-value">${structured.jsonLd.length}個</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Microdata</span>
+                        <span class="metric-value">${structured.microdata.length}個</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">RDFa</span>
+                        <span class="metric-value">${structured.rdfa.length}個</span>
+                    </div>
+                `;
+
+                if (structured.issues && structured.issues.length > 0) {
+                    html += `
+                        <div class="issues">
+                            <h4>構造化データの問題</h4>
+                            <ul>
+                                ${structured.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (structured.recommendations && structured.recommendations.length > 0) {
+                    html += `
+                        <div class="recommendations">
+                            <h4>構造化データの推奨事項</h4>
+                            <ul>
+                                ${structured.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
+            return html;
+        }
+
+        function formatAioTab(data) {
+            let html = '';
+            
+            if (data.aio) {
+                html += `
+                    <div class="metric">
+                        <span class="metric-label">AIO総合スコア</span>
+                        <span class="metric-value">${data.aio.overallScore}/100</span>
+                    </div>
+                `;
+
+                if (data.aio.checks) {
+                    Object.entries(data.aio.checks).forEach(([key, value]) => {
+                        const aioClass = value.score >= 80 ? 'good' : value.score >= 60 ? 'warning' : 'error';
+                        html += `
+                            <div class="metric ${aioClass}">
+                                <span class="metric-label">${key}</span>
+                                <span class="metric-value">${value.score}/100</span>
+                            </div>
+                        `;
+                    });
+                }
+            }
+
+            return html;
+        }
+
         function formatSingleResult(data) {
-                let html = '';
+            let html = '';
                 
             // 基本情報
             if (data.url) {
