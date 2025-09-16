@@ -1622,6 +1622,17 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ヘルスチェックエンドポイント
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    version: process.version
+  });
+});
+
 // ルートパス - HTMLファイルを提供（最初に定義）
 app.get('/', (req, res) => {
   logger.info('ルートパス（/）にアクセスされました');
@@ -2253,11 +2264,48 @@ app.get('/api/statistics', async (req, res) => {
 
 
 // サーバー起動
-app.listen(port, () => {
+const server = app.listen(port, '0.0.0.0', () => {
   logger.info(`SEOチェックサーバー起動: ポート ${port}`);
   console.log(`🚀 SEO・AIOチェックツールが起動しました！`);
   console.log(`📱 Webインターフェース: http://localhost:${port}`);
   console.log(`🔧 API エンドポイント: http://localhost:${port}/api/check/seo`);
+  console.log(`🌐 外部アクセス: http://0.0.0.0:${port}`);
+});
+
+// エラーハンドリング
+server.on('error', (error) => {
+  logger.error(`サーバーエラー: ${error.message}`);
+  console.error('❌ サーバーエラー:', error.message);
+});
+
+// プロセス終了時の処理
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM受信: サーバーを終了します');
+  server.close(() => {
+    logger.info('サーバーが正常に終了しました');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT受信: サーバーを終了します');
+  server.close(() => {
+    logger.info('サーバーが正常に終了しました');
+    process.exit(0);
+  });
+});
+
+// 未処理の例外をキャッチ
+process.on('uncaughtException', (error) => {
+  logger.error(`未処理の例外: ${error.message}`);
+  console.error('❌ 未処理の例外:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error(`未処理のPromise拒否: ${reason}`);
+  console.error('❌ 未処理のPromise拒否:', reason);
+  process.exit(1);
 });
 
 module.exports = SEOChecker;
