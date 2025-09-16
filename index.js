@@ -463,12 +463,16 @@ class SEOChecker {
       }
     }
 
+    // 理想的なタイトル提案
+    const idealSuggestions = this.generateIdealTitleSuggestions(title, keywords, titleLength);
+
     return {
       current: title,
       length: titleLength,
       issues: issues,
       recommendations: recommendations,
-      score: this.calculateTitleScore(title, titleLength, keywords)
+      score: this.calculateTitleScore(title, titleLength, keywords),
+      idealSuggestions: idealSuggestions
     };
   }
 
@@ -710,17 +714,210 @@ class SEOChecker {
       }
     }
 
+    // 理想的なメタディスクリプション提案
+    const idealSuggestions = this.generateIdealDescriptionSuggestions(description, keywords, descriptionLength);
+
     const result = {
       current: description,
       length: descriptionLength,
       issues: issues,
       recommendations: recommendations,
-      score: this.calculateDescriptionScore(description, descriptionLength, keywords)
+      score: this.calculateDescriptionScore(description, descriptionLength, keywords),
+      idealSuggestions: idealSuggestions
     };
     
     logger.info(`メタディスクリプション結果: ${JSON.stringify(result)}`);
     
     return result;
+  }
+
+  /**
+   * 理想的なタイトル提案を生成
+   */
+  generateIdealTitleSuggestions(currentTitle, keywords = [], currentLength = 0) {
+    const suggestions = [];
+    
+    if (!keywords || keywords.length === 0) {
+      return suggestions;
+    }
+
+    // キーワードを優先度順にソート（長いキーワードを優先）
+    const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
+    const primaryKeyword = sortedKeywords[0];
+    const secondaryKeywords = sortedKeywords.slice(1, 3);
+
+    // パターン1: キーワード + 説明 + ブランド
+    if (primaryKeyword) {
+      const pattern1 = `${primaryKeyword}の完全ガイド | 初心者でも分かる方法`;
+      if (pattern1.length <= 30) {
+        suggestions.push({
+          pattern: 'キーワード + 説明 + ブランド',
+          title: pattern1,
+          length: pattern1.length,
+          features: ['主要キーワードを先頭配置', '説明文で価値を明示', 'パイプで区切り']
+        });
+      }
+    }
+
+    // パターン2: 数字 + キーワード + ベネフィット
+    if (primaryKeyword) {
+      const pattern2 = `【2024年最新】${primaryKeyword}の効果的な方法`;
+      if (pattern2.length <= 30) {
+        suggestions.push({
+          pattern: '数字 + キーワード + ベネフィット',
+          title: pattern2,
+          length: pattern2.length,
+          features: ['数字で注目度アップ', '主要キーワード配置', 'ベネフィット明示']
+        });
+      }
+    }
+
+    // パターン3: 疑問形 + キーワード
+    if (primaryKeyword) {
+      const pattern3 = `${primaryKeyword}とは？初心者向け解説`;
+      if (pattern3.length <= 30) {
+        suggestions.push({
+          pattern: '疑問形 + キーワード',
+          title: pattern3,
+          length: pattern3.length,
+          features: ['疑問形でクリック率向上', '主要キーワード配置', 'ターゲット明示']
+        });
+      }
+    }
+
+    // パターン4: 複数キーワード組み合わせ
+    if (keywords.length >= 2) {
+      const pattern4 = `${primaryKeyword}と${secondaryKeywords[0]}の関係性`;
+      if (pattern4.length <= 30) {
+        suggestions.push({
+          pattern: '複数キーワード組み合わせ',
+          title: pattern4,
+          length: pattern4.length,
+          features: ['複数キーワード活用', '関係性で差別化', '簡潔な表現']
+        });
+      }
+    }
+
+    // パターン5: 現在のタイトルを改善
+    if (currentTitle && currentTitle.length > 0) {
+      let improvedTitle = currentTitle;
+      
+      // キーワードが含まれていない場合は追加
+      if (!currentTitle.toLowerCase().includes(primaryKeyword.toLowerCase())) {
+        improvedTitle = `${primaryKeyword} | ${currentTitle}`;
+      }
+      
+      // 長すぎる場合は短縮
+      if (improvedTitle.length > 30) {
+        improvedTitle = improvedTitle.substring(0, 27) + '...';
+      }
+      
+      if (improvedTitle !== currentTitle) {
+        suggestions.push({
+          pattern: '現在のタイトル改善版',
+          title: improvedTitle,
+          length: improvedTitle.length,
+          features: ['現在のタイトルをベース', 'キーワード追加', '長さ調整']
+        });
+      }
+    }
+
+    return suggestions.slice(0, 5); // 最大5つの提案
+  }
+
+  /**
+   * 理想的なメタディスクリプション提案を生成
+   */
+  generateIdealDescriptionSuggestions(currentDescription, keywords = [], currentLength = 0) {
+    const suggestions = [];
+    
+    if (!keywords || keywords.length === 0) {
+      return suggestions;
+    }
+
+    const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
+    const primaryKeyword = sortedKeywords[0];
+    const secondaryKeywords = sortedKeywords.slice(1, 3);
+
+    // パターン1: キーワード + 説明 + CTA
+    if (primaryKeyword) {
+      const pattern1 = `${primaryKeyword}について詳しく解説します。初心者でも分かりやすく、効果的な方法を具体的に紹介。今すぐ始められる実践的なガイドです。`;
+      if (pattern1.length >= 120 && pattern1.length <= 160) {
+        suggestions.push({
+          pattern: 'キーワード + 説明 + CTA',
+          description: pattern1,
+          length: pattern1.length,
+          features: ['主要キーワードを先頭配置', '具体的な説明', '行動喚起（CTA）']
+        });
+      }
+    }
+
+    // パターン2: 疑問形 + 解決策 + ベネフィット
+    if (primaryKeyword) {
+      const pattern2 = `${primaryKeyword}でお悩みではありませんか？この記事では、効果的な解決方法を詳しく解説。初心者でも簡単に実践できる具体的なステップをご紹介します。`;
+      if (pattern2.length >= 120 && pattern2.length <= 160) {
+        suggestions.push({
+          pattern: '疑問形 + 解決策 + ベネフィット',
+          description: pattern2,
+          length: pattern2.length,
+          features: ['疑問形で共感', '解決策提示', 'ベネフィット明示']
+        });
+      }
+    }
+
+    // パターン3: 数字 + キーワード + 詳細説明
+    if (primaryKeyword) {
+      const pattern3 = `【2024年最新】${primaryKeyword}の完全ガイド。5つのステップで効果的に実践する方法を詳しく解説。初心者から上級者まで、レベル別の具体的なアドバイスをお届けします。`;
+      if (pattern3.length >= 120 && pattern3.length <= 160) {
+        suggestions.push({
+          pattern: '数字 + キーワード + 詳細説明',
+          description: pattern3,
+          length: pattern3.length,
+          features: ['数字で信頼性', '主要キーワード配置', '詳細な説明']
+        });
+      }
+    }
+
+    // パターン4: 複数キーワード活用
+    if (keywords.length >= 2) {
+      const pattern4 = `${primaryKeyword}と${secondaryKeywords[0]}の関係性について詳しく解説。両方の効果的な活用方法から、組み合わせのコツまで、実践的なノウハウをお伝えします。`;
+      if (pattern4.length >= 120 && pattern4.length <= 160) {
+        suggestions.push({
+          pattern: '複数キーワード活用',
+          description: pattern4,
+          length: pattern4.length,
+          features: ['複数キーワード活用', '関係性説明', '実践的ノウハウ']
+        });
+      }
+    }
+
+    // パターン5: 現在のディスクリプションを改善
+    if (currentDescription && currentDescription.length > 0) {
+      let improvedDescription = currentDescription;
+      
+      // キーワードが含まれていない場合は追加
+      if (!currentDescription.toLowerCase().includes(primaryKeyword.toLowerCase())) {
+        improvedDescription = `${primaryKeyword}について。${currentDescription}`;
+      }
+      
+      // 長さ調整
+      if (improvedDescription.length < 120) {
+        improvedDescription += ` 効果的な方法やコツを詳しく解説します。`;
+      } else if (improvedDescription.length > 160) {
+        improvedDescription = improvedDescription.substring(0, 157) + '...';
+      }
+      
+      if (improvedDescription !== currentDescription) {
+        suggestions.push({
+          pattern: '現在のディスクリプション改善版',
+          description: improvedDescription,
+          length: improvedDescription.length,
+          features: ['現在の内容をベース', 'キーワード追加', '長さ調整']
+        });
+      }
+    }
+
+    return suggestions.slice(0, 5); // 最大5つの提案
   }
 
   /**
