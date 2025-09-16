@@ -28,6 +28,10 @@ RUN npm install --production --no-audit --no-fund
 # アプリケーションのソースコードをコピー
 COPY . .
 
+# publicディレクトリの存在確認
+RUN ls -la /app/
+RUN ls -la /app/public/ || echo "publicディレクトリが存在しません"
+
 # ログディレクトリを作成
 RUN mkdir -p logs
 

@@ -1626,15 +1626,48 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   logger.info('ルートパス（/）にアクセスされました');
   try {
-    const htmlPath = path.join(__dirname, 'public', 'index.html');
-    logger.info(`HTMLファイルパス: ${htmlPath}`);
+    // 複数のパスを試行
+    const possiblePaths = [
+      path.join(__dirname, 'public', 'index.html'),
+      path.join(__dirname, 'index.html'),
+      path.join(process.cwd(), 'public', 'index.html'),
+      path.join(process.cwd(), 'index.html')
+    ];
     
-    // ファイルの存在確認
-    if (fs.existsSync(htmlPath)) {
-      logger.info('HTMLファイルが存在します');
+    logger.info(`現在のディレクトリ: ${__dirname}`);
+    logger.info(`作業ディレクトリ: ${process.cwd()}`);
+    
+    let htmlPath = null;
+    for (const testPath of possiblePaths) {
+      logger.info(`パスを確認中: ${testPath}`);
+      if (fs.existsSync(testPath)) {
+        htmlPath = testPath;
+        logger.info(`HTMLファイルが見つかりました: ${htmlPath}`);
+        break;
+      }
+    }
+    
+    if (htmlPath) {
       res.sendFile(htmlPath);
     } else {
-      logger.error(`HTMLファイルが見つかりません: ${htmlPath}`);
+      logger.error(`HTMLファイルが見つかりません。確認したパス: ${possiblePaths.join(', ')}`);
+      
+      // ディレクトリ構造を確認
+      try {
+        const dirContents = fs.readdirSync(__dirname);
+        logger.info(`__dirname の内容: ${dirContents.join(', ')}`);
+        
+        const publicDir = path.join(__dirname, 'public');
+        if (fs.existsSync(publicDir)) {
+          const publicContents = fs.readdirSync(publicDir);
+          logger.info(`public ディレクトリの内容: ${publicContents.join(', ')}`);
+        } else {
+          logger.info('public ディレクトリが存在しません');
+        }
+      } catch (dirError) {
+        logger.error(`ディレクトリ確認エラー: ${dirError.message}`);
+      }
+      
       res.status(404).send(`
         <!DOCTYPE html>
         <html lang="ja">
@@ -1648,6 +1681,7 @@ app.get('/', (req, res) => {
             h1 { color: #e74c3c; text-align: center; }
             .error { color: #e74c3c; background: #fdf2f2; padding: 20px; border-radius: 4px; margin: 20px 0; }
             .info { color: #3498db; background: #f0f8ff; padding: 20px; border-radius: 4px; margin: 20px 0; }
+            .debug { color: #666; background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; font-family: monospace; font-size: 12px; }
           </style>
         </head>
         <body>
@@ -1655,8 +1689,16 @@ app.get('/', (req, res) => {
             <h1>🔍 SEOチェッカーツール</h1>
             <div class="error">
               <h3>⚠️ HTMLファイルが見つかりません</h3>
-              <p>ファイルパス: ${htmlPath}</p>
               <p>APIは正常に動作しています。</p>
+            </div>
+            <div class="debug">
+              <h4>デバッグ情報:</h4>
+              <p><strong>現在のディレクトリ:</strong> ${__dirname}</p>
+              <p><strong>作業ディレクトリ:</strong> ${process.cwd()}</p>
+              <p><strong>確認したパス:</strong></p>
+              <ul>
+                ${possiblePaths.map(p => `<li>${p}</li>`).join('')}
+              </ul>
             </div>
             <div class="info">
               <h3>📡 API エンドポイント</h3>
