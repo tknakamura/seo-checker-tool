@@ -32,6 +32,10 @@ COPY . .
 RUN ls -la /app/
 RUN ls -la /app/public/ || echo "publicディレクトリが存在しません"
 
+# HTMLファイルをルートディレクトリにもコピー（フォールバック用）
+RUN if [ -f /app/public/index.html ]; then cp /app/public/index.html /app/index.html; fi
+RUN ls -la /app/index.html || echo "index.htmlがルートにコピーされませんでした"
+
 # ログディレクトリを作成
 RUN mkdir -p logs
 

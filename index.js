@@ -1668,30 +1668,216 @@ app.get('/', (req, res) => {
         logger.error(`ディレクトリ確認エラー: ${dirError.message}`);
       }
       
-      res.status(404).send(`
+      // HTMLファイルが見つからない場合、埋め込みHTMLを提供
+      logger.info('埋め込みHTMLを提供します');
+      res.send(`
         <!DOCTYPE html>
         <html lang="ja">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>SEOチェッカーツール - ファイルが見つかりません</title>
+          <title>SEO・AIOチェックツール - Mercari Japan</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-            .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            h1 { color: #e74c3c; text-align: center; }
-            .error { color: #e74c3c; background: #fdf2f2; padding: 20px; border-radius: 4px; margin: 20px 0; }
-            .info { color: #3498db; background: #f0f8ff; padding: 20px; border-radius: 4px; margin: 20px 0; }
-            .debug { color: #666; background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; font-family: monospace; font-size: 12px; }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              background-color: #f8f9fa;
+            }
+
+            .container {
+              max-width: 1200px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 2rem 0;
+              margin-bottom: 2rem;
+              border-radius: 10px;
+              text-align: center;
+            }
+
+            .header h1 {
+              font-size: 2.5rem;
+              margin-bottom: 0.5rem;
+            }
+
+            .header p {
+              font-size: 1.1rem;
+              opacity: 0.9;
+            }
+
+            .form-container {
+              background: white;
+              padding: 2rem;
+              border-radius: 10px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              margin-bottom: 2rem;
+            }
+
+            .form-group {
+              margin-bottom: 1.5rem;
+            }
+
+            .form-group label {
+              display: block;
+              margin-bottom: 0.5rem;
+              font-weight: 600;
+              color: #555;
+            }
+
+            .form-group input,
+            .form-group textarea {
+              width: 100%;
+              padding: 0.75rem;
+              border: 2px solid #e1e5e9;
+              border-radius: 8px;
+              font-size: 1rem;
+              transition: border-color 0.3s ease;
+            }
+
+            .form-group input:focus,
+            .form-group textarea:focus {
+              outline: none;
+              border-color: #667eea;
+            }
+
+            .form-group textarea {
+              min-height: 200px;
+              resize: vertical;
+            }
+
+            .btn {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 0.75rem 2rem;
+              border: none;
+              border-radius: 8px;
+              font-size: 1rem;
+              font-weight: 600;
+              cursor: pointer;
+              transition: transform 0.2s ease;
+            }
+
+            .btn:hover {
+              transform: translateY(-2px);
+            }
+
+            .btn:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+              transform: none;
+            }
+
+            .results-container {
+              background: white;
+              padding: 2rem;
+              border-radius: 10px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              margin-top: 2rem;
+            }
+
+            .loading {
+              text-align: center;
+              padding: 2rem;
+              color: #666;
+            }
+
+            .error {
+              background: #fee;
+              color: #c33;
+              padding: 1rem;
+              border-radius: 8px;
+              margin: 1rem 0;
+            }
+
+            .success {
+              background: #efe;
+              color: #363;
+              padding: 1rem;
+              border-radius: 8px;
+              margin: 1rem 0;
+            }
+
+            .debug-info {
+              background: #f8f9fa;
+              border: 1px solid #e9ecef;
+              border-radius: 8px;
+              padding: 1rem;
+              margin: 1rem 0;
+              font-family: monospace;
+              font-size: 0.9rem;
+              color: #666;
+            }
+
+            .debug-info h4 {
+              color: #333;
+              margin-bottom: 0.5rem;
+            }
+
+            .debug-info ul {
+              margin: 0.5rem 0;
+              padding-left: 1.5rem;
+            }
+
+            @media (max-width: 768px) {
+              .container {
+                padding: 10px;
+              }
+              
+              .header h1 {
+                font-size: 2rem;
+              }
+              
+              .form-container,
+              .results-container {
+                padding: 1.5rem;
+              }
+            }
           </style>
         </head>
         <body>
           <div class="container">
-            <h1>🔍 SEOチェッカーツール</h1>
-            <div class="error">
-              <h3>⚠️ HTMLファイルが見つかりません</h3>
-              <p>APIは正常に動作しています。</p>
+            <div class="header">
+              <h1>🔍 SEO・AIOチェックツール</h1>
+              <p>Mercari Japan - 包括的SEO分析とパフォーマンス測定</p>
             </div>
-            <div class="debug">
+
+            <div class="form-container">
+              <form id="seoForm">
+                <div class="form-group">
+                  <label for="url">チェック対象URL</label>
+                  <input type="url" id="url" name="url" placeholder="https://example.com" required>
+                </div>
+                
+                <div class="form-group">
+                  <label for="html">または、HTMLコードを直接入力</label>
+                  <textarea id="html" name="html" placeholder="<html>...</html>"></textarea>
+                </div>
+                
+                <button type="submit" class="btn" id="submitBtn">
+                  SEOチェックを実行
+                </button>
+              </form>
+            </div>
+
+            <div class="results-container" id="results" style="display: none;">
+              <div class="loading" id="loading">
+                <p>🔍 SEOチェックを実行中...</p>
+              </div>
+              <div id="content"></div>
+            </div>
+
+            <div class="debug-info">
               <h4>デバッグ情報:</h4>
               <p><strong>現在のディレクトリ:</strong> ${__dirname}</p>
               <p><strong>作業ディレクトリ:</strong> ${process.cwd()}</p>
@@ -1700,17 +1886,58 @@ app.get('/', (req, res) => {
                 ${possiblePaths.map(p => `<li>${p}</li>`).join('')}
               </ul>
             </div>
-            <div class="info">
-              <h3>📡 API エンドポイント</h3>
-              <ul>
-                <li><strong>SEOチェック:</strong> POST /api/check/seo</li>
-                <li><strong>バッチチェック:</strong> POST /api/check/batch</li>
-                <li><strong>ダッシュボード:</strong> GET /api/dashboard</li>
-                <li><strong>履歴:</strong> GET /api/history</li>
-                <li><strong>統計:</strong> GET /api/statistics</li>
-              </ul>
-            </div>
           </div>
+
+          <script>
+            document.getElementById('seoForm').addEventListener('submit', async function(e) {
+              e.preventDefault();
+              
+              const url = document.getElementById('url').value;
+              const html = document.getElementById('html').value;
+              const results = document.getElementById('results');
+              const loading = document.getElementById('loading');
+              const content = document.getElementById('content');
+              const submitBtn = document.getElementById('submitBtn');
+              
+              if (!url && !html) {
+                alert('URLまたはHTMLコードを入力してください。');
+                return;
+              }
+              
+              results.style.display = 'block';
+              loading.style.display = 'block';
+              content.innerHTML = '';
+              submitBtn.disabled = true;
+              submitBtn.textContent = 'チェック中...';
+              
+              try {
+                const response = await fetch('/api/check/seo', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ url, html })
+                });
+                
+                const data = await response.json();
+                
+                loading.style.display = 'none';
+                
+                if (data.success) {
+                  content.innerHTML = '<div class="success"><h3>✅ SEOチェック完了</h3><p>結果を表示しています...</p></div>';
+                  // ここで結果を表示する処理を追加
+                } else {
+                  content.innerHTML = '<div class="error"><h3>❌ エラーが発生しました</h3><p>' + data.error + '</p></div>';
+                }
+              } catch (error) {
+                loading.style.display = 'none';
+                content.innerHTML = '<div class="error"><h3>❌ エラーが発生しました</h3><p>' + error.message + '</p></div>';
+              } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'SEOチェックを実行';
+              }
+            });
+          </script>
         </body>
         </html>
       `);
