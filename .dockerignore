@@ -76,7 +76,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public ディレクトリは除外しない（HTMLファイルが含まれているため）
 
 # Storybook build outputs
 .out
