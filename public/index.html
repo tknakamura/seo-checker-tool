@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO・AIOチェックツール - Mercari Japan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .results h2 {
+            color: #333;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .metric.good {
+            border-left-color: #28a745;
+        }
+
+        .metric.warning {
+            border-left-color: #ffc107;
+        }
+
+        .metric.error {
+            border-left-color: #dc3545;
+        }
+
+        .metric-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .metric-value {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .recommendations {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .recommendations h3 {
+            color: #0066cc;
+            margin-bottom: 0.5rem;
+        }
+
+        .recommendations ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .recommendations li {
+            margin: 0.5rem 0;
+            color: #333;
+        }
+
+        .issues {
+            background: #ffe6e6;
+            border: 1px solid #ffb3b3;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .issues h3 {
+            color: #cc0000;
+            margin-bottom: 0.5rem;
+        }
+
+        .issues ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .issues li {
+            margin: 0.5rem 0;
+            color: #333;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px solid #c3e6cb;
+        }
+
+        .batch-results {
+            margin-top: 2rem;
+        }
+
+        .url-result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .url-result h3 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+            word-break: break-all;
+        }
+
+        .url-result .status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .url-result .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .url-result .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .form-container {
+                padding: 1rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SEO・AIOチェックツール</h1>
+            <p>WebページのSEO最適化とAI最適化を包括的にチェックします</p>
+        </div>
+
+        <div class="form-container">
+            <form id="seoCheckForm">
+                <div class="form-group">
+                    <label for="keywords">重要なキーワード <span style="color: #e74c3c;">*</span></label>
+                    <input type="text" id="keywords" name="keywords" placeholder="誕生日,プレゼント,20代,男性" required>
+                    <small style="color: #666; font-size: 0.9rem; margin-top: 0.5rem; display: block;">
+                        💡 複数のキーワードはカンマで区切って入力してください（最大4語まで）。例：誕生日,プレゼント,20代,男性
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="url">WebページURL</label>
+                    <input type="url" id="url" name="url" placeholder="https://example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="urls">または複数URL（バッチチェック）</label>
+                    <textarea id="urls" name="urls" placeholder="複数のURLを1行ずつ入力してください&#10;https://example.com&#10;https://example2.com&#10;https://example3.com" style="min-height: 100px;"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="html">またはHTMLコンテンツ（オプション）</label>
+                    <textarea id="html" name="html" placeholder="HTMLコンテンツを直接貼り付ける場合はこちらに記入してください"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" id="checkBtn">
+                        SEOチェック実行
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="clearBtn">
+                        クリア
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>SEOチェックを実行中...</p>
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <h2>チェック結果</h2>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('seoCheckForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            runSEOCheck();
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            document.getElementById('seoCheckForm').reset();
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+        });
+
+        async function runSEOCheck() {
+            const url = document.getElementById('url').value.trim();
+            const urls = document.getElementById('urls').value.trim();
+            const html = document.getElementById('html').value.trim();
+            const keywordsInput = document.getElementById('keywords').value.trim();
+
+            // キーワードの検証
+            if (!keywordsInput) {
+                alert('重要なキーワードを入力してください。');
+                return;
+            }
+
+            const keywordList = keywordsInput.split(',').map(k => k.trim()).filter(k => k.length > 0);
+            
+            if (keywordList.length === 0) {
+                alert('有効なキーワードを入力してください。');
+                return;
+            }
+
+            if (keywordList.length > 4) {
+                alert('キーワードは最大4語までです。現在の数: ' + keywordList.length);
+                return;
+            }
+
+            // 入力検証
+            if (!url && !urls && !html) {
+                alert('URL、複数URL、またはHTMLコンテンツのいずれかを入力してください。');
+                return;
+            }
+
+            if (url && urls) {
+                alert('単一URLと複数URLは同時に使用できません。');
+                return;
+            }
+
+            if (url && html) {
+                alert('単一URLとHTMLコンテンツは同時に使用できません。');
+                return;
+            }
+
+            if (urls && html) {
+                alert('複数URLとHTMLコンテンツは同時に使用できません。');
+                return;
+            }
+
+            // ローディング表示
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+
+            try {
+                let response;
+                let data;
+
+                if (urls) {
+                    // バッチチェック
+                    const urlList = urls.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+                    if (urlList.length === 0) {
+                        throw new Error('有効なURLが入力されていません。');
+                    }
+
+                    response = await fetch('/api/check/batch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            urls: urlList,
+                            keywords: keywordList
+                        })
+                    });
+                } else {
+                    // 単一チェック
+                    response = await fetch('/api/check/seo', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            url: url || null,
+                            html: html || null,
+                            keywords: keywordList
+                        })
+                    });
+                }
+
+                data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'チェック中にエラーが発生しました。');
+                }
+
+                displayResults(data);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('resultsContent').innerHTML = `
+                    <div class="error">
+                        <h3>エラーが発生しました</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('results').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsContent = document.getElementById('resultsContent');
+            
+            if (data.batchResults) {
+                // バッチ結果の表示
+                let html = '<div class="batch-results">';
+                html += '<h2>バッチチェック結果</h2>';
+                
+                data.batchResults.forEach((result, index) => {
+                    const statusClass = result.success ? 'success' : 'error';
+                    const statusText = result.success ? '成功' : 'エラー';
+                    
+                    html += `
+                        <div class="url-result">
+                            <h3>${result.url}</h3>
+                            <span class="status ${statusClass}">${statusText}</span>
+                            ${result.success ? formatSingleResult(result.data) : `<p>エラー: ${result.error}</p>`}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultsContent.innerHTML = html;
+            } else {
+                // 単一結果の表示
+                resultsContent.innerHTML = formatSingleResult(data);
+            }
+            
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function formatSingleResult(data) {
+            let html = '';
+
+            // 基本情報
+            if (data.url) {
+                html += `<div class="metric">
+                    <span class="metric-label">URL</span>
+                    <span class="metric-value">${data.url}</span>
+                </div>`;
+            }
+
+            // タイトルタグ
+            if (data.titleTag) {
+                const titleClass = data.titleTag.score >= 80 ? 'good' : data.titleTag.score >= 60 ? 'warning' : 'error';
+                html += `
+                    <div class="metric ${titleClass}">
+                        <span class="metric-label">タイトルタグ</span>
+                        <span class="metric-value">${data.titleTag.score}/100</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">タイトル</span>
+                        <span class="metric-value">${data.titleTag.title || 'なし'}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">文字数</span>
+                        <span class="metric-value">${data.titleTag.length}文字</span>
+                    </div>
+                `;
+
+                if (data.titleTag.issues && data.titleTag.issues.length > 0) {
+                    html += `
+                        <div class="issues">
+                            <h3>タイトルタグの問題</h3>
+                            <ul>
+                                ${data.titleTag.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (data.titleTag.recommendations && data.titleTag.recommendations.length > 0) {
+                    html += `
+                        <div class="recommendations">
+                            <h3>タイトルタグの推奨事項</h3>
+                            <ul>
+                                ${data.titleTag.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
+            // メタディスクリプション
+            if (data.metaDescription) {
+                const descClass = data.metaDescription.score >= 80 ? 'good' : data.metaDescription.score >= 60 ? 'warning' : 'error';
+                html += `
+                    <div class="metric ${descClass}">
+                        <span class="metric-label">メタディスクリプション</span>
+                        <span class="metric-value">${data.metaDescription.score}/100</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">ディスクリプション</span>
+                        <span class="metric-value">${data.metaDescription.description || 'なし'}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">文字数</span>
+                        <span class="metric-value">${data.metaDescription.length}文字</span>
+                    </div>
+                `;
+
+                if (data.metaDescription.issues && data.metaDescription.issues.length > 0) {
+                    html += `
+                        <div class="issues">
+                            <h3>メタディスクリプションの問題</h3>
+                            <ul>
+                                ${data.metaDescription.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (data.metaDescription.recommendations && data.metaDescription.recommendations.length > 0) {
+                    html += `
+                        <div class="recommendations">
+                            <h3>メタディスクリプションの推奨事項</h3>
+                            <ul>
+                                ${data.metaDescription.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
+            // h1タグ
+            if (data.headingStructure) {
+                const h1Class = data.headingStructure.h1Count === 1 ? 'good' : data.headingStructure.h1Count === 0 ? 'error' : 'warning';
+                html += `
+                    <div class="metric ${h1Class}">
+                        <span class="metric-label">h1タグ数</span>
+                        <span class="metric-value">${data.headingStructure.h1Count}個</span>
+                    </div>
+                `;
+
+                if (data.headingStructure.h1Tags && data.headingStructure.h1Tags.length > 0) {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">h1タグ内容</span>
+                            <span class="metric-value">${data.headingStructure.h1Tags.join(', ')}</span>
+                        </div>
+                    `;
+                }
+
+                if (data.headingStructure.issues && data.headingStructure.issues.length > 0) {
+                    html += `
+                        <div class="issues">
+                            <h3>見出し構造の問題</h3>
+                            <ul>
+                                ${data.headingStructure.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (data.headingStructure.recommendations && data.headingStructure.recommendations.length > 0) {
+                    html += `
+                        <div class="recommendations">
+                            <h3>見出し構造の推奨事項</h3>
+                            <ul>
+                                ${data.headingStructure.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
+            // パフォーマンス
+            if (data.performance) {
+                const perfClass = data.performance.score >= 90 ? 'good' : data.performance.score >= 50 ? 'warning' : 'error';
+                html += `
+                    <div class="metric ${perfClass}">
+                        <span class="metric-label">パフォーマンススコア</span>
+                        <span class="metric-value">${data.performance.score}/100</span>
+                    </div>
+                `;
+
+                if (data.performance.metrics) {
+                    Object.entries(data.performance.metrics).forEach(([key, value]) => {
+                        html += `
+                            <div class="metric">
+                                <span class="metric-label">${key}</span>
+                                <span class="metric-value">${value}</span>
+                            </div>
+                        `;
+                    });
+                }
+            }
+
+            return html;
+        }
+    </script>
+</body>
+</html>
