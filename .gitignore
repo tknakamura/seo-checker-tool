@@ -213,3 +213,4 @@ Thumbs.db
 data/check_history.json
 data/statistics.json
 server.log
+package-lock.json

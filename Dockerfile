@@ -19,11 +19,11 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# package.jsonとpackage-lock.jsonをコピー
-COPY package*.json ./
+# package.jsonをコピー
+COPY package.json ./
 
 # 依存関係をインストール
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm install --production --no-audit --no-fund
 
 # アプリケーションのソースコードをコピー
 COPY . .
