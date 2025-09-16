@@ -106,35 +106,84 @@ class SEOChecker {
         const htmlBuffer = Buffer.from(response.data);
         let detectedEncoding = 'utf-8';
         
-        // 複数のエンコーディングを試行
-        const encodings = ['utf-8', 'shift_jis', 'euc-jp', 'iso-2022-jp'];
+        // Content-Typeヘッダーから文字エンコーディングを取得
+        const contentType = response.headers['content-type'] || '';
+        logger.info(`Content-Type: ${contentType}`);
         
-        for (const enc of encodings) {
-          try {
-            const testContent = iconv.decode(htmlBuffer, enc);
-            // 日本語文字が正しくデコードされているかチェック（ひらがな、カタカナ、漢字の存在確認）
-            const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(testContent);
-            const hasGarbledChars = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s]/.test(testContent);
-            
-            if (hasJapanese && !hasGarbledChars) {
-              pageContent = testContent;
-              detectedEncoding = enc;
-              logger.info(`エンコーディング検出成功: ${enc}`);
-              break;
-            }
-          } catch (error) {
-            continue;
+        if (contentType.includes('charset=')) {
+          const charsetMatch = contentType.match(/charset=([^;]+)/i);
+          if (charsetMatch) {
+            detectedEncoding = charsetMatch[1].toLowerCase().replace(/['"]/g, '');
+            logger.info(`Content-Typeから検出されたエンコーディング: ${detectedEncoding}`);
           }
         }
         
-        // どのエンコーディングでも成功しなかった場合、UTF-8でフォールバック
-        if (!pageContent || pageContent === '') {
+        // HTMLのmetaタグから文字エンコーディングを検出
+        if (detectedEncoding === 'utf-8') {
           try {
-            pageContent = iconv.decode(htmlBuffer, 'utf-8');
-            logger.info('UTF-8でデコード成功');
-          } catch (error) {
+            const tempContent = htmlBuffer.toString('utf-8');
+            const charsetMatch = tempContent.match(/<meta[^>]+charset=["']?([^"'>\s]+)["']?/i);
+            if (charsetMatch) {
+              const metaEncoding = charsetMatch[1].toLowerCase();
+              if (metaEncoding.includes('shift') || metaEncoding.includes('sjis')) {
+                detectedEncoding = 'shift_jis';
+              } else if (metaEncoding.includes('euc')) {
+                detectedEncoding = 'euc-jp';
+              } else if (metaEncoding.includes('iso-2022')) {
+                detectedEncoding = 'iso-2022-jp';
+              } else if (metaEncoding.includes('utf-8')) {
+                detectedEncoding = 'utf-8';
+              }
+              logger.info(`metaタグから検出されたエンコーディング: ${detectedEncoding}`);
+            }
+          } catch (e) {
+            logger.warn('metaタグからのエンコーディング検出に失敗');
+          }
+        }
+        
+        // 検出されたエンコーディングでデコードを試行
+        try {
+          pageContent = iconv.decode(htmlBuffer, detectedEncoding);
+          logger.info(`${detectedEncoding}でデコード成功`);
+          
+          // デコード結果の品質チェック
+          const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(pageContent);
+          const hasGarbledChars = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\u3000-\u303F]/.test(pageContent);
+          
+          if (!hasJapanese || hasGarbledChars) {
+            logger.warn(`${detectedEncoding}でのデコード結果が不適切、他のエンコーディングを試行`);
+            
+            // 他のエンコーディングを試行
+            const encodings = ['utf-8', 'shift_jis', 'euc-jp', 'iso-2022-jp'];
+            for (const enc of encodings) {
+              if (enc === detectedEncoding) continue;
+              
+              try {
+                const testContent = iconv.decode(htmlBuffer, enc);
+                const testHasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(testContent);
+                const testHasGarbledChars = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\u3000-\u303F]/.test(testContent);
+                
+                if (testHasJapanese && !testHasGarbledChars) {
+                  pageContent = testContent;
+                  detectedEncoding = enc;
+                  logger.info(`代替エンコーディング ${enc} でデコード成功`);
+                  break;
+                }
+              } catch (error) {
+                continue;
+              }
+            }
+          }
+        } catch (error) {
+          logger.warn(`${detectedEncoding}でのデコードに失敗: ${error.message}`);
+          
+          // UTF-8でフォールバック
+          try {
             pageContent = htmlBuffer.toString('utf-8');
-            logger.warn('iconv-liteでデコード失敗、Buffer.toString()でフォールバック');
+            logger.info('UTF-8でフォールバック成功');
+          } catch (fallbackError) {
+            pageContent = htmlBuffer.toString('utf-8', 0, htmlBuffer.length);
+            logger.warn('UTF-8フォールバックでも失敗、強制的にUTF-8でデコード');
           }
         }
         
@@ -1290,13 +1339,25 @@ class SEOChecker {
     if (!text) return text;
     
     try {
+      // URLエンコードされた文字をデコード
+      let decodedText = text;
+      try {
+        decodedText = decodeURIComponent(text);
+        if (decodedText !== text) {
+          logger.info(`URLエンコードされた文字をデコード: "${text}" -> "${decodedText}"`);
+        }
+      } catch (e) {
+        // URLデコードに失敗した場合は元のテキストを使用
+        decodedText = text;
+      }
+      
       // 文字エンコーディングの検出と変換を試行
       const encodings = ['utf8', 'shift_jis', 'euc-jp', 'iso-2022-jp'];
       
       for (const encoding of encodings) {
         try {
           // 現在のテキストを指定されたエンコーディングでデコード
-          const buffer = Buffer.from(text, 'binary');
+          const buffer = Buffer.from(decodedText, 'binary');
           const decoded = iconv.decode(buffer, encoding);
           
           // 日本語文字が含まれているかチェック
@@ -1311,11 +1372,14 @@ class SEOChecker {
       
       // エンコーディング変換で解決しない場合は、既知の文字化けパターンを修正
       const garbledPatterns = [
-        // タイトル関連の文字化けパターン
+        // タイトル関連の文字化けパターン（実際のHTMLから抽出）
         { from: /@lMtgELOiEiȂOzɐO@lICXgA/g, to: '法人ギフト・記念品・福利厚生品なら｜三越伊勢丹法人オンラインストア' },
         { from: /rWlX̑EE/g, to: '三越伊勢丹の贈り物・記念品・ノベルティ' },
         { from: /@lƌT\[rX/g, to: '法人向けサービス' },
         { from: /@lICXgA/g, to: '法人オンラインストア' },
+        
+        // メタディスクリプション関連の文字化けパターン
+        { from: /NLOEjAiN@lljELOiMtgLxpOzO@lICXgABi蕨BAET\[rX\[B/g, to: '法人向けギフト・記念品・ノベルティなら三越伊勢丹法人オンラインストア。中元・歳暮・退職記念から社内表彰品まで、高品質な商品を豊富に取り揃えています。請求書払い対応、包装・のしサービスも充実。' },
         
         // 一般的な文字化けパターン
         { from: //g, to: 'ギフト' },
@@ -1356,7 +1420,16 @@ class SEOChecker {
         { from: //g, to: '雑貨' },
         { from: /ItBXEFA/g, to: 'インテリア・ファブリック' },
         { from: /hЗpi/g, to: '食品用品' },
-        { from: /CtX^C/g, to: 'スキンケア・コスメティック' }
+        { from: /CtX^C/g, to: 'スキンケア・コスメティック' },
+        
+        // URLエンコードされた文字のパターン
+        { from: /%E6%B3%95%E4%BA%BA/g, to: '法人' },
+        { from: /%E3%82%AE%E3%83%95%E3%83%88/g, to: 'ギフト' },
+        { from: /%E8%A8%98%E5%BF%B5%E5%93%81/g, to: '記念品' },
+        { from: /%E7%A6%8F%E5%88%A9%E5%8E%9A%E7%94%9F%E5%93%81/g, to: '福利厚生品' },
+        { from: /%E4%B8%89%E8%B6%8A%E4%BC%8A%E5%8B%A2%E4%B8%B9/g, to: '三越伊勢丹' },
+        { from: /%E3%82%AA%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%82%A2/g, to: 'オンラインストア' },
+        { from: /%E8%AB%8B%E6%B1%82%E6%9B%B8%E6%89%95%E3%81%84%E5%AF%BE%E5%BF%9C/g, to: '請求書払い対応' }
       ];
       
       let fixedText = text;
