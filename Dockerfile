@@ -1,20 +1,43 @@
-# Node.js 18 Alpine ベースイメージを使用
-FROM node:18-alpine
+# Node.js 20 Alpine ベースイメージを使用
+FROM node:20-alpine
 
 # 作業ディレクトリを設定
 WORKDIR /app
+
+# システムの依存関係をインストール（Puppeteer用）
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    curl
+
+# PuppeteerがChromiumを使用するように設定
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # package.jsonとpackage-lock.jsonをコピー
 COPY package*.json ./
 
 # 依存関係をインストール
-RUN npm ci --only=production
+RUN npm ci --omit=dev --no-audit --no-fund
 
 # アプリケーションのソースコードをコピー
 COPY . .
 
 # ログディレクトリを作成
 RUN mkdir -p logs
+
+# 非rootユーザーを作成
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+# ファイルの所有権を変更
+RUN chown -R nextjs:nodejs /app
+USER nextjs
 
 # ポート3001を公開
 EXPOSE 3001

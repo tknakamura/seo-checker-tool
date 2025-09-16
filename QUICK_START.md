@@ -1,11 +1,11 @@
-# 🚀 Render.com クイックスタートガイド
+# 🚀 Render.com クイックスタートガイド（Docker版）
 
 ## 5分でデプロイ完了！
 
 ### ステップ1: GitHubにプッシュ
 ```bash
 git add .
-git commit -m "Deploy to Render.com"
+git commit -m "Deploy to Render.com with Docker"
 git push origin main
 ```
 
@@ -13,21 +13,24 @@ git push origin main
 1. [Render.com](https://render.com) → "New +" → "Web Service"
 2. GitHubリポジトリを選択
 3. 設定を入力：
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-   - **Environment**: `Node`
+   - **Environment**: `Docker`
+   - **Dockerfile Path**: `./Dockerfile`
+   - **Plan**: `Free` (または `Starter`)
 4. "Create Web Service" をクリック
 
 ### ステップ3: 完了！
-- 5-10分でデプロイ完了
+- 10-15分でデプロイ完了（Dockerビルド時間含む）
 - 提供されたURLでアクセス可能
 - 自動的にHTTPS対応
+- Puppeteer（Lighthouse）が正常に動作
 
-## 🔧 環境変数（必要に応じて）
+## 🔧 環境変数（自動設定）
 
 ```
 NODE_ENV=production
 PORT=3001
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ```
 
 ## 📱 アクセス方法

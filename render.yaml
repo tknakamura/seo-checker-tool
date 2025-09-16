@@ -1,14 +1,17 @@
 services:
   - type: web
     name: seo-checker-tool
-    env: node
+    env: docker
     plan: free
-    buildCommand: npm install
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3001
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: "true"
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: "/usr/bin/chromium-browser"
     healthCheckPath: /
     autoDeploy: true
