@@ -52,10 +52,10 @@ class SEOChecker {
       const configPath = path.join(__dirname, '../../config/seo-config.yaml');
       // YAMLファイルの読み込みは後で実装
       return {
-        titleMaxLength: 60,
-        titleMinLength: 30,
-        descriptionMaxLength: 160,
-        descriptionMinLength: 120,
+        titleMaxLength: 30, // 全角30文字以内（参考サイト推奨）
+        titleMinLength: 10, // 最低10文字
+        descriptionMaxLength: 160, // 160文字以下
+        descriptionMinLength: 120, // 120文字以上
         h1MaxCount: 1,
         h2MinCount: 2,
         h3MinCount: 3,
@@ -66,10 +66,10 @@ class SEOChecker {
     } catch (error) {
       logger.warn('設定ファイルの読み込みに失敗、デフォルト設定を使用');
       return {
-        titleMaxLength: 60,
-        titleMinLength: 30,
-        descriptionMaxLength: 160,
-        descriptionMinLength: 120,
+        titleMaxLength: 30, // 全角30文字以内（参考サイト推奨）
+        titleMinLength: 10, // 最低10文字
+        descriptionMaxLength: 160, // 160文字以下
+        descriptionMinLength: 120, // 120文字以上
         h1MaxCount: 1,
         h2MinCount: 2,
         h3MinCount: 3,
@@ -386,7 +386,7 @@ class SEOChecker {
       issues.push('タイトルタグが存在しません');
       recommendations.push('ページに適切なタイトルタグを追加してください');
     } else {
-      // 長さチェック
+      // 長さチェック（参考サイト推奨：全角30文字以内）
       if (titleLength < this.config.titleMinLength) {
         issues.push(`タイトルが短すぎます（${titleLength}文字）`);
         recommendations.push(`タイトルを${this.config.titleMinLength}文字以上にしてください`);
@@ -394,21 +394,51 @@ class SEOChecker {
       
       if (titleLength > this.config.titleMaxLength) {
         issues.push(`タイトルが長すぎます（${titleLength}文字）`);
-        recommendations.push(`タイトルを${this.config.titleMaxLength}文字以下にしてください`);
+        recommendations.push(`タイトルを${this.config.titleMaxLength}文字以下にしてください（参考サイト推奨：全角30文字以内）`);
       }
 
-      // 重複チェック
-      if (title.includes('|') && title.split('|').length > 3) {
-        issues.push('タイトルにパイプ（|）が多すぎます');
-        recommendations.push('タイトルのパイプ（|）を3個以下にしてください');
+      // キーワードの先出しチェック（参考サイト推奨）
+      const firstWords = title.split(/\s+|・|｜|【|】/)[0];
+      if (firstWords && firstWords.length > 0) {
+        // 重要なキーワードが最初に来ているかチェック
+        const importantKeywords = ['SEO', '対策', '方法', 'コツ', '解説', '完全版', '初心者', '上級者'];
+        const hasImportantKeyword = importantKeywords.some(keyword => 
+          firstWords.includes(keyword) || title.toLowerCase().indexOf(keyword.toLowerCase()) === 0
+        );
+        
+        if (!hasImportantKeyword) {
+          recommendations.push('重要なキーワードをタイトルの最初に配置することを検討してください');
+        }
+      }
+
+      // パイプ（|）の使用チェック（参考サイト推奨：適切な使用）
+      const pipeCount = (title.match(/\|/g) || []).length;
+      if (pipeCount > 2) {
+        issues.push(`タイトルにパイプ（|）が多すぎます（${pipeCount}個）`);
+        recommendations.push('タイトルのパイプ（|）を2個以下にしてください');
       }
 
       // キーワードの重複チェック
-      const words = title.toLowerCase().split(/\s+/);
-      const duplicateWords = words.filter((word, index) => words.indexOf(word) !== index);
+      const words = title.toLowerCase().split(/\s+|・|｜|【|】/);
+      const duplicateWords = words.filter((word, index) => 
+        word.length > 1 && words.indexOf(word) !== index
+      );
       if (duplicateWords.length > 0) {
-        issues.push('タイトルに重複するキーワードがあります');
+        issues.push(`タイトルに重複するキーワードがあります: ${duplicateWords.join(', ')}`);
         recommendations.push('タイトルから重複するキーワードを削除してください');
+      }
+
+      // 数字や記号の使用チェック（参考サイト推奨：クリック率向上）
+      const hasNumbers = /\d/.test(title);
+      const hasSymbols = /[【】「」！？]/.test(title);
+      if (!hasNumbers && !hasSymbols) {
+        recommendations.push('クリック率向上のため、数字や記号（【】「」！？）の使用を検討してください');
+      }
+
+      // ユニーク性チェック（参考サイト推奨：ページ固有のタイトル）
+      if (title.includes('無題') || title.includes('Untitled') || title.includes('Home')) {
+        issues.push('タイトルが汎用的すぎます');
+        recommendations.push('ページの内容を具体的に表すユニークなタイトルにしてください');
       }
     }
 
@@ -570,15 +600,39 @@ class SEOChecker {
       logger.info(`属性順序を変えたメタディスクリプション検索結果: ${metaDescReversed.length}`);
       
     } else {
-      // 長さチェック
+      // 長さチェック（参考サイト推奨：120-160文字）
       if (descriptionLength < this.config.descriptionMinLength) {
         issues.push(`メタディスクリプションが短すぎます（${descriptionLength}文字）`);
-        recommendations.push(`メタディスクリプションを${this.config.descriptionMinLength}文字以上にしてください`);
+        recommendations.push(`メタディスクリプションを${this.config.descriptionMinLength}文字以上にしてください（参考サイト推奨：120文字以上）`);
       }
       
       if (descriptionLength > this.config.descriptionMaxLength) {
         issues.push(`メタディスクリプションが長すぎます（${descriptionLength}文字）`);
-        recommendations.push(`メタディスクリプションを${this.config.descriptionMaxLength}文字以下にしてください`);
+        recommendations.push(`メタディスクリプションを${this.config.descriptionMaxLength}文字以下にしてください（参考サイト推奨：160文字以下）`);
+      }
+
+      // キーワードの先出しチェック（参考サイト推奨）
+      const firstWords = description.split(/\s+|・|｜|【|】/).slice(0, 3).join(' ');
+      if (firstWords && firstWords.length > 0) {
+        // 重要なキーワードが最初に来ているかチェック
+        const importantKeywords = ['SEO', '対策', '方法', 'コツ', '解説', '完全版', '初心者', '上級者', 'おすすめ', '人気'];
+        const hasImportantKeyword = importantKeywords.some(keyword => 
+          firstWords.toLowerCase().includes(keyword.toLowerCase())
+        );
+        
+        if (!hasImportantKeyword) {
+          recommendations.push('重要なキーワードをメタディスクリプションの最初に配置することを検討してください');
+        }
+      }
+
+      // 検索ニーズの反映チェック（参考サイト推奨）
+      const searchIntentKeywords = ['とは', '方法', 'やり方', 'コツ', 'おすすめ', '比較', 'ランキング', '初心者', '上級者'];
+      const hasSearchIntent = searchIntentKeywords.some(keyword => 
+        description.includes(keyword)
+      );
+      
+      if (!hasSearchIntent) {
+        recommendations.push('ユーザーの検索ニーズを反映したキーワードを含めることを検討してください');
       }
 
       // 内容の品質チェック
@@ -590,6 +644,28 @@ class SEOChecker {
       if (description.includes('...') || description.includes('…')) {
         issues.push('メタディスクリプションに省略記号が含まれています');
         recommendations.push('メタディスクリプションから省略記号を削除してください');
+      }
+
+      // キーワードの重複チェック
+      const words = description.toLowerCase().split(/\s+|・|｜|【|】/);
+      const duplicateWords = words.filter((word, index) => 
+        word.length > 1 && words.indexOf(word) !== index
+      );
+      if (duplicateWords.length > 0) {
+        issues.push(`メタディスクリプションに重複するキーワードがあります: ${duplicateWords.join(', ')}`);
+        recommendations.push('メタディスクリプションから重複するキーワードを削除してください');
+      }
+
+      // 数字や記号の使用チェック（参考サイト推奨：クリック率向上）
+      const hasNumbers = /\d/.test(description);
+      const hasSymbols = /[【】「」！？]/.test(description);
+      if (!hasNumbers && !hasSymbols) {
+        recommendations.push('クリック率向上のため、数字や記号（【】「」！？）の使用を検討してください');
+      }
+
+      // ユニーク性チェック（参考サイト推奨：ページ固有の内容）
+      if (description.includes('このページ') || description.includes('こちら') || description.includes('詳細は')) {
+        recommendations.push('より具体的で魅力的な内容に変更することを検討してください');
       }
     }
 
@@ -1450,14 +1526,87 @@ class SEOChecker {
    */
   calculateTitleScore(title, length) {
     if (!title) return 0;
-    if (length < this.config.titleMinLength || length > this.config.titleMaxLength) return 50;
-    return 100;
+    
+    let score = 0;
+    
+    // 長さチェック（参考サイト推奨：全角30文字以内）
+    if (length >= this.config.titleMinLength && length <= this.config.titleMaxLength) {
+      score += 30; // 適切な長さ
+    } else if (length < this.config.titleMinLength) {
+      score += 10; // 短すぎる
+    } else {
+      score += 5; // 長すぎる
+    }
+    
+    // キーワードの先出しチェック（参考サイト推奨）
+    const firstWords = title.split(/\s+|・|｜|【|】/)[0];
+    const importantKeywords = ['SEO', '対策', '方法', 'コツ', '解説', '完全版', '初心者', '上級者'];
+    const hasImportantKeyword = importantKeywords.some(keyword => 
+      firstWords.includes(keyword) || title.toLowerCase().indexOf(keyword.toLowerCase()) === 0
+    );
+    if (hasImportantKeyword) score += 25;
+    
+    // 数字や記号の使用チェック（参考サイト推奨：クリック率向上）
+    const hasNumbers = /\d/.test(title);
+    const hasSymbols = /[【】「」！？]/.test(title);
+    if (hasNumbers || hasSymbols) score += 20;
+    
+    // パイプ（|）の適切な使用
+    const pipeCount = (title.match(/\|/g) || []).length;
+    if (pipeCount <= 2) score += 15;
+    
+    // キーワードの重複チェック
+    const words = title.toLowerCase().split(/\s+|・|｜|【|】/);
+    const duplicateWords = words.filter((word, index) => 
+      word.length > 1 && words.indexOf(word) !== index
+    );
+    if (duplicateWords.length === 0) score += 10;
+    
+    return Math.min(score, 100);
   }
 
   calculateDescriptionScore(description, length) {
     if (!description) return 0;
-    if (length < this.config.descriptionMinLength || length > this.config.descriptionMaxLength) return 50;
-    return 100;
+    
+    let score = 0;
+    
+    // 長さチェック（参考サイト推奨：120-160文字）
+    if (length >= this.config.descriptionMinLength && length <= this.config.descriptionMaxLength) {
+      score += 30; // 適切な長さ
+    } else if (length < this.config.descriptionMinLength) {
+      score += 10; // 短すぎる
+    } else {
+      score += 5; // 長すぎる
+    }
+    
+    // キーワードの先出しチェック（参考サイト推奨）
+    const firstWords = description.split(/\s+|・|｜|【|】/).slice(0, 3).join(' ');
+    const importantKeywords = ['SEO', '対策', '方法', 'コツ', '解説', '完全版', '初心者', '上級者', 'おすすめ', '人気'];
+    const hasImportantKeyword = importantKeywords.some(keyword => 
+      firstWords.toLowerCase().includes(keyword.toLowerCase())
+    );
+    if (hasImportantKeyword) score += 25;
+    
+    // 検索ニーズの反映チェック（参考サイト推奨）
+    const searchIntentKeywords = ['とは', '方法', 'やり方', 'コツ', 'おすすめ', '比較', 'ランキング', '初心者', '上級者'];
+    const hasSearchIntent = searchIntentKeywords.some(keyword => 
+      description.includes(keyword)
+    );
+    if (hasSearchIntent) score += 20;
+    
+    // 数字や記号の使用チェック（参考サイト推奨：クリック率向上）
+    const hasNumbers = /\d/.test(description);
+    const hasSymbols = /[【】「」！？]/.test(description);
+    if (hasNumbers || hasSymbols) score += 15;
+    
+    // キーワードの重複チェック
+    const words = description.toLowerCase().split(/\s+|・|｜|【|】/);
+    const duplicateWords = words.filter((word, index) => 
+      word.length > 1 && words.indexOf(word) !== index
+    );
+    if (duplicateWords.length === 0) score += 10;
+    
+    return Math.min(score, 100);
   }
 
   calculateHeadingScore(h1Count, h2Count, h3Count, hierarchy, content) {
