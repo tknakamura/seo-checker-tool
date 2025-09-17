@@ -52,10 +52,10 @@ class SEOChecker {
       const configPath = path.join(__dirname, '../../config/seo-config.yaml');
       // YAMLファイルの読み込みは後で実装
       return {
-        titleMaxLength: 30, // 全角30文字以内（参考サイト推奨）
-        titleMinLength: 10, // 最低10文字
-        descriptionMaxLength: 160, // 160文字以下
-        descriptionMinLength: 120, // 120文字以上
+        titleMaxLength: 50, // 全角50文字以内（柔軟な制約）
+        titleMinLength: 5, // 最低5文字
+        descriptionMaxLength: 200, // 200文字以下（柔軟な制約）
+        descriptionMinLength: 80, // 80文字以上（柔軟な制約）
         h1MaxCount: 1,
         h2MinCount: 2,
         h3MinCount: 3,
@@ -66,10 +66,10 @@ class SEOChecker {
     } catch (error) {
       logger.warn('設定ファイルの読み込みに失敗、デフォルト設定を使用');
       return {
-        titleMaxLength: 30, // 全角30文字以内（参考サイト推奨）
-        titleMinLength: 10, // 最低10文字
-        descriptionMaxLength: 160, // 160文字以下
-        descriptionMinLength: 120, // 120文字以上
+        titleMaxLength: 50, // 全角50文字以内（柔軟な制約）
+        titleMinLength: 5, // 最低5文字
+        descriptionMaxLength: 200, // 200文字以下（柔軟な制約）
+        descriptionMinLength: 80, // 80文字以上（柔軟な制約）
         h1MaxCount: 1,
         h2MinCount: 2,
         h3MinCount: 3,
@@ -744,61 +744,8 @@ class SEOChecker {
     // キーワードを優先度順にソート（長いキーワードを優先）
     const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
     const primaryKeyword = sortedKeywords[0];
-    const secondaryKeywords = sortedKeywords.slice(1, 3);
 
-    // パターン1: キーワード + 説明 + ブランド
-    if (primaryKeyword) {
-      const pattern1 = `${primaryKeyword}の完全ガイド | 初心者でも分かる方法`;
-      if (pattern1.length <= 30) {
-        suggestions.push({
-          pattern: 'キーワード + 説明 + ブランド',
-          title: pattern1,
-          length: pattern1.length,
-          features: ['主要キーワードを先頭配置', '説明文で価値を明示', 'パイプで区切り']
-        });
-      }
-    }
-
-    // パターン2: 数字 + キーワード + ベネフィット
-    if (primaryKeyword) {
-      const pattern2 = `【2024年最新】${primaryKeyword}の効果的な方法`;
-      if (pattern2.length <= 30) {
-        suggestions.push({
-          pattern: '数字 + キーワード + ベネフィット',
-          title: pattern2,
-          length: pattern2.length,
-          features: ['数字で注目度アップ', '主要キーワード配置', 'ベネフィット明示']
-        });
-      }
-    }
-
-    // パターン3: 疑問形 + キーワード
-    if (primaryKeyword) {
-      const pattern3 = `${primaryKeyword}とは？初心者向け解説`;
-      if (pattern3.length <= 30) {
-        suggestions.push({
-          pattern: '疑問形 + キーワード',
-          title: pattern3,
-          length: pattern3.length,
-          features: ['疑問形でクリック率向上', '主要キーワード配置', 'ターゲット明示']
-        });
-      }
-    }
-
-    // パターン4: 複数キーワード組み合わせ
-    if (keywords.length >= 2) {
-      const pattern4 = `${primaryKeyword}と${secondaryKeywords[0]}の関係性`;
-      if (pattern4.length <= 30) {
-        suggestions.push({
-          pattern: '複数キーワード組み合わせ',
-          title: pattern4,
-          length: pattern4.length,
-          features: ['複数キーワード活用', '関係性で差別化', '簡潔な表現']
-        });
-      }
-    }
-
-    // パターン5: 現在のタイトルを改善
+    // 現在のタイトルを改善
     if (currentTitle && currentTitle.length > 0) {
       let improvedTitle = currentTitle;
       
@@ -807,9 +754,19 @@ class SEOChecker {
         improvedTitle = `${primaryKeyword} | ${currentTitle}`;
       }
       
-      // 長すぎる場合は短縮
-      if (improvedTitle.length > 30) {
-        improvedTitle = improvedTitle.substring(0, 27) + '...';
+      // 長すぎる場合は適切に短縮（単語の境界で切る）
+      if (improvedTitle.length > 50) {
+        // 単語の境界で切る
+        const words = improvedTitle.split(' ');
+        let truncated = '';
+        for (const word of words) {
+          if ((truncated + ' ' + word).length <= 47) {
+            truncated += (truncated ? ' ' : '') + word;
+          } else {
+            break;
+          }
+        }
+        improvedTitle = truncated + '...';
       }
       
       if (improvedTitle !== currentTitle) {
@@ -817,12 +774,12 @@ class SEOChecker {
           pattern: '現在のタイトル改善版',
           title: improvedTitle,
           length: improvedTitle.length,
-          features: ['現在のタイトルをベース', 'キーワード追加', '長さ調整']
+          features: ['現在のタイトルをベース', 'キーワード追加', '適切な長さ調整']
         });
       }
     }
 
-    return suggestions.slice(0, 5); // 最大5つの提案
+    return suggestions;
   }
 
   /**
@@ -837,61 +794,8 @@ class SEOChecker {
 
     const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
     const primaryKeyword = sortedKeywords[0];
-    const secondaryKeywords = sortedKeywords.slice(1, 3);
 
-    // パターン1: キーワード + 説明 + CTA
-    if (primaryKeyword) {
-      const pattern1 = `${primaryKeyword}について詳しく解説します。初心者でも分かりやすく、効果的な方法を具体的に紹介。今すぐ始められる実践的なガイドです。`;
-      if (pattern1.length >= 120 && pattern1.length <= 160) {
-        suggestions.push({
-          pattern: 'キーワード + 説明 + CTA',
-          description: pattern1,
-          length: pattern1.length,
-          features: ['主要キーワードを先頭配置', '具体的な説明', '行動喚起（CTA）']
-        });
-      }
-    }
-
-    // パターン2: 疑問形 + 解決策 + ベネフィット
-    if (primaryKeyword) {
-      const pattern2 = `${primaryKeyword}でお悩みではありませんか？この記事では、効果的な解決方法を詳しく解説。初心者でも簡単に実践できる具体的なステップをご紹介します。`;
-      if (pattern2.length >= 120 && pattern2.length <= 160) {
-        suggestions.push({
-          pattern: '疑問形 + 解決策 + ベネフィット',
-          description: pattern2,
-          length: pattern2.length,
-          features: ['疑問形で共感', '解決策提示', 'ベネフィット明示']
-        });
-      }
-    }
-
-    // パターン3: 数字 + キーワード + 詳細説明
-    if (primaryKeyword) {
-      const pattern3 = `【2024年最新】${primaryKeyword}の完全ガイド。5つのステップで効果的に実践する方法を詳しく解説。初心者から上級者まで、レベル別の具体的なアドバイスをお届けします。`;
-      if (pattern3.length >= 120 && pattern3.length <= 160) {
-        suggestions.push({
-          pattern: '数字 + キーワード + 詳細説明',
-          description: pattern3,
-          length: pattern3.length,
-          features: ['数字で信頼性', '主要キーワード配置', '詳細な説明']
-        });
-      }
-    }
-
-    // パターン4: 複数キーワード活用
-    if (keywords.length >= 2) {
-      const pattern4 = `${primaryKeyword}と${secondaryKeywords[0]}の関係性について詳しく解説。両方の効果的な活用方法から、組み合わせのコツまで、実践的なノウハウをお伝えします。`;
-      if (pattern4.length >= 120 && pattern4.length <= 160) {
-        suggestions.push({
-          pattern: '複数キーワード活用',
-          description: pattern4,
-          length: pattern4.length,
-          features: ['複数キーワード活用', '関係性説明', '実践的ノウハウ']
-        });
-      }
-    }
-
-    // パターン5: 現在のディスクリプションを改善
+    // 現在のディスクリプションを改善
     if (currentDescription && currentDescription.length > 0) {
       let improvedDescription = currentDescription;
       
@@ -900,11 +804,21 @@ class SEOChecker {
         improvedDescription = `${primaryKeyword}について。${currentDescription}`;
       }
       
-      // 長さ調整
-      if (improvedDescription.length < 120) {
+      // 長さ調整（より柔軟に）
+      if (improvedDescription.length < 100) {
         improvedDescription += ` 効果的な方法やコツを詳しく解説します。`;
-      } else if (improvedDescription.length > 160) {
-        improvedDescription = improvedDescription.substring(0, 157) + '...';
+      } else if (improvedDescription.length > 200) {
+        // 文の境界で切る
+        const sentences = improvedDescription.split(/[。！？]/);
+        let truncated = '';
+        for (const sentence of sentences) {
+          if ((truncated + sentence + '。').length <= 197) {
+            truncated += sentence + '。';
+          } else {
+            break;
+          }
+        }
+        improvedDescription = truncated || improvedDescription.substring(0, 197) + '...';
       }
       
       if (improvedDescription !== currentDescription) {
@@ -912,12 +826,12 @@ class SEOChecker {
           pattern: '現在のディスクリプション改善版',
           description: improvedDescription,
           length: improvedDescription.length,
-          features: ['現在の内容をベース', 'キーワード追加', '長さ調整']
+          features: ['現在の内容をベース', 'キーワード追加', '適切な長さ調整']
         });
       }
     }
 
-    return suggestions.slice(0, 5); // 最大5つの提案
+    return suggestions;
   }
 
   /**
