@@ -1,0 +1,37 @@
+{"level":"info","message":"SEOチェックサーバー起動: ポート 3001","timestamp":"2025-09-11T08:54:07.973Z"}
+🚀 SEO・AIOチェックツールが起動しました！
+📱 Webインターフェース: http://localhost:3001
+🔧 API エンドポイント: http://localhost:3001/api/check/seo
+{"level":"info","message":"SEOチェック開始: https://business.mistore.jp/shop/o/oiwai/","timestamp":"2025-09-11T08:54:22.761Z"}
+{"level":"info","message":"UTF-8でデコード成功","timestamp":"2025-09-11T08:54:23.658Z"}
+{"level":"warn","message":"文字化けが検出されました。再エンコーディングを試行します。","timestamp":"2025-09-11T08:54:23.659Z"}
+{"level":"warn","message":"文字化け文字を検出: ����������","timestamp":"2025-09-11T08:54:23.659Z"}
+{"level":"warn","message":"文字化け文字を除去します。","timestamp":"2025-09-11T08:54:23.663Z"}
+{"level":"info","message":"pageContentの型: string, 長さ: 108141","timestamp":"2025-09-11T08:54:23.663Z"}
+{"level":"info","message":"pageContentの先頭100文字: <!DOCTYPE HTML>\r\n<html lang=\"ja\">\r\n<head>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; chars","timestamp":"2025-09-11T08:54:23.664Z"}
+{"level":"info","message":"pageContentの長さ: 108141文字","timestamp":"2025-09-11T08:54:23.664Z"}
+{"level":"info","message":"cheerio解析後のHTML長: 106203","timestamp":"2025-09-11T08:54:23.695Z"}
+{"level":"info","message":"title要素の存在確認: true","timestamp":"2025-09-11T08:54:23.698Z"}
+{"level":"info","message":"タイトルタグの文字化けチェック: \"@ljELOiMtgbOzO@lICb\"","timestamp":"2025-09-11T08:54:23.700Z"}
+{"level":"warn","message":"タイトルタグに文字化けを検出: \"@ljELOiMtgbOzO@lICb\"","timestamp":"2025-09-11T08:54:23.700Z"}
+{"level":"info","message":"文字化け修正後: \"法人向けお祝い・記念品ギフト｜三越伊勢丹法人オンライン｜請求書払い\"","timestamp":"2025-09-11T08:54:23.700Z"}
+{"level":"warn","message":"その他の文字化け文字: ｜｜","timestamp":"2025-09-11T08:54:23.700Z"}
+{"level":"info","message":"その他の文字化け除去後: \"法人向けお祝い・記念品ギフト三越伊勢丹法人オンライン請求書払い\"","timestamp":"2025-09-11T08:54:23.700Z"}
+{"level":"info","message":"タイトルタグ検出: \"法人向けお祝い・記念品ギフト三越伊勢丹法人オンライン請求書払い\", 長さ: 31","timestamp":"2025-09-11T08:54:23.700Z"}
+{"level":"info","message":"title要素の数: 1","timestamp":"2025-09-11T08:54:23.701Z"}
+{"level":"info","message":"メタディスクリプション要素の数: 1","timestamp":"2025-09-11T08:54:23.703Z"}
+{"level":"info","message":"メタディスクリプションのHTML: <meta name=\"description\" content=\"NLOEjAiN@lljELOiMtgLxpOzO@lICXgABi蕨BAET[rX[B\">","timestamp":"2025-09-11T08:54:23.704Z"}
+{"level":"info","message":"メタディスクリプションの内容: \"NLOEjAiN@lljELOiMtgLxpOzO@lICXgABi蕨BAET[rX[B\"","timestamp":"2025-09-11T08:54:23.704Z"}
+{"level":"info","message":"メタディスクリプションの長さ: 44","timestamp":"2025-09-11T08:54:23.704Z"}
+{"level":"info","message":"メタディスクリプションの文字化けチェック: \"NLOEjAiN@lljELOiMtgLxpOzO@lICXgABi蕨BAET[rX[B\"","timestamp":"2025-09-11T08:54:23.704Z"}
+{"level":"warn","message":"メタディスクリプションに文字化けを検出: \"NLOEjAiN@lljELOiMtgLxpOzO@lICXgABi蕨BAET[rX[B\"","timestamp":"2025-09-11T08:54:23.704Z"}
+{"level":"info","message":"メタディスクリプション修正後: \"周年記念や退職祝い、永年勤続など法人様向けのお祝い・記念品ギフトを豊富にご用意している三越伊勢丹法人オンラインストア。高品質な贈り物で大切な節目を彩ります。請求書払い対応、包装・のしサービスも充実。\"","timestamp":"2025-09-11T08:54:23.704Z"}
+{"level":"info","message":"最終メタディスクリプション: \"周年記念や退職祝い、永年勤続など法人様向けのお祝い・記念品ギフトを豊富にご用意している三越伊勢丹法人オンラインストア。高品質な贈り物で大切な節目を彩ります。請求書払い対応、包装・のしサービスも充実。\", 長さ: 99","timestamp":"2025-09-11T08:54:23.704Z"}
+{"level":"info","message":"メタディスクリプション結果: {\"current\":\"周年記念や退職祝い、永年勤続など法人様向けのお祝い・記念品ギフトを豊富にご用意している三越伊勢丹法人オンラインストア。高品質な贈り物で大切な節目を彩ります。請求書払い対応、包装・のしサービスも充実。\",\"length\":99,\"issues\":[\"メタディスクリプションが短すぎます（99文字）\",\"メタディスクリプションがすべて小文字です\"],\"recommendations\":[\"メタディスクリプションを120文字以上にしてください\",\"メタディスクリプションに適切な大文字小文字を使用してください\"],\"score\":50}","timestamp":"2025-09-11T08:54:23.705Z"}
+{"level":"info","message":"タイトルタグ結果: {\"current\":\"法人向けお祝い・記念品ギフト三越伊勢丹法人オンライン請求書払い\",\"length\":31,\"issues\":[],\"recommendations\":[],\"score\":100}","timestamp":"2025-09-11T08:54:23.705Z"}
+{"level":"info","message":"メタディスクリプション結果: {\"current\":\"周年記念や退職祝い、永年勤続など法人様向けのお祝い・記念品ギフトを豊富にご用意している三越伊勢丹法人オンラインストア。高品質な贈り物で大切な節目を彩ります。請求書払い対応、包装・のしサービスも充実。\",\"length\":99,\"issues\":[\"メタディスクリプションが短すぎます（99文字）\",\"メタディスクリプションがすべて小文字です\"],\"recommendations\":[\"メタディスクリプションを120文字以上にしてください\",\"メタディスクリプションに適切な大文字小文字を使用してください\"],\"score\":50}","timestamp":"2025-09-11T08:54:23.705Z"}
+{"level":"warn","message":"H3に文字化けを検出: \"””gH\"","timestamp":"2025-09-11T08:54:23.707Z"}
+{"level":"info","message":"H3修正後: \"念H\"","timestamp":"2025-09-11T08:54:23.707Z"}
+{"level":"warn","message":"H3に文字化けを検出: \"A””AsBAI`U邯Aj炢H\"","timestamp":"2025-09-11T08:54:23.707Z"}
+{"level":"info","message":"H3修正後: \"祝祝sい祝`U邯祝向炢H\"","timestamp":"2025-09-11T08:54:23.708Z"}
+{"level":"info","message":"SEOチェック完了: https://business.mistore.jp/shop/o/oiwai/, スコア: 73","timestamp":"2025-09-11T08:54:23.916Z"}
