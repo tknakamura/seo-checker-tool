@@ -18,7 +18,7 @@ require('dotenv').config();
 
 // ログ設定
 const logger = winston.createLogger({
-  level: 'info',
+  level: 'error', // warnからerrorに変更してメモリ削減
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -66,6 +66,8 @@ class SEOChecker {
         waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
         enablePuppeteer: false, // Puppeteerを完全に無効化（Render制限対応）
         enableLighthouse: false, // Lighthouseを無効化（Render制限対応）
+        enableDetailedAnalysis: false, // 詳細分析を無効化（メモリ削減）
+        enableAIO: false, // AIOチェックを無効化（メモリ削減）
         puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
         seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
@@ -86,6 +88,8 @@ class SEOChecker {
         waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
         enablePuppeteer: false, // Puppeteerを完全に無効化（Render制限対応）
         enableLighthouse: false, // Lighthouseを無効化（Render制限対応）
+        enableDetailedAnalysis: false, // 詳細分析を無効化（メモリ削減）
+        enableAIO: false, // AIOチェックを無効化（メモリ削減）
         puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
         seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
@@ -460,21 +464,32 @@ class SEOChecker {
         recommendations: []
       };
 
-      // AIOチェックの実行
-      const aioResults = await this.aioChecker.checkAIO(results, url || '', $);
-      results.aio = aioResults;
+      // AIOチェックの実行（有効な場合のみ）
+      if (this.config.enableAIO) {
+        const aioResults = await this.aioChecker.checkAIO(results, url || '', $);
+        results.aio = aioResults;
+        results.aioOverallScore = aioResults.overallScore;
+        results.combinedScore = Math.round((results.overallScore + aioResults.overallScore) / 2);
+        results.aioRecommendations = aioResults.recommendations;
+      } else {
+        results.aio = { error: 'AIOチェックは無効化されています（メモリ削減対応）' };
+        results.aioOverallScore = 0;
+        results.combinedScore = results.overallScore;
+        results.aioRecommendations = [];
+      }
 
-      // 総合スコア計算（SEO + AIO）
+      // 総合スコア計算（SEO）
       results.overallScore = this.calculateOverallScore(results.checks);
-      results.aioOverallScore = aioResults.overallScore;
-      results.combinedScore = Math.round((results.overallScore + aioResults.overallScore) / 2);
       
       // 改善提案生成
       results.recommendations = this.generateRecommendations(results.checks);
-      results.aioRecommendations = aioResults.recommendations;
 
-      // 詳細分析の実行
-      results.detailedAnalysis = this.detailedAnalyzer.analyzeDetails($, url || '');
+      // 詳細分析の実行（有効な場合のみ）
+      if (this.config.enableDetailedAnalysis) {
+        results.detailedAnalysis = this.detailedAnalyzer.analyzeDetails($, url || '');
+      } else {
+        results.detailedAnalysis = { error: '詳細分析は無効化されています（メモリ削減対応）' };
+      }
 
       // パフォーマンスチェックの実行（URLが提供され、Lighthouseが有効な場合のみ）
       if (url && url !== 'HTMLコンテンツ' && this.config.enableLighthouse) {
@@ -494,11 +509,14 @@ class SEOChecker {
         };
       }
 
-      // 詳細レポート生成
-      results.detailedReport = this.enhancedReporter.generateDetailedReport(results);
-      
-      // 簡潔な推奨アクション生成
-      results.conciseRecommendations = this.enhancedReporter.generateConciseRecommendations(results);
+      // 詳細レポート生成（有効な場合のみ）
+      if (this.config.enableDetailedAnalysis) {
+        results.detailedReport = this.enhancedReporter.generateDetailedReport(results);
+        results.conciseRecommendations = this.enhancedReporter.generateConciseRecommendations(results);
+      } else {
+        results.detailedReport = { error: '詳細レポートは無効化されています（メモリ削減対応）' };
+        results.conciseRecommendations = [];
+      }
 
       // データベースに履歴を保存
       try {
@@ -2239,13 +2257,13 @@ app.use((req, res, next) => {
   const memUsage = process.memoryUsage();
   const memUsageMB = Math.round(memUsage.heapUsed / 1024 / 1024);
   
-  // Renderの制限に合わせて警告レベルを下げる
-  if (memUsageMB > 100) {
+  // Renderの制限に合わせて警告レベルをさらに下げる
+  if (memUsageMB > 50) {
     logger.warn(`メモリ使用量が高いです: ${memUsageMB}MB`);
   }
   
-  // Renderの制限に合わせてメモリ制限を厳しく設定
-  if (memUsageMB > 200) {
+  // Renderの制限に合わせてメモリ制限をさらに厳しく設定
+  if (memUsageMB > 100) {
     logger.error(`メモリ使用量が上限を超えました: ${memUsageMB}MB`);
     return res.status(503).json({
       success: false,
@@ -2768,12 +2786,10 @@ app.post('/api/check/seo/advanced', async (req, res) => {
 
 // SEOチェックエンドポイント（標準版）
 app.post('/api/check/seo', async (req, res) => {
-  const requestId = Math.random().toString(36).substr(2, 9);
-  logger.info(`[${requestId}] SEOチェックリクエスト受信開始`);
-  
-  try {
-    const { url, html, keywords, waitForJS = false } = req.body;
-    logger.info(`[${requestId}] リクエストパラメータ: url=${url}, html=${html ? 'あり' : 'なし'}, keywords=${keywords?.length || 0}, waitForJS=${waitForJS}`);
+    // ログ出力を削減（メモリ削減対応）
+    
+    try {
+      const { url, html, keywords, waitForJS = false } = req.body;
     
     if (!url && !html) {
       return res.status(400).json({
@@ -2790,18 +2806,14 @@ app.post('/api/check/seo', async (req, res) => {
     }
 
     const checker = new SEOChecker();
-    logger.info(`[${requestId}] SEOチェック開始`);
     const results = await checker.checkSEO(url, html, keywords, waitForJS);
-    logger.info(`[${requestId}] SEOチェック完了`);
     
     res.json({
       success: true,
       data: results
     });
-    logger.info(`[${requestId}] レスポンス送信完了`);
   } catch (error) {
-    logger.error(`[${requestId}] API エラー: ${error.message}`);
-    logger.error(`[${requestId}] エラースタック: ${error.stack}`);
+    logger.error(`API エラー: ${error.message}`);
     
     // エラーの種類に応じて適切なHTTPステータスコードを返す
     let statusCode = 500;
