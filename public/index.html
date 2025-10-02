@@ -83,6 +83,30 @@
             resize: vertical;
         }
 
+        .form-text {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .checkbox-label {
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
         .button-group {
             display: flex;
             gap: 1rem;
@@ -551,6 +575,20 @@
                     <textarea id="html" name="html" placeholder="HTMLコンテンツを直接貼り付ける場合はこちらに記入してください"></textarea>
                 </div>
 
+                <div class="form-group">
+                    <label for="waitForJS">JavaScript描画待機</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="waitForJS" name="waitForJS">
+                        <label for="waitForJS" class="checkbox-label">
+                            JavaScriptで動的に生成されるコンテンツを待機する
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        SPAや動的コンテンツサイトの場合、このオプションを有効にすることでメタディスクリプションやH1要素を確実に読み込めます。<br>
+                        <strong>注意:</strong> このオプションは処理時間が長くなり、サーバーリソースを多く使用します。必要に応じてのみ有効にしてください。
+                    </small>
+                </div>
+
                 <div class="button-group">
                     <button type="submit" class="btn btn-primary" id="checkBtn">
                         SEOチェック実行
@@ -602,6 +640,47 @@
                 </div>
             </div>
     <script>
+        // Chrome拡張機能のエラーを抑制
+        window.addEventListener('error', function(e) {
+            if (e.message && (
+                e.message.includes('extension') || 
+                e.message.includes('runtime.lastError') ||
+                e.message.includes('message channel') ||
+                e.message.includes('back/forward cache')
+            )) {
+                e.preventDefault();
+                console.warn('Chrome拡張機能のエラーを抑制しました:', e.message);
+                return false;
+            }
+        });
+
+        // 未処理のPromise拒否をキャッチ
+        window.addEventListener('unhandledrejection', function(e) {
+            if (e.reason && e.reason.message && (
+                e.reason.message.includes('extension') ||
+                e.reason.message.includes('runtime.lastError') ||
+                e.reason.message.includes('message channel') ||
+                e.reason.message.includes('back/forward cache')
+            )) {
+                e.preventDefault();
+                console.warn('Chrome拡張機能のPromise拒否を抑制しました:', e.reason.message);
+                return false;
+            }
+        });
+
+        // コンソールエラーをフィルタリング
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('extension') || 
+                message.includes('runtime.lastError') ||
+                message.includes('message channel')) {
+                console.warn('Chrome拡張機能のエラーを抑制しました:', message);
+                return;
+            }
+            originalConsoleError.apply(console, args);
+        };
+
         document.getElementById('seoCheckForm').addEventListener('submit', function(e) {
                     e.preventDefault();
             runSEOCheck();
@@ -695,7 +774,8 @@
                             },
                         body: JSON.stringify({
                             urls: urlList,
-                            keywords: keywordList
+                            keywords: keywordList,
+                            waitForJS: document.getElementById('waitForJS').checked
                         })
                         });
                     } else {
@@ -708,7 +788,8 @@
                         body: JSON.stringify({
                             url: url || null,
                             html: html || null,
-                            keywords: keywordList
+                            keywords: keywordList,
+                            waitForJS: document.getElementById('waitForJS').checked
                         })
                     });
                 }
@@ -716,12 +797,34 @@
                 data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || 'チェック中にエラーが発生しました。');
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+                    
+                    if (response.status === 502) {
+                        throw new Error(`ページの取得に失敗しました。JavaScript描画待機を無効にして再試行してください。\n\n解決方法:\n1. 「JavaScript描画待機」のチェックを外す\n2. 再度チェックを実行する`);
+                    } else if (response.status === 408) {
+                        throw new Error(`リクエストがタイムアウトしました。ページの読み込みに時間がかかりすぎています。`);
+                    } else if (response.status === 503) {
+                        throw new Error(`ネットワークエラーが発生しました。しばらく時間をおいて再試行してください。`);
+                    } else {
+                        throw new Error(errorMessage);
+                    }
                 }
 
                 displayResults(data);
                 } catch (error) {
                 console.error('Error:', error);
+                
+                // デバッグ情報を追加
+                const debugInfo = {
+                    error: error.message,
+                    stack: error.stack,
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    url: window.location.href
+                };
+                console.log('Debug Info:', debugInfo);
+                
                 document.getElementById('resultsContent').innerHTML = `
                     <div class="error">
                         <h3>エラーが発生しました</h3>

@@ -61,7 +61,11 @@ class SEOChecker {
         h3MinCount: 3,
         imageAltRequired: true,
         internalLinksMin: 10,
-        structuredDataRequired: true
+        structuredDataRequired: true,
+        // JavaScript描画待機設定
+        waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
+        puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
+        seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
     } catch (error) {
       logger.warn('設定ファイルの読み込みに失敗、デフォルト設定を使用');
@@ -75,8 +79,307 @@ class SEOChecker {
         h3MinCount: 3,
         imageAltRequired: true,
         internalLinksMin: 10,
-        structuredDataRequired: true
+        structuredDataRequired: true,
+        // JavaScript描画待機設定
+        waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
+        puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
+        seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
+    }
+  }
+
+  /**
+   * Puppeteerを使用してページを取得（JavaScript描画待機付き）
+   * @param {string} url - 取得対象のURL
+   * @returns {string} ページのHTMLコンテンツ
+   */
+  async fetchPageWithPuppeteer(url) {
+    let browser = null;
+    try {
+      logger.info(`Puppeteerでページ取得開始: ${url}`);
+      
+      // ブラウザを起動（Chrome拡張機能との競合を避ける設定）
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--disable-extensions',
+          '--disable-plugins',
+          '--disable-images',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-back-forward-cache',
+          '--disable-ipc-flooding-protection',
+          '--memory-pressure-off',
+          '--max_old_space_size=4096',
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--disable-translate',
+          '--hide-scrollbars',
+          '--mute-audio'
+        ],
+        timeout: 60000
+      });
+
+      const page = await browser.newPage();
+      
+      // User-Agentを設定
+      await page.setUserAgent('Mozilla/5.0 (compatible; SEO-Checker/1.0)');
+      
+      // ビューポートを設定
+      await page.setViewport({ width: 1920, height: 1080 });
+      
+      // Chrome拡張機能との競合を避ける設定
+      await page.evaluateOnNewDocument(() => {
+        // Chrome拡張機能のAPIを無効化
+        if (window.chrome && window.chrome.runtime) {
+          window.chrome.runtime = undefined;
+        }
+        // メッセージチャンネルを無効化
+        if (window.chrome && window.chrome.tabs) {
+          window.chrome.tabs = undefined;
+        }
+      });
+      
+      // 不要なリソースをブロック
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        const resourceType = req.resourceType();
+        if (resourceType === 'image' || resourceType === 'media' || resourceType === 'font') {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
+      
+      // ページに移動
+      await page.goto(url, { 
+        waitUntil: 'networkidle0', // ネットワークが完全にアイドルになるまで待機
+        timeout: this.config.puppeteerTimeout 
+      });
+      
+      // 追加の待機：DOMContentLoadedイベントを待機
+      await page.waitForFunction(() => {
+        return document.readyState === 'complete';
+      }, { timeout: 10000 });
+      
+      // SEO要素が確実に読み込まれるまで待機
+      await this.waitForSEOElements(page);
+      
+      // HTMLコンテンツを取得
+      const htmlContent = await page.content();
+      
+      logger.info(`Puppeteerでページ取得完了: ${url}, HTML長: ${htmlContent.length}`);
+      
+      return htmlContent;
+      
+    } catch (error) {
+      logger.error(`Puppeteerでのページ取得エラー: ${error.message}`);
+      logger.warn('Puppeteerでの取得に失敗、Axiosでの取得にフォールバックします');
+      
+      // Puppeteerが失敗した場合はAxiosにフォールバック
+      try {
+        return await this.fetchPageWithAxios(url);
+      } catch (fallbackError) {
+        logger.error(`フォールバック（Axios）でもエラー: ${fallbackError.message}`);
+        throw new Error(`ページ取得に失敗しました。Puppeteer: ${error.message}, Axios: ${fallbackError.message}`);
+      }
+    } finally {
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeError) {
+          logger.warn(`ブラウザのクローズでエラー: ${closeError.message}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * SEO要素が確実に読み込まれるまで待機
+   * @param {Object} page - Puppeteerのページオブジェクト
+   */
+  async waitForSEOElements(page) {
+    try {
+      // タイトルタグの存在を確認
+      await page.waitForSelector('title', { timeout: this.config.seoElementWaitTimeout });
+      
+      // メタディスクリプションの存在を確認（存在しない場合もあるので、タイムアウトは短め）
+      try {
+        await page.waitForSelector('meta[name="description"]', { timeout: 3000 });
+      } catch (e) {
+        logger.info('メタディスクリプションが見つかりません（これは正常な場合があります）');
+      }
+      
+      // H1要素の存在を確認（存在しない場合もあるので、タイムアウトは短め）
+      try {
+        await page.waitForSelector('h1', { timeout: 3000 });
+      } catch (e) {
+        logger.info('H1要素が見つかりません（これは正常な場合があります）');
+      }
+      
+      // 追加の待機時間（JavaScriptによる動的コンテンツ生成を考慮）
+      await page.waitForTimeout(2000);
+      
+      logger.info('SEO要素の読み込み待機完了');
+      
+    } catch (error) {
+      logger.warn(`SEO要素の読み込み待機でエラー: ${error.message}`);
+      // エラーが発生しても処理を続行
+    }
+  }
+
+  /**
+   * Axiosを使用してページを取得（従来の方式）
+   * @param {string} url - 取得対象のURL
+   * @returns {string} ページのHTMLコンテンツ
+   */
+  async fetchPageWithAxios(url) {
+    try {
+      logger.info(`Axiosでページ取得開始: ${url}`);
+      
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; SEO-Checker/1.0)'
+        },
+        responseType: 'arraybuffer'
+      });
+      
+      // 文字エンコーディングを検出して正しくデコード
+      const htmlBuffer = Buffer.from(response.data);
+      let detectedEncoding = 'utf-8';
+      
+      // Content-Typeヘッダーから文字エンコーディングを取得
+      const contentType = response.headers['content-type'] || '';
+      logger.info(`Content-Type: ${contentType}`);
+      
+      if (contentType.includes('charset=')) {
+        const charsetMatch = contentType.match(/charset=([^;]+)/i);
+        if (charsetMatch) {
+          detectedEncoding = charsetMatch[1].toLowerCase().replace(/['"]/g, '');
+          logger.info(`Content-Typeから検出されたエンコーディング: ${detectedEncoding}`);
+        }
+      }
+      
+      // HTMLのmetaタグから文字エンコーディングを検出
+      if (detectedEncoding === 'utf-8') {
+        try {
+          const tempContent = htmlBuffer.toString('utf-8');
+          const charsetMatch = tempContent.match(/<meta[^>]+charset=["']?([^"'>\s]+)["']?/i);
+          if (charsetMatch) {
+            const metaEncoding = charsetMatch[1].toLowerCase();
+            if (metaEncoding.includes('shift') || metaEncoding.includes('sjis')) {
+              detectedEncoding = 'shift_jis';
+            } else if (metaEncoding.includes('euc')) {
+              detectedEncoding = 'euc-jp';
+            } else if (metaEncoding.includes('iso-2022')) {
+              detectedEncoding = 'iso-2022-jp';
+            } else if (metaEncoding.includes('utf-8')) {
+              detectedEncoding = 'utf-8';
+            }
+            logger.info(`metaタグから検出されたエンコーディング: ${detectedEncoding}`);
+          }
+        } catch (e) {
+          logger.warn('metaタグからのエンコーディング検出に失敗');
+        }
+      }
+      
+      // 検出されたエンコーディングでデコードを試行
+      let pageContent = '';
+      try {
+        pageContent = iconv.decode(htmlBuffer, detectedEncoding);
+        logger.info(`${detectedEncoding}でデコード成功`);
+        
+        // デコード結果の品質チェック
+        const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(pageContent);
+        const hasGarbledChars = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\u3000-\u303F]/.test(pageContent);
+        
+        if (!hasJapanese || hasGarbledChars) {
+          logger.warn(`${detectedEncoding}でのデコード結果が不適切、他のエンコーディングを試行`);
+          
+          // 他のエンコーディングを試行
+          const encodings = ['utf-8', 'shift_jis', 'euc-jp', 'iso-2022-jp'];
+          for (const enc of encodings) {
+            if (enc === detectedEncoding) continue;
+            
+            try {
+              const testContent = iconv.decode(htmlBuffer, enc);
+              const testHasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(testContent);
+              const testHasGarbledChars = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\u3000-\u303F]/.test(testContent);
+              
+              if (testHasJapanese && !testHasGarbledChars) {
+                pageContent = testContent;
+                detectedEncoding = enc;
+                logger.info(`代替エンコーディング ${enc} でデコード成功`);
+                break;
+              }
+            } catch (error) {
+              continue;
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn(`${detectedEncoding}でのデコードに失敗: ${error.message}`);
+        
+        // UTF-8でフォールバック
+        try {
+          pageContent = htmlBuffer.toString('utf-8');
+          logger.info('UTF-8でフォールバック成功');
+        } catch (fallbackError) {
+          pageContent = htmlBuffer.toString('utf-8', 0, htmlBuffer.length);
+          logger.warn('UTF-8フォールバックでも失敗、強制的にUTF-8でデコード');
+        }
+      }
+      
+      // 文字化けチェックと修正
+      if (pageContent && (pageContent.includes('') || /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(pageContent))) {
+        logger.warn('文字化けが検出されました。再エンコーディングを試行します。');
+        
+        // より詳細な文字化け検出
+        const garbledChars = pageContent.match(/[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/g);
+        if (garbledChars) {
+          logger.warn(`文字化け文字を検出: ${garbledChars.slice(0, 10).join('')}`);
+        }
+        
+        // 別のエンコーディングで再試行
+        for (const enc of ['shift_jis', 'euc-jp', 'iso-2022-jp', 'utf-8']) {
+          try {
+            const retryContent = iconv.decode(htmlBuffer, enc);
+            const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(retryContent);
+            const hasGarbled = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(retryContent);
+            
+            if (hasJapanese && !hasGarbled) {
+              pageContent = retryContent;
+              logger.info(`文字化け修正成功: ${enc}`);
+              break;
+            }
+          } catch (error) {
+            continue;
+          }
+        }
+        
+        // それでも文字化けが残る場合は、文字化け文字を除去
+        if (pageContent && /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(pageContent)) {
+          logger.warn('文字化け文字を除去します。');
+          pageContent = pageContent.replace(/[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/g, '');
+        }
+      }
+      
+      logger.info(`Axiosでページ取得完了: ${url}, HTML長: ${pageContent.length}`);
+      return pageContent;
+      
+    } catch (error) {
+      logger.error(`Axiosでのページ取得エラー: ${error.message}`);
+      throw error;
     }
   }
 
@@ -84,144 +387,28 @@ class SEOChecker {
    * メインのSEOチェック実行
    * @param {string} url - チェック対象のURL
    * @param {string} html - オプションのHTMLコンテンツ
+   * @param {boolean} waitForJS - JavaScript描画待機の有効/無効
    * @returns {Object} SEOチェック結果
    */
-  async checkSEO(url, html = null, keywords = []) {
+  async checkSEO(url, html = null, keywords = [], waitForJS = false) {
     try {
       logger.info(`SEOチェック開始: ${url || 'HTMLコンテンツ'}`);
       logger.info(`対象キーワード: ${keywords.join(', ')}`);
+      logger.info(`JavaScript描画待機: ${waitForJS ? '有効' : '無効'}`);
       
       let pageContent = '';
       if (html) {
         pageContent = html;
       } else {
-        const response = await axios.get(url, {
-          timeout: 10000,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SEO-Checker/1.0)'
-          },
-          responseType: 'arraybuffer'
-        });
-        
-        // 文字エンコーディングを検出して正しくデコード
-        const htmlBuffer = Buffer.from(response.data);
-        let detectedEncoding = 'utf-8';
-        
-        // Content-Typeヘッダーから文字エンコーディングを取得
-        const contentType = response.headers['content-type'] || '';
-        logger.info(`Content-Type: ${contentType}`);
-        
-        if (contentType.includes('charset=')) {
-          const charsetMatch = contentType.match(/charset=([^;]+)/i);
-          if (charsetMatch) {
-            detectedEncoding = charsetMatch[1].toLowerCase().replace(/['"]/g, '');
-            logger.info(`Content-Typeから検出されたエンコーディング: ${detectedEncoding}`);
-          }
+        // JavaScript描画待機が有効な場合はPuppeteerを使用
+        if (waitForJS && this.config.waitForJS && url) {
+          pageContent = await this.fetchPageWithPuppeteer(url);
+        } else {
+          // 従来のaxios方式
+          pageContent = await this.fetchPageWithAxios(url);
         }
-        
-        // HTMLのmetaタグから文字エンコーディングを検出
-        if (detectedEncoding === 'utf-8') {
-          try {
-            const tempContent = htmlBuffer.toString('utf-8');
-            const charsetMatch = tempContent.match(/<meta[^>]+charset=["']?([^"'>\s]+)["']?/i);
-            if (charsetMatch) {
-              const metaEncoding = charsetMatch[1].toLowerCase();
-              if (metaEncoding.includes('shift') || metaEncoding.includes('sjis')) {
-                detectedEncoding = 'shift_jis';
-              } else if (metaEncoding.includes('euc')) {
-                detectedEncoding = 'euc-jp';
-              } else if (metaEncoding.includes('iso-2022')) {
-                detectedEncoding = 'iso-2022-jp';
-              } else if (metaEncoding.includes('utf-8')) {
-                detectedEncoding = 'utf-8';
-              }
-              logger.info(`metaタグから検出されたエンコーディング: ${detectedEncoding}`);
-            }
-          } catch (e) {
-            logger.warn('metaタグからのエンコーディング検出に失敗');
-          }
-        }
-        
-        // 検出されたエンコーディングでデコードを試行
-        try {
-          pageContent = iconv.decode(htmlBuffer, detectedEncoding);
-          logger.info(`${detectedEncoding}でデコード成功`);
-          
-          // デコード結果の品質チェック
-          const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(pageContent);
-          const hasGarbledChars = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\u3000-\u303F]/.test(pageContent);
-          
-          if (!hasJapanese || hasGarbledChars) {
-            logger.warn(`${detectedEncoding}でのデコード結果が不適切、他のエンコーディングを試行`);
-            
-            // 他のエンコーディングを試行
-            const encodings = ['utf-8', 'shift_jis', 'euc-jp', 'iso-2022-jp'];
-            for (const enc of encodings) {
-              if (enc === detectedEncoding) continue;
-              
-              try {
-                const testContent = iconv.decode(htmlBuffer, enc);
-                const testHasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(testContent);
-                const testHasGarbledChars = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\u3000-\u303F]/.test(testContent);
-                
-                if (testHasJapanese && !testHasGarbledChars) {
-                  pageContent = testContent;
-                  detectedEncoding = enc;
-                  logger.info(`代替エンコーディング ${enc} でデコード成功`);
-                  break;
-                }
-              } catch (error) {
-                continue;
-              }
-            }
-          }
-        } catch (error) {
-          logger.warn(`${detectedEncoding}でのデコードに失敗: ${error.message}`);
-          
-          // UTF-8でフォールバック
-          try {
-            pageContent = htmlBuffer.toString('utf-8');
-            logger.info('UTF-8でフォールバック成功');
-          } catch (fallbackError) {
-            pageContent = htmlBuffer.toString('utf-8', 0, htmlBuffer.length);
-            logger.warn('UTF-8フォールバックでも失敗、強制的にUTF-8でデコード');
-          }
-        }
-        
-        // 文字化けチェックと修正
-        if (pageContent && (pageContent.includes('') || /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(pageContent))) {
-          logger.warn('文字化けが検出されました。再エンコーディングを試行します。');
-          
-          // より詳細な文字化け検出
-          const garbledChars = pageContent.match(/[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/g);
-          if (garbledChars) {
-            logger.warn(`文字化け文字を検出: ${garbledChars.slice(0, 10).join('')}`);
-          }
-          
-          // 別のエンコーディングで再試行
-          for (const enc of ['shift_jis', 'euc-jp', 'iso-2022-jp', 'utf-8']) {
-            try {
-              const retryContent = iconv.decode(htmlBuffer, enc);
-              const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(retryContent);
-              const hasGarbled = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(retryContent);
-              
-              if (hasJapanese && !hasGarbled) {
-                pageContent = retryContent;
-                logger.info(`文字化け修正成功: ${enc}`);
-                break;
-              }
-            } catch (error) {
-              continue;
-            }
-          }
-          
-          // それでも文字化けが残る場合は、文字化け文字を除去
-          if (pageContent && /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(pageContent)) {
-            logger.warn('文字化け文字を除去します。');
-            pageContent = pageContent.replace(/[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/g, '');
-          }
-        }
-        
+      }
+      
       // デバッグログ
       logger.info(`pageContentの型: ${typeof pageContent}, 長さ: ${pageContent ? pageContent.length : 'undefined'}`);
       logger.info(`pageContentの先頭100文字: ${pageContent ? pageContent.substring(0, 100) : 'undefined'}`);
@@ -230,7 +417,6 @@ class SEOChecker {
       if (typeof pageContent !== 'string') {
         pageContent = String(pageContent);
         logger.warn('pageContentを文字列に変換しました');
-      }
       }
 
       // pageContentが文字列でない場合はエラー
@@ -2036,6 +2222,14 @@ class SEOChecker {
 const app = express();
 const port = process.env.PORT || 3001;
 
+// サーバータイムアウト設定（Puppeteer対応）
+app.use((req, res, next) => {
+  // リクエストタイムアウトを2分に設定
+  req.setTimeout(120000);
+  res.setTimeout(120000);
+  next();
+});
+
 // CORS設定
 const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? ['https://seo-checker-tool.onrender.com', 'https://www.seo-checker-tool.onrender.com']
@@ -2424,10 +2618,10 @@ app.get('/', (req, res) => {
   }
 });
 
-// SEOチェックエンドポイント
-app.post('/api/check/seo', async (req, res) => {
+// SEOチェックエンドポイント（シンプル版）
+app.post('/api/check/seo/simple', async (req, res) => {
   try {
-    const { url, html, keywords } = req.body;
+    const { url, html, keywords, waitForJS = false } = req.body;
     
     if (!url && !html) {
       return res.status(400).json({
@@ -2444,7 +2638,119 @@ app.post('/api/check/seo', async (req, res) => {
     }
 
     const checker = new SEOChecker();
-    const results = await checker.checkSEO(url, html, keywords);
+    const results = await checker.checkSEO(url, html, keywords, waitForJS);
+    
+    res.json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    logger.error(`API エラー (simple): ${error.message}`);
+    logger.error(`エラースタック: ${error.stack}`);
+    
+    let statusCode = 500;
+    let errorMessage = error.message;
+    
+    if (error.message.includes('タイムアウト')) {
+      statusCode = 408;
+      errorMessage = 'リクエストがタイムアウトしました。ページの読み込みに時間がかかりすぎています。';
+    } else if (error.message.includes('ネットワーク') || error.message.includes('接続')) {
+      statusCode = 503;
+      errorMessage = 'ネットワークエラーが発生しました。しばらく時間をおいて再試行してください。';
+    } else if (error.message.includes('Puppeteer') || error.message.includes('ブラウザ')) {
+      statusCode = 502;
+      errorMessage = 'ページの取得に失敗しました。JavaScript描画待機を無効にして再試行してください。';
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// SEOチェックエンドポイント（詳細版）
+app.post('/api/check/seo/advanced', async (req, res) => {
+  try {
+    const { url, html, keywords, waitForJS = false } = req.body;
+    
+    if (!url && !html) {
+      return res.status(400).json({
+        success: false,
+        error: 'URLまたはHTMLが必要です'
+      });
+    }
+
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '重要なキーワードが必要です'
+      });
+    }
+
+    const checker = new SEOChecker();
+    const results = await checker.checkSEO(url, html, keywords, waitForJS);
+    
+    // 詳細版では追加の分析も含める
+    results.advancedAnalysis = {
+      timestamp: new Date().toISOString(),
+      processingTime: Date.now() - new Date(results.timestamp).getTime(),
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.connection.remoteAddress
+    };
+    
+    res.json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    logger.error(`API エラー (advanced): ${error.message}`);
+    logger.error(`エラースタック: ${error.stack}`);
+    
+    let statusCode = 500;
+    let errorMessage = error.message;
+    
+    if (error.message.includes('タイムアウト')) {
+      statusCode = 408;
+      errorMessage = 'リクエストがタイムアウトしました。ページの読み込みに時間がかかりすぎています。';
+    } else if (error.message.includes('ネットワーク') || error.message.includes('接続')) {
+      statusCode = 503;
+      errorMessage = 'ネットワークエラーが発生しました。しばらく時間をおいて再試行してください。';
+    } else if (error.message.includes('Puppeteer') || error.message.includes('ブラウザ')) {
+      statusCode = 502;
+      errorMessage = 'ページの取得に失敗しました。JavaScript描画待機を無効にして再試行してください。';
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// SEOチェックエンドポイント（標準版）
+app.post('/api/check/seo', async (req, res) => {
+  try {
+    const { url, html, keywords, waitForJS = false } = req.body;
+    
+    if (!url && !html) {
+      return res.status(400).json({
+        success: false,
+        error: 'URLまたはHTMLが必要です'
+      });
+    }
+
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '重要なキーワードが必要です'
+      });
+    }
+
+    const checker = new SEOChecker();
+    const results = await checker.checkSEO(url, html, keywords, waitForJS);
     
     res.json({
       success: true,
@@ -2452,9 +2758,27 @@ app.post('/api/check/seo', async (req, res) => {
     });
   } catch (error) {
     logger.error(`API エラー: ${error.message}`);
-    res.status(500).json({
+    logger.error(`エラースタック: ${error.stack}`);
+    
+    // エラーの種類に応じて適切なHTTPステータスコードを返す
+    let statusCode = 500;
+    let errorMessage = error.message;
+    
+    if (error.message.includes('タイムアウト')) {
+      statusCode = 408; // Request Timeout
+      errorMessage = 'リクエストがタイムアウトしました。ページの読み込みに時間がかかりすぎています。';
+    } else if (error.message.includes('ネットワーク') || error.message.includes('接続')) {
+      statusCode = 503; // Service Unavailable
+      errorMessage = 'ネットワークエラーが発生しました。しばらく時間をおいて再試行してください。';
+    } else if (error.message.includes('Puppeteer') || error.message.includes('ブラウザ')) {
+      statusCode = 502; // Bad Gateway
+      errorMessage = 'ページの取得に失敗しました。JavaScript描画待機を無効にして再試行してください。';
+    }
+    
+    res.status(statusCode).json({
       success: false,
-      error: error.message
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -2557,7 +2881,7 @@ app.post('/api/check/performance', async (req, res) => {
 // バッチチェックエンドポイント
 app.post('/api/check/batch', async (req, res) => {
   try {
-    const { urls, options, keywords } = req.body;
+    const { urls, options, keywords, waitForJS = false } = req.body;
     
     if (!urls || !Array.isArray(urls) || urls.length === 0) {
       return res.status(400).json({
@@ -2581,7 +2905,7 @@ app.post('/api/check/batch', async (req, res) => {
     }
 
     const batchChecker = new BatchChecker();
-    const results = await batchChecker.checkBatch(urls, options, keywords);
+    const results = await batchChecker.checkBatch(urls, options, keywords, waitForJS);
     const report = batchChecker.generateBatchReport(results);
     
     res.json({

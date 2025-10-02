@@ -6,8 +6,8 @@ const SEOChecker = require('./index');
 
 class BatchChecker {
   constructor() {
-    this.maxConcurrent = 3; // 同時実行数の制限
-    this.timeout = 30000; // 30秒のタイムアウト
+    this.maxConcurrent = 2; // 同時実行数を2に削減（リソース節約）
+    this.timeout = 90000; // 90秒のタイムアウト（Puppeteer対応）
   }
 
   /**
@@ -15,9 +15,10 @@ class BatchChecker {
    * @param {Array} urls - チェック対象のURL配列
    * @param {Object} options - チェックオプション
    * @param {Array} keywords - 重要なキーワード配列
+   * @param {boolean} waitForJS - JavaScript描画待機の有効/無効
    * @returns {Object} バッチチェック結果
    */
-  async checkBatch(urls, options = {}, keywords = []) {
+  async checkBatch(urls, options = {}, keywords = [], waitForJS = false) {
     const startTime = Date.now();
     const results = {
       timestamp: new Date().toISOString(),
@@ -40,7 +41,7 @@ class BatchChecker {
         const batch = batches[i];
         console.log(`バッチ ${i + 1}/${batches.length} 処理中 (${batch.length}件)`);
         
-        const batchPromises = batch.map(url => this.checkSingleUrl(url, options, keywords));
+        const batchPromises = batch.map(url => this.checkSingleUrl(url, options, keywords, waitForJS));
         const batchResults = await Promise.allSettled(batchPromises);
         
         batchResults.forEach((result, index) => {
@@ -87,14 +88,16 @@ class BatchChecker {
    * 単一URLのチェック
    * @param {string} url - チェック対象URL
    * @param {Object} options - チェックオプション
+   * @param {Array} keywords - 重要なキーワード配列
+   * @param {boolean} waitForJS - JavaScript描画待機の有効/無効
    * @returns {Object} チェック結果
    */
-  async checkSingleUrl(url, options = {}, keywords = []) {
+  async checkSingleUrl(url, options = {}, keywords = [], waitForJS = false) {
     const checker = new SEOChecker();
     
     try {
       const result = await Promise.race([
-        checker.checkSEO(url, null, keywords),
+        checker.checkSEO(url, null, keywords, waitForJS),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('タイムアウト')), this.timeout)
         )
