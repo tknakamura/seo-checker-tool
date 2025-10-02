@@ -53,6 +53,10 @@
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
+  "render": {
+    "startCommand": "node index.js",
+    "healthCheckPath": "/health"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/mercari/mercari-seo-checker-tool.git"

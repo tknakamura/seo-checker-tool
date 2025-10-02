@@ -64,7 +64,8 @@ class SEOChecker {
         structuredDataRequired: true,
         // JavaScript描画待機設定
         waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
-        enablePuppeteer: false, // Puppeteerを完全に無効化（安定性重視）
+        enablePuppeteer: false, // Puppeteerを完全に無効化（Render制限対応）
+        enableLighthouse: false, // Lighthouseを無効化（Render制限対応）
         puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
         seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
@@ -83,7 +84,8 @@ class SEOChecker {
         structuredDataRequired: true,
         // JavaScript描画待機設定
         waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
-        enablePuppeteer: false, // Puppeteerを完全に無効化（安定性重視）
+        enablePuppeteer: false, // Puppeteerを完全に無効化（Render制限対応）
+        enableLighthouse: false, // Lighthouseを無効化（Render制限対応）
         puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
         seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
@@ -474,8 +476,8 @@ class SEOChecker {
       // 詳細分析の実行
       results.detailedAnalysis = this.detailedAnalyzer.analyzeDetails($, url || '');
 
-      // パフォーマンスチェックの実行（URLが提供されている場合のみ）
-      if (url && url !== 'HTMLコンテンツ') {
+      // パフォーマンスチェックの実行（URLが提供され、Lighthouseが有効な場合のみ）
+      if (url && url !== 'HTMLコンテンツ' && this.config.enableLighthouse) {
         try {
           results.performance = await this.performanceChecker.checkPerformance(url);
           logger.info(`パフォーマンスチェック完了: ${url}`);
@@ -488,7 +490,7 @@ class SEOChecker {
         }
       } else {
         results.performance = {
-          error: 'URLが提供されていないため、パフォーマンスチェックをスキップしました'
+          error: this.config.enableLighthouse ? 'URLが提供されていないため、パフォーマンスチェックをスキップしました' : 'パフォーマンスチェックは無効化されています（Render制限対応）'
         };
       }
 
@@ -2224,11 +2226,11 @@ class SEOChecker {
 const app = express();
 const port = process.env.PORT || 3001;
 
-// サーバータイムアウト設定（Puppeteer対応）
+// サーバータイムアウト設定（Render対応）
 app.use((req, res, next) => {
-  // リクエストタイムアウトを3分に設定（より長く）
-  req.setTimeout(180000);
-  res.setTimeout(180000);
+  // Renderの制限に合わせてタイムアウトを短縮
+  req.setTimeout(30000); // 30秒
+  res.setTimeout(30000); // 30秒
   next();
 });
 
@@ -2237,13 +2239,13 @@ app.use((req, res, next) => {
   const memUsage = process.memoryUsage();
   const memUsageMB = Math.round(memUsage.heapUsed / 1024 / 1024);
   
-  // メモリ使用量が500MBを超えた場合は警告
-  if (memUsageMB > 500) {
+  // Renderの制限に合わせて警告レベルを下げる
+  if (memUsageMB > 100) {
     logger.warn(`メモリ使用量が高いです: ${memUsageMB}MB`);
   }
   
-  // メモリ使用量が1GBを超えた場合はエラー
-  if (memUsageMB > 1000) {
+  // Renderの制限に合わせてメモリ制限を厳しく設定
+  if (memUsageMB > 200) {
     logger.error(`メモリ使用量が上限を超えました: ${memUsageMB}MB`);
     return res.status(503).json({
       success: false,
@@ -2281,6 +2283,16 @@ app.get('/health', (req, res) => {
 });
 
 // ルートパス - HTMLファイルを提供（最初に定義）
+// ヘルスチェックエンドポイント（Render用）
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
+});
+
 app.get('/', (req, res) => {
   logger.info('ルートパス（/）にアクセスされました');
   try {
@@ -3076,27 +3088,27 @@ server.on('error', (error) => {
   console.error('❌ サーバーエラー:', error.message);
 });
 
-// プロセス終了時の処理
+// プロセス終了時の処理（Render対応）
 process.on('SIGTERM', () => {
   logger.info('SIGTERM受信: サーバーを終了します');
-  // 既存のリクエストを処理してから終了
+  // Renderの制限に合わせて短縮
   setTimeout(() => {
     server.close(() => {
       logger.info('サーバーが正常に終了しました');
       process.exit(0);
     });
-  }, 5000);
+  }, 1000); // 1秒に短縮
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT受信: サーバーを終了します');
-  // 既存のリクエストを処理してから終了
+  // Renderの制限に合わせて短縮
   setTimeout(() => {
     server.close(() => {
       logger.info('サーバーが正常に終了しました');
       process.exit(0);
     });
-  }, 5000);
+  }, 1000); // 1秒に短縮
 });
 
 // 未処理の例外をキャッチ
