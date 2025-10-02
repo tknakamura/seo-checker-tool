@@ -64,6 +64,7 @@ class SEOChecker {
         structuredDataRequired: true,
         // JavaScript描画待機設定
         waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
+        enablePuppeteer: false, // Puppeteerを完全に無効化（安定性重視）
         puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
         seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
@@ -82,6 +83,7 @@ class SEOChecker {
         structuredDataRequired: true,
         // JavaScript描画待機設定
         waitForJS: false, // デフォルトでJavaScript描画待機を無効（安定性重視）
+        enablePuppeteer: false, // Puppeteerを完全に無効化（安定性重視）
         puppeteerTimeout: 60000, // Puppeteerのタイムアウト（ミリ秒）- 60秒に延長
         seoElementWaitTimeout: 10000 // SEO要素の待機タイムアウト（ミリ秒）- 10秒に延長
       };
@@ -98,7 +100,7 @@ class SEOChecker {
     try {
       logger.info(`Puppeteerでページ取得開始: ${url}`);
       
-      // ブラウザを起動（Chrome拡張機能との競合を避ける設定）
+      // ブラウザを起動（軽量化設定）
       browser = await puppeteer.launch({
         headless: true,
         args: [
@@ -107,7 +109,6 @@ class SEOChecker {
           '--disable-dev-shm-usage',
           '--disable-gpu',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
           '--disable-extensions',
           '--disable-plugins',
           '--disable-images',
@@ -115,18 +116,19 @@ class SEOChecker {
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
           '--disable-back-forward-cache',
-          '--disable-ipc-flooding-protection',
           '--memory-pressure-off',
-          '--max_old_space_size=4096',
+          '--max_old_space_size=2048', // メモリ制限を2GBに削減
           '--no-first-run',
           '--no-default-browser-check',
           '--disable-default-apps',
           '--disable-sync',
           '--disable-translate',
           '--hide-scrollbars',
-          '--mute-audio'
+          '--mute-audio',
+          '--single-process', // シングルプロセスでメモリ使用量削減
+          '--no-zygote'
         ],
-        timeout: 60000
+        timeout: 30000 // タイムアウトを30秒に短縮
       });
 
       const page = await browser.newPage();
@@ -400,11 +402,11 @@ class SEOChecker {
       if (html) {
         pageContent = html;
       } else {
-        // JavaScript描画待機が有効な場合はPuppeteerを使用
-        if (waitForJS && this.config.waitForJS && url) {
+        // JavaScript描画待機が有効で、Puppeteerが有効な場合はPuppeteerを使用
+        if (waitForJS && this.config.waitForJS && this.config.enablePuppeteer && url) {
           pageContent = await this.fetchPageWithPuppeteer(url);
         } else {
-          // 従来のaxios方式
+          // 従来のaxios方式（安定性重視）
           pageContent = await this.fetchPageWithAxios(url);
         }
       }
@@ -2224,9 +2226,31 @@ const port = process.env.PORT || 3001;
 
 // サーバータイムアウト設定（Puppeteer対応）
 app.use((req, res, next) => {
-  // リクエストタイムアウトを2分に設定
-  req.setTimeout(120000);
-  res.setTimeout(120000);
+  // リクエストタイムアウトを3分に設定（より長く）
+  req.setTimeout(180000);
+  res.setTimeout(180000);
+  next();
+});
+
+// メモリ使用量の監視と制限
+app.use((req, res, next) => {
+  const memUsage = process.memoryUsage();
+  const memUsageMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+  
+  // メモリ使用量が500MBを超えた場合は警告
+  if (memUsageMB > 500) {
+    logger.warn(`メモリ使用量が高いです: ${memUsageMB}MB`);
+  }
+  
+  // メモリ使用量が1GBを超えた場合はエラー
+  if (memUsageMB > 1000) {
+    logger.error(`メモリ使用量が上限を超えました: ${memUsageMB}MB`);
+    return res.status(503).json({
+      success: false,
+      error: 'サーバーリソースが不足しています。しばらく時間をおいて再試行してください。'
+    });
+  }
+  
   next();
 });
 
