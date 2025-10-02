@@ -2756,8 +2756,12 @@ app.post('/api/check/seo/advanced', async (req, res) => {
 
 // SEOチェックエンドポイント（標準版）
 app.post('/api/check/seo', async (req, res) => {
+  const requestId = Math.random().toString(36).substr(2, 9);
+  logger.info(`[${requestId}] SEOチェックリクエスト受信開始`);
+  
   try {
     const { url, html, keywords, waitForJS = false } = req.body;
+    logger.info(`[${requestId}] リクエストパラメータ: url=${url}, html=${html ? 'あり' : 'なし'}, keywords=${keywords?.length || 0}, waitForJS=${waitForJS}`);
     
     if (!url && !html) {
       return res.status(400).json({
@@ -2774,15 +2778,18 @@ app.post('/api/check/seo', async (req, res) => {
     }
 
     const checker = new SEOChecker();
+    logger.info(`[${requestId}] SEOチェック開始`);
     const results = await checker.checkSEO(url, html, keywords, waitForJS);
+    logger.info(`[${requestId}] SEOチェック完了`);
     
     res.json({
       success: true,
       data: results
     });
+    logger.info(`[${requestId}] レスポンス送信完了`);
   } catch (error) {
-    logger.error(`API エラー: ${error.message}`);
-    logger.error(`エラースタック: ${error.stack}`);
+    logger.error(`[${requestId}] API エラー: ${error.message}`);
+    logger.error(`[${requestId}] エラースタック: ${error.stack}`);
     
     // エラーの種類に応じて適切なHTTPステータスコードを返す
     let statusCode = 500;
@@ -3072,31 +3079,37 @@ server.on('error', (error) => {
 // プロセス終了時の処理
 process.on('SIGTERM', () => {
   logger.info('SIGTERM受信: サーバーを終了します');
-  server.close(() => {
-    logger.info('サーバーが正常に終了しました');
-    process.exit(0);
-  });
+  // 既存のリクエストを処理してから終了
+  setTimeout(() => {
+    server.close(() => {
+      logger.info('サーバーが正常に終了しました');
+      process.exit(0);
+    });
+  }, 5000);
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT受信: サーバーを終了します');
-  server.close(() => {
-    logger.info('サーバーが正常に終了しました');
-    process.exit(0);
-  });
+  // 既存のリクエストを処理してから終了
+  setTimeout(() => {
+    server.close(() => {
+      logger.info('サーバーが正常に終了しました');
+      process.exit(0);
+    });
+  }, 5000);
 });
 
 // 未処理の例外をキャッチ
 process.on('uncaughtException', (error) => {
-  logger.error(`未処理の例外: ${error.message}`);
+  logger.error('未処理の例外:', error);
   console.error('❌ 未処理の例外:', error);
-  process.exit(1);
+  // サーバーを終了せずに継続
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error(`未処理のPromise拒否: ${reason}`);
+  logger.error('未処理のPromise拒否:', reason);
   console.error('❌ 未処理のPromise拒否:', reason);
-  process.exit(1);
+  // サーバーを終了せずに継続
 });
 
 module.exports = SEOChecker;
