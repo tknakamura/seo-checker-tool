@@ -4,8 +4,8 @@
   "description": "Mercari Japan SEOチェックツール - 日本語文字化け対応版",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node --max-old-space-size=512 --expose-gc index.js",
+    "dev": "nodemon --max-old-space-size=512 --expose-gc index.js",
     "test": "jest",
     "lint": "eslint ."
   },

@@ -86,6 +86,7 @@ class SEOChecker {
    */
   async fetchHTMLWithPuppeteer(url) {
     let browser = null;
+    let page = null;
     try {
       logger.info(`PuppeteerでHTML取得開始: ${url}`);
       
@@ -98,11 +99,17 @@ class SEOChecker {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--memory-pressure-off',
+          '--max_old_space_size=512'
         ]
       });
       
-      const page = await browser.newPage();
+      page = await browser.newPage();
+      
+      // メモリ使用量を制限
+      await page.setCacheEnabled(false);
+      await page.setJavaScriptEnabled(true);
       
       // ユーザーエージェントを設定
       await page.setUserAgent('Mozilla/5.0 (compatible; SEO-Checker/1.0)');
@@ -129,8 +136,15 @@ class SEOChecker {
       logger.error(`PuppeteerでHTML取得エラー: ${error.message}`);
       throw error;
     } finally {
+      if (page) {
+        await page.close();
+      }
       if (browser) {
         await browser.close();
+      }
+      // ガベージコレクションを強制実行
+      if (global.gc) {
+        global.gc();
       }
     }
   }
@@ -234,37 +248,38 @@ class SEOChecker {
         }
       }
       
-      // 文字化けチェックと修正
-      if (pageContent && (pageContent.includes('') || /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(pageContent))) {
-        logger.warn('文字化けが検出されました。再エンコーディングを試行します。');
+      // 文字化けチェックと修正（最適化版）
+      if (pageContent && pageContent.length > 0) {
+        const garbledPattern = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/g;
+        const garbledMatches = pageContent.match(garbledPattern);
         
-        // より詳細な文字化け検出
-        const garbledChars = pageContent.match(/[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/g);
-        if (garbledChars) {
-          logger.warn(`文字化け文字を検出: ${garbledChars.slice(0, 10).join('')}`);
-        }
-        
-        // 別のエンコーディングで再試行
-        for (const enc of ['shift_jis', 'euc-jp', 'iso-2022-jp', 'utf-8']) {
-          try {
-            const retryContent = iconv.decode(htmlBuffer, enc);
-            const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(retryContent);
-            const hasGarbled = /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(retryContent);
-            
-            if (hasJapanese && !hasGarbled) {
-              pageContent = retryContent;
-              logger.info(`文字化け修正成功: ${enc}`);
-              break;
+        if (garbledMatches && garbledMatches.length > 10) { // 文字化けが多数ある場合のみ処理
+          logger.warn(`文字化けが検出されました: ${garbledMatches.length}文字`);
+          
+          // 別のエンコーディングで再試行（最大3回）
+          let fixed = false;
+          for (const enc of ['shift_jis', 'euc-jp', 'utf-8']) {
+            try {
+              const retryContent = iconv.decode(htmlBuffer, enc);
+              const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(retryContent);
+              const garbledCount = (retryContent.match(garbledPattern) || []).length;
+              
+              if (hasJapanese && garbledCount < garbledMatches.length) {
+                pageContent = retryContent;
+                logger.info(`文字化け修正成功: ${enc} (${garbledCount}文字の文字化け残存)`);
+                fixed = true;
+                break;
+              }
+            } catch (error) {
+              continue;
             }
-          } catch (error) {
-            continue;
           }
-        }
-        
-        // それでも文字化けが残る場合は、文字化け文字を除去
-        if (pageContent && /[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/.test(pageContent)) {
-          logger.warn('文字化け文字を除去します。');
-          pageContent = pageContent.replace(/[^\x00-\x7F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s\n\r\t]/g, '');
+          
+          // それでも文字化けが残る場合は、文字化け文字を除去
+          if (!fixed && pageContent.match(garbledPattern)) {
+            logger.warn('文字化け文字を除去します。');
+            pageContent = pageContent.replace(garbledPattern, '');
+          }
         }
       }
       
@@ -314,6 +329,12 @@ class SEOChecker {
       if (typeof pageContent !== 'string') {
         logger.error(`pageContentの型: ${typeof pageContent}, 値: ${pageContent}`);
         throw new Error('HTMLコンテンツが文字列ではありません');
+      }
+      
+      // HTMLサイズの制限チェック
+      if (pageContent.length > 1000000) { // 1MB制限
+        logger.warn(`HTMLサイズが大きすぎます: ${pageContent.length}文字。処理を簡略化します。`);
+        pageContent = pageContent.substring(0, 1000000);
       }
       
       logger.info(`pageContentの長さ: ${pageContent.length}文字`);
@@ -368,6 +389,12 @@ class SEOChecker {
       
       // 簡潔な推奨アクション生成
       results.conciseRecommendations = this.enhancedReporter.generateConciseRecommendations(results);
+
+      // メモリクリーンアップ
+      pageContent = null;
+      if (global.gc) {
+        global.gc();
+      }
 
       logger.info(`SEOチェック完了: ${url}, スコア: ${results.overallScore}`);
       
@@ -1475,9 +1502,9 @@ app.use(cors({
   credentials: true
 }));
 
-// リクエストサイズ制限を増加（50MB）
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// リクエストサイズ制限を適切に設定（10MB）
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // SEOチェックエンドポイント
@@ -1570,6 +1597,25 @@ app.post('/api/report/detailed', async (req, res) => {
     });
   }
 });
+
+// メモリ使用量監視
+setInterval(() => {
+  const used = process.memoryUsage();
+  const usedMB = Math.round(used.heapUsed / 1024 / 1024);
+  const totalMB = Math.round(used.heapTotal / 1024 / 1024);
+  
+  if (usedMB > 200) { // 200MBを超えた場合に警告
+    logger.warn(`メモリ使用量が高いです: ${usedMB}MB / ${totalMB}MB`);
+    
+    // ガベージコレクションを強制実行
+    if (global.gc) {
+      global.gc();
+      const afterGC = process.memoryUsage();
+      const afterMB = Math.round(afterGC.heapUsed / 1024 / 1024);
+      logger.info(`ガベージコレクション実行後: ${afterMB}MB`);
+    }
+  }
+}, 30000); // 30秒ごとにチェック
 
 // サーバー起動
 app.listen(port, () => {

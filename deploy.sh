@@ -12,19 +12,23 @@ FTP_PASS="Asapspqr1618!"
 REMOTE_DIR="/home/h6u8t_ve78vhk6/api.checkseoaio.com"
 LOCAL_DIR="./"
 
-# 依存関係のインストール
-echo "📦 依存関係をインストール中..."
-npm install --production
-
 # ログディレクトリの作成
 echo "📁 ログディレクトリを作成中..."
 mkdir -p logs
 
-# ファイルのアップロード
+# ファイルのアップロード（node_modulesを除外）
 echo "📤 ファイルをアップロード中..."
 lftp -u $FTP_USER,$FTP_PASS $FTP_HOST << EOF
 cd $REMOTE_DIR
-mirror -R --delete --verbose $LOCAL_DIR ./
+mirror -R --delete --verbose --exclude-glob node_modules/ --exclude-glob .git/ --exclude-glob test-seo.js $LOCAL_DIR ./
+quit
+EOF
+
+# 本番環境で依存関係をインストール
+echo "📦 本番環境で依存関係をインストール中..."
+lftp -u $FTP_USER,$FTP_PASS $FTP_HOST << EOF
+cd $REMOTE_DIR
+!npm install --production
 quit
 EOF
 

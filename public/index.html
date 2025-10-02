@@ -62,6 +62,56 @@
             color: #555;
         }
 
+        .check-type-label {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .check-type-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .check-type-option {
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .check-type-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .check-type-option.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .option-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .option-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .option-desc {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
         .form-group input,
         .form-group textarea {
             width: 100%;
@@ -851,13 +901,20 @@
                 </div>
 
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="waitForJS" name="waitForJS" style="margin-right: 8px;">
-                        JavaScript実行待機（動的コンテンツ対応）
-                    </label>
-                    <small style="display: block; margin-top: 4px; color: #666;">
-                        メタディスクリプションやタイトルタグがJavaScriptで動的に生成される場合にチェックしてください
-                    </small>
+                    <label class="check-type-label">チェックタイプを選択してください</label>
+                    <div class="check-type-options">
+                        <div class="check-type-option" data-type="simple">
+                            <div class="option-icon">⚡</div>
+                            <div class="option-title">Simple Check (Fast)</div>
+                            <div class="option-desc">高速チェック（従来の方法）</div>
+                        </div>
+                        <div class="check-type-option active" data-type="advanced">
+                            <div class="option-icon">🚀</div>
+                            <div class="option-title">Advanced Check (JavaScript)</div>
+                            <div class="option-desc">JavaScript実行待機（動的コンテンツ対応）</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="waitForJS" name="waitForJS" value="true">
                 </div>
 
                 <div class="button-group">
@@ -927,6 +984,23 @@
             }
 
             initializeEventListeners() {
+                // チェックタイプ選択処理
+                document.querySelectorAll('.check-type-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        // すべてのオプションからactiveクラスを削除
+                        document.querySelectorAll('.check-type-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        
+                        // クリックされたオプションにactiveクラスを追加
+                        this.classList.add('active');
+                        
+                        // waitForJSの値を更新
+                        const waitForJSInput = document.getElementById('waitForJS');
+                        waitForJSInput.value = this.dataset.type === 'advanced' ? 'true' : 'false';
+                    });
+                });
+
                 document.getElementById('seoCheckForm').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.runSEOCheck();
