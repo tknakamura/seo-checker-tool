@@ -40,6 +40,51 @@ class SEOChecker {
   }
 
   /**
+   * 全角文字数を計算する（日本語SEO基準）
+   * 全角文字（ひらがな、カタカナ、漢字、全角英数字）= 1文字
+   * 半角文字（半角英数字、半角記号）= 0.5文字
+   * @param {string} text - 計算対象の文字列
+   * @returns {number} 全角文字数基準での文字数
+   */
+  calculateFullWidthLength(text) {
+    if (!text) return 0;
+    
+    let length = 0;
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charAt(i);
+      const code = char.charCodeAt(0);
+      
+      // 全角文字の判定
+      if (
+        // ひらがな (U+3040-U+309F)
+        (code >= 0x3040 && code <= 0x309F) ||
+        // カタカナ (U+30A0-U+30FF)
+        (code >= 0x30A0 && code <= 0x30FF) ||
+        // 漢字 (U+4E00-U+9FAF)
+        (code >= 0x4E00 && code <= 0x9FAF) ||
+        // 全角英数字・記号 (U+FF00-U+FFEF)
+        (code >= 0xFF00 && code <= 0xFFEF) ||
+        // 全角スペース (U+3000)
+        code === 0x3000 ||
+        // その他の全角文字（CJK拡張など）
+        (code >= 0x3400 && code <= 0x4DBF) ||
+        (code >= 0x20000 && code <= 0x2A6DF) ||
+        (code >= 0x2A700 && code <= 0x2B73F) ||
+        (code >= 0x2B740 && code <= 0x2B81F) ||
+        (code >= 0x2B820 && code <= 0x2CEAF) ||
+        (code >= 0xF900 && code <= 0xFAFF) ||
+        (code >= 0x2F800 && code <= 0x2FA1F)
+      ) {
+        length += 1; // 全角文字は1文字
+      } else {
+        length += 0.5; // 半角文字は0.5文字
+      }
+    }
+    
+    return length;
+  }
+
+  /**
    * 設定ファイルの読み込み
    */
   loadConfig() {
@@ -47,10 +92,10 @@ class SEOChecker {
       const configPath = path.join(__dirname, '../../config/seo-config.yaml');
       // YAMLファイルの読み込みは後で実装
       return {
-        titleMaxLength: 60,
-        titleMinLength: 30,
-        descriptionMaxLength: 160,
-        descriptionMinLength: 120,
+        titleMaxLength: 30,  // 全角基準に変更（30全角文字）
+        titleMinLength: 15,  // 全角基準に変更（15全角文字）
+        descriptionMaxLength: 80,  // 全角基準に変更（80全角文字）
+        descriptionMinLength: 60,  // 全角基準に変更（60全角文字）
         h1MaxCount: 1,
         h2MinCount: 2,
         h3MinCount: 3,
@@ -63,10 +108,10 @@ class SEOChecker {
     } catch (error) {
       logger.warn('設定ファイルの読み込みに失敗、デフォルト設定を使用');
       return {
-        titleMaxLength: 60,
-        titleMinLength: 30,
-        descriptionMaxLength: 160,
-        descriptionMinLength: 120,
+        titleMaxLength: 30,  // 全角基準に変更（30全角文字）
+        titleMinLength: 15,  // 全角基準に変更（15全角文字）
+        descriptionMaxLength: 80,  // 全角基準に変更（80全角文字）
+        descriptionMinLength: 60,  // 全角基準に変更（60全角文字）
         h1MaxCount: 1,
         h2MinCount: 2,
         h3MinCount: 3,
@@ -442,11 +487,11 @@ class SEOChecker {
       logger.info(`その他の文字化け除去後: "${title}"`);
     }
     
-    // 修正後の長さを計算
-    const titleLength = title.length;
+    // 修正後の長さを計算（全角基準）
+    const titleLength = this.calculateFullWidthLength(title);
     
     // デバッグログ
-    logger.info(`タイトルタグ検出: "${title}", 長さ: ${titleLength}`);
+    logger.info(`タイトルタグ検出: "${title}", 全角文字数: ${titleLength}`);
     logger.info(`title要素の数: ${$('title').length}`);
     
     const issues = [];
@@ -457,15 +502,15 @@ class SEOChecker {
       issues.push('タイトルタグが存在しません');
       recommendations.push('ページに適切なタイトルタグを追加してください');
     } else {
-      // 長さチェック
+      // 長さチェック（全角基準）
       if (titleLength < this.config.titleMinLength) {
-        issues.push(`タイトルが短すぎます（${titleLength}文字）`);
-        recommendations.push(`タイトルを${this.config.titleMinLength}文字以上にしてください`);
+        issues.push(`タイトルが短すぎます（${titleLength}全角文字）`);
+        recommendations.push(`タイトルを${this.config.titleMinLength}全角文字以上にしてください`);
       }
       
       if (titleLength > this.config.titleMaxLength) {
-        issues.push(`タイトルが長すぎます（${titleLength}文字）`);
-        recommendations.push(`タイトルを${this.config.titleMaxLength}文字以下にしてください`);
+        issues.push(`タイトルが長すぎます（${titleLength}全角文字）`);
+        recommendations.push(`タイトルを${this.config.titleMaxLength}全角文字以下にしてください`);
       }
 
       // 重複チェック
@@ -536,11 +581,11 @@ class SEOChecker {
       logger.info(`その他の文字化け除去後: "${description}"`);
     }
     
-    // 最終的なメタディスクリプションの確認
-    logger.info(`最終メタディスクリプション: "${description}", 長さ: ${description.length}`);
+    // 修正後の長さを計算（全角基準）
+    const descriptionLength = this.calculateFullWidthLength(description);
     
-    // 修正後の長さを計算
-    const descriptionLength = description.length;
+    // 最終的なメタディスクリプションの確認
+    logger.info(`最終メタディスクリプション: "${description}", 全角文字数: ${descriptionLength}`);
     
     const issues = [];
     const recommendations = [];
@@ -550,15 +595,15 @@ class SEOChecker {
       issues.push('メタディスクリプションが存在しません');
       recommendations.push('ページに適切なメタディスクリプションを追加してください');
     } else {
-      // 長さチェック
+      // 長さチェック（全角基準）
       if (descriptionLength < this.config.descriptionMinLength) {
-        issues.push(`メタディスクリプションが短すぎます（${descriptionLength}文字）`);
-        recommendations.push(`メタディスクリプションを${this.config.descriptionMinLength}文字以上にしてください`);
+        issues.push(`メタディスクリプションが短すぎます（${descriptionLength}全角文字）`);
+        recommendations.push(`メタディスクリプションを${this.config.descriptionMinLength}全角文字以上にしてください`);
       }
       
       if (descriptionLength > this.config.descriptionMaxLength) {
-        issues.push(`メタディスクリプションが長すぎます（${descriptionLength}文字）`);
-        recommendations.push(`メタディスクリプションを${this.config.descriptionMaxLength}文字以下にしてください`);
+        issues.push(`メタディスクリプションが長すぎます（${descriptionLength}全角文字）`);
+        recommendations.push(`メタディスクリプションを${this.config.descriptionMaxLength}全角文字以下にしてください`);
       }
 
       // 内容の品質チェック
@@ -1281,12 +1326,14 @@ class SEOChecker {
    */
   calculateTitleScore(title, length) {
     if (!title) return 0;
+    // 全角基準での文字数チェック
     if (length < this.config.titleMinLength || length > this.config.titleMaxLength) return 50;
     return 100;
   }
 
   calculateDescriptionScore(description, length) {
     if (!description) return 0;
+    // 全角基準での文字数チェック
     if (length < this.config.descriptionMinLength || length > this.config.descriptionMaxLength) return 50;
     return 100;
   }

@@ -8,6 +8,51 @@ class DetailedAnalyzer {
   }
 
   /**
+   * 全角文字数を計算する（日本語SEO基準）
+   * 全角文字（ひらがな、カタカナ、漢字、全角英数字）= 1文字
+   * 半角文字（半角英数字、半角記号）= 0.5文字
+   * @param {string} text - 計算対象の文字列
+   * @returns {number} 全角文字数基準での文字数
+   */
+  calculateFullWidthLength(text) {
+    if (!text) return 0;
+    
+    let length = 0;
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charAt(i);
+      const code = char.charCodeAt(0);
+      
+      // 全角文字の判定
+      if (
+        // ひらがな (U+3040-U+309F)
+        (code >= 0x3040 && code <= 0x309F) ||
+        // カタカナ (U+30A0-U+30FF)
+        (code >= 0x30A0 && code <= 0x30FF) ||
+        // 漢字 (U+4E00-U+9FAF)
+        (code >= 0x4E00 && code <= 0x9FAF) ||
+        // 全角英数字・記号 (U+FF00-U+FFEF)
+        (code >= 0xFF00 && code <= 0xFFEF) ||
+        // 全角スペース (U+3000)
+        code === 0x3000 ||
+        // その他の全角文字（CJK拡張など）
+        (code >= 0x3400 && code <= 0x4DBF) ||
+        (code >= 0x20000 && code <= 0x2A6DF) ||
+        (code >= 0x2A700 && code <= 0x2B73F) ||
+        (code >= 0x2B740 && code <= 0x2B81F) ||
+        (code >= 0x2B820 && code <= 0x2CEAF) ||
+        (code >= 0xF900 && code <= 0xFAFF) ||
+        (code >= 0x2F800 && code <= 0x2FA1F)
+      ) {
+        length += 1; // 全角文字は1文字
+      } else {
+        length += 0.5; // 半角文字は0.5文字
+      }
+    }
+    
+    return length;
+  }
+
+  /**
    * 詳細分析の実行
    * @param {Object} $ - Cheerioオブジェクト
    * @param {string} url - チェック対象URL
@@ -33,7 +78,7 @@ class DetailedAnalyzer {
   analyzeTitleTag($) {
     const title = $('title');
     const titleText = title.text().trim();
-    const titleLength = titleText.length;
+    const titleLength = this.calculateFullWidthLength(titleText);
     
     const issues = [];
     const recommendations = [];
@@ -50,32 +95,32 @@ class DetailedAnalyzer {
         fix: '<title>適切なタイトルを追加</title>'
       });
     } else {
-      // 長さチェック
-      if (titleLength < 30) {
-        issues.push(`タイトルが短すぎます（${titleLength}文字）`);
-        recommendations.push(`タイトルを30文字以上にしてください`);
+      // 長さチェック（全角基準）
+      if (titleLength < 15) {
+        issues.push(`タイトルが短すぎます（${titleLength}全角文字）`);
+        recommendations.push(`タイトルを15全角文字以上にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'title',
           location: 'head',
           current: titleText,
           length: titleLength,
-          description: `現在のタイトル「${titleText}」は${titleLength}文字で短すぎます`,
-          fix: 'タイトルを30-60文字の範囲で拡張してください'
+          description: `現在のタイトル「${titleText}」は${titleLength}全角文字で短すぎます`,
+          fix: 'タイトルを15-30全角文字の範囲で拡張してください'
         });
       }
       
-      if (titleLength > 60) {
-        issues.push(`タイトルが長すぎます（${titleLength}文字）`);
-        recommendations.push(`タイトルを60文字以下にしてください`);
+      if (titleLength > 30) {
+        issues.push(`タイトルが長すぎます（${titleLength}全角文字）`);
+        recommendations.push(`タイトルを30全角文字以下にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'title',
           location: 'head',
           current: titleText,
           length: titleLength,
-          description: `現在のタイトル「${titleText}」は${titleLength}文字で長すぎます`,
-          fix: 'タイトルを60文字以下に短縮してください'
+          description: `現在のタイトル「${titleText}」は${titleLength}全角文字で長すぎます`,
+          fix: 'タイトルを30全角文字以下に短縮してください'
         });
       }
 
@@ -129,7 +174,7 @@ class DetailedAnalyzer {
   analyzeMetaDescription($) {
     const metaDesc = $('meta[name="description"]');
     const description = metaDesc.attr('content') || '';
-    const descriptionLength = description.length;
+    const descriptionLength = this.calculateFullWidthLength(description);
     
     const issues = [];
     const recommendations = [];
@@ -146,32 +191,32 @@ class DetailedAnalyzer {
         fix: '<meta name="description" content="適切な説明文を追加">'
       });
     } else {
-      // 長さチェック
-      if (descriptionLength < 120) {
-        issues.push(`メタディスクリプションが短すぎます（${descriptionLength}文字）`);
-        recommendations.push(`メタディスクリプションを120文字以上にしてください`);
+      // 長さチェック（全角基準）
+      if (descriptionLength < 60) {
+        issues.push(`メタディスクリプションが短すぎます（${descriptionLength}全角文字）`);
+        recommendations.push(`メタディスクリプションを60全角文字以上にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'meta[name="description"]',
           location: 'head',
           current: description,
           length: descriptionLength,
-          description: `現在の説明文「${description}」は${descriptionLength}文字で短すぎます`,
-          fix: '説明文を120-160文字の範囲で拡張してください'
+          description: `現在の説明文「${description}」は${descriptionLength}全角文字で短すぎます`,
+          fix: '説明文を60-80全角文字の範囲で拡張してください'
         });
       }
       
-      if (descriptionLength > 160) {
-        issues.push(`メタディスクリプションが長すぎます（${descriptionLength}文字）`);
-        recommendations.push(`メタディスクリプションを160文字以下にしてください`);
+      if (descriptionLength > 80) {
+        issues.push(`メタディスクリプションが長すぎます（${descriptionLength}全角文字）`);
+        recommendations.push(`メタディスクリプションを80全角文字以下にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'meta[name="description"]',
           location: 'head',
           current: description,
           length: descriptionLength,
-          description: `現在の説明文「${description}」は${descriptionLength}文字で長すぎます`,
-          fix: '説明文を160文字以下に短縮してください'
+          description: `現在の説明文「${description}」は${descriptionLength}全角文字で長すぎます`,
+          fix: '説明文を80全角文字以下に短縮してください'
         });
       }
 
@@ -830,13 +875,15 @@ class DetailedAnalyzer {
    */
   calculateTitleScore(title, length) {
     if (!title) return 0;
-    if (length < 30 || length > 60) return 50;
+    // 全角基準での文字数チェック
+    if (length < 15 || length > 30) return 50;
     return 100;
   }
 
   calculateDescriptionScore(description, length) {
     if (!description) return 0;
-    if (length < 120 || length > 160) return 50;
+    // 全角基準での文字数チェック
+    if (length < 60 || length > 80) return 50;
     return 100;
   }
 
