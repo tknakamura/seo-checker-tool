@@ -1,36 +1,31 @@
-# render.com デプロイ設定
-# 全角文字数カウント修正版 SEO・AIOチェックツール
+# render.yaml - 最適化版設定
+# メルカリSEOチェックツール（全角文字数カウント対応）
 
 services:
   - type: web
-    name: mercari-seo-checker
+    name: seo-checker-tool
     env: node
-    plan: free  # または starter
-    buildCommand: npm install
+    region: oregon
+    plan: free
+    buildCommand: npm install --only=production
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /health
+    autoDeploy: true
+    branch: main
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3001
-    
-    # 自動デプロイ設定
-    autoDeploy: true
-    branch: main  # または master
-    
-    # ヘルスチェック設定
-    healthCheck:
-      httpPath: /
-      timeoutSeconds: 30
-    
-    # ドメイン設定（オプション）
-    # domains:
-    #   - api.checkseoaio.com
-    
-    # 環境変数（プライベート情報はWeb UIで設定）
-    # envVars:
-    #   - key: DATABASE_URL
-    #     fromDatabase:
-    #       name: my-database
-    #       property: connectionString
+        value: 10000
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=512
+    # render.com最適化設定
+    buildFilter:
+      paths:
+        - analysis/seo-checker/**
+      ignoredPaths:
+        - README.md
+        - "*.md"
+        - logs/**
+        - test/**
+        - docs/**
