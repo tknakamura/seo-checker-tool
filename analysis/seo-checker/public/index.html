@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO・AIOチェックツール - Mercari Japan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .check-type-label {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .check-type-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .check-type-option {
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .check-type-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .check-type-option.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .option-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .option-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .option-desc {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-container {
+            display: none;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .score-display {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .score-number {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-label {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .category {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .category h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .category-score {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .score-excellent {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .score-good {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .score-fair {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .score-poor {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .issues-list,
+        .recommendations-list {
+            margin-top: 1rem;
+        }
+
+        .issues-list h4,
+        .recommendations-list h4 {
+            margin-bottom: 0.5rem;
+            color: #dc3545;
+        }
+
+        .recommendations-list h4 {
+            color: #28a745;
+        }
+
+        .issues-list ul,
+        .recommendations-list ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .issues-list li,
+        .recommendations-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .issues-list li:last-child,
+        .recommendations-list li:last-child {
+            border-bottom: none;
+        }
+
+        .issues-list li::before {
+            content: "⚠️ ";
+            margin-right: 0.5rem;
+        }
+
+        .recommendations-list li::before {
+            content: "✅ ";
+            margin-right: 0.5rem;
+        }
+
+        .report-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .report-section h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .report-content {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin-bottom: 1rem;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+            margin-bottom: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e1e5e9;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 詳細レポート用スタイル */
+        .detailed-report {
+            max-width: 100%;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .score-large {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0.5rem 0;
+        }
+
+        .grade {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .status-critical { background: #f8d7da; color: #721c24; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        .status-good { background: #d4edda; color: #155724; }
+        .status-poor { background: #f8d7da; color: #721c24; }
+
+        .quick-wins-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .quick-win-card {
+            background: #e8f5e8;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+
+        .win-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .priority-sections {
+            margin-bottom: 2rem;
+        }
+
+        .priority-section {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .priority-section.critical { background: #f8d7da; }
+        .priority-section.high { background: #fff3cd; }
+        .priority-section.medium { background: #d1ecf1; }
+        .priority-section.low { background: #d4edda; }
+
+        .priority-item {
+            background: white;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .item-meta {
+            display: flex;
+            gap: 1rem;
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+        }
+
+        .implementation-phase {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .implementation-item {
+            background: white;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .implementation-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .implementation-guide ol,
+        .implementation-examples ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .tools-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tool-tag {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .impact-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .impact-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .impact-card .score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .impact-card .score.improvement {
+            color: #28a745;
+        }
+
+        .benefits ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        /* 具体的な箇所表示用スタイル */
+        .specific-issues {
+            max-width: 100%;
+        }
+
+        .specific-issues .description {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #2196f3;
+        }
+
+        .category-section {
+            margin-bottom: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .category-section h3 {
+            background: #f8f9fa;
+            padding: 1rem;
+            margin: 0;
+            border-bottom: 1px solid #e1e5e9;
+            font-size: 1.2rem;
+        }
+
+        .specific-issue {
+            border-bottom: 1px solid #e1e5e9;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .specific-issue:hover {
+            background-color: #f8f9fa;
+        }
+
+        .specific-issue:last-child {
+            border-bottom: none;
+        }
+
+        .issue-header {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        .issue-type {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .issue-type.missing { background: #dc3545; }
+        .issue-type.length { background: #fd7e14; }
+        .issue-type.duplicate { background: #6f42c1; }
+        .issue-type.format { background: #20c997; }
+        .issue-type.quality { background: #17a2b8; }
+        .issue-type.hierarchy { background: #ffc107; color: #212529; }
+        .issue-type.empty { background: #6c757d; }
+        .issue-type.count { background: #e83e8c; }
+        .issue-type.missing_alt { background: #dc3545; }
+        .issue-type.empty_alt { background: #fd7e14; }
+        .issue-type.alt_length { background: #20c997; }
+        .issue-type.alt_quality { background: #17a2b8; }
+        .issue-type.internal_count { background: #6f42c1; }
+        .issue-type.external_missing { background: #dc3545; }
+        .issue-type.empty_text { background: #fd7e14; }
+        .issue-type.generic_text { background: #6c757d; }
+        .issue-type.jsonld_syntax { background: #dc3545; }
+        .issue-type.missing_schema { background: #fd7e14; }
+        .issue-type.protocol { background: #20c997; }
+        .issue-type.depth { background: #17a2b8; }
+        .issue-type.viewport_content { background: #6f42c1; }
+        .issue-type.noindex { background: #dc3545; }
+
+        .issue-location {
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #495057;
+        }
+
+        .toggle-icon {
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .issue-description {
+            padding: 0 1rem 1rem 1rem;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        .issue-details {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-top: 1px solid #e1e5e9;
+        }
+
+        .issue-fix {
+            margin-bottom: 1rem;
+        }
+
+        .issue-fix h4 {
+            color: #28a745;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .issue-fix p {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .issue-current {
+            margin-bottom: 1rem;
+        }
+
+        .issue-current h4 {
+            color: #007bff;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .issue-current code {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+            display: block;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+        }
+
+        .issue-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .meta-item {
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #495057;
+        }
+
+        /* 簡潔な推奨アクション表示用スタイル */
+        .summary-section {
+            margin-bottom: 2rem;
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-value.excellent { color: #28a745; }
+        .score-value.good { color: #17a2b8; }
+        .score-value.fair { color: #ffc107; }
+        .score-value.poor { color: #dc3545; }
+
+        .recommendations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .recommendation-item {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #e9ecef;
+        }
+
+        .recommendation-item.critical {
+            border-left-color: #dc3545;
+        }
+
+        .recommendation-item.high {
+            border-left-color: #fd7e14;
+        }
+
+        .recommendation-item.medium {
+            border-left-color: #ffc107;
+        }
+
+        .recommendation-item.low {
+            border-left-color: #28a745;
+        }
+
+        .recommendation-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .checkmark {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .recommendation-text {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .priority-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .priority-badge.critical { background: #dc3545; }
+        .priority-badge.high { background: #fd7e14; }
+        .priority-badge.medium { background: #ffc107; color: #212529; }
+        .priority-badge.low { background: #28a745; }
+
+        .recommendation-details {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .element-info {
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .location-info {
+            background: #f8f9fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .count-info {
+            background: #fff3cd;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            color: #856404;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .form-container,
+            .results-container,
+            .report-section {
+                padding: 1rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-wins-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .implementation-details {
+                grid-template-columns: 1fr;
+            }
+
+            .impact-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SEO・AIOチェックツール</h1>
+            <p>WebページのSEO最適化とAI最適化を包括的にチェックします</p>
+        </div>
+
+        <div class="form-container">
+            <form id="seoCheckForm">
+                <div class="form-group">
+                    <label for="url">WebページURL</label>
+                    <input type="url" id="url" name="url" placeholder="https://example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="html">またはHTMLコンテンツ（オプション）</label>
+                    <textarea id="html" name="html" placeholder="HTMLコンテンツを直接貼り付ける場合はこちらに記入してください"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="check-type-label">チェックタイプを選択してください</label>
+                    <div class="check-type-options">
+                        <div class="check-type-option" data-type="simple">
+                            <div class="option-icon">⚡</div>
+                            <div class="option-title">Simple Check (Fast)</div>
+                            <div class="option-desc">高速チェック（従来の方法）</div>
+                        </div>
+                        <div class="check-type-option active" data-type="advanced">
+                            <div class="option-icon">🚀</div>
+                            <div class="option-title">Advanced Check (JavaScript)</div>
+                            <div class="option-desc">JavaScript実行待機（動的コンテンツ対応）</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="waitForJS" name="waitForJS" value="true">
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" id="checkBtn">
+                        SEOチェック実行
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="clearBtn">
+                        クリア
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>SEOチェックを実行中...</p>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="score-display">
+                <div class="score-number" id="overallScore">0</div>
+                <div class="score-label">総合SEOスコア</div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="summary">サマリー</button>
+                <button class="tab" data-tab="details">SEO詳細</button>
+                <button class="tab" data-tab="aio">AIO詳細</button>
+                <button class="tab" data-tab="specific">具体的な箇所</button>
+                <button class="tab" data-tab="detailed">詳細レポート</button>
+                <button class="tab" data-tab="report">Markdownレポート</button>
+            </div>
+
+            <div class="tab-content active" id="summary">
+                <div id="summaryContent"></div>
+            </div>
+
+            <div class="tab-content" id="details">
+                <div id="detailsContent"></div>
+            </div>
+
+            <div class="tab-content" id="aio">
+                <div id="aioContent"></div>
+            </div>
+
+            <div class="tab-content" id="specific">
+                <div id="specificContent"></div>
+            </div>
+
+            <div class="tab-content" id="detailed">
+                <div id="detailedContent"></div>
+            </div>
+
+            <div class="tab-content" id="report">
+                <div class="report-section">
+                    <h2>SEOチェックレポート</h2>
+                    <div class="report-content" id="reportContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SEOCheckerApp {
+            constructor() {
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                // チェックタイプ選択処理
+                document.querySelectorAll('.check-type-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        // すべてのオプションからactiveクラスを削除
+                        document.querySelectorAll('.check-type-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        
+                        // クリックされたオプションにactiveクラスを追加
+                        this.classList.add('active');
+                        
+                        // waitForJSの値を更新
+                        const waitForJSInput = document.getElementById('waitForJS');
+                        waitForJSInput.value = this.dataset.type === 'advanced' ? 'true' : 'false';
+                    });
+                });
+
+                document.getElementById('seoCheckForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.runSEOCheck();
+                });
+
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    this.clearForm();
+                });
+
+                // タブ切り替え
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        this.switchTab(e.target.dataset.tab);
+                    });
+                });
+            }
+
+            async runSEOCheck() {
+                const url = document.getElementById('url').value;
+                const html = document.getElementById('html').value;
+                const waitForJS = document.getElementById('waitForJS').checked;
+
+                if (!url && !html) {
+                    this.showError('URLまたはHTMLコンテンツを入力してください');
+                    return;
+                }
+
+                this.showLoading(true);
+                this.hideResults();
+
+                try {
+                    const response = await fetch('/api/check/seo', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ url, html, waitForJS })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.displayResults(data.data);
+                        this.showSuccess('SEOチェックが完了しました');
+                    } else {
+                        this.showError(data.error || 'SEOチェック中にエラーが発生しました');
+                    }
+                } catch (error) {
+                    this.showError('ネットワークエラーが発生しました: ' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async generateReport() {
+                const url = document.getElementById('url').value;
+                const html = document.getElementById('html').value;
+                const waitForJS = document.getElementById('waitForJS').checked;
+
+                try {
+                    const response = await fetch('/api/report/seo', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ url, html, waitForJS })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        document.getElementById('reportContent').textContent = data.data.report;
+                    } else {
+                        this.showError('レポート生成中にエラーが発生しました');
+                    }
+                } catch (error) {
+                    this.showError('レポート生成中にネットワークエラーが発生しました');
+                }
+            }
+
+            displayResults(results) {
+                // 総合スコア表示
+                document.getElementById('overallScore').textContent = results.combinedScore || results.overallScore;
+                
+                // サマリー表示
+                this.displaySummary(results);
+                
+                // 詳細表示
+                this.displayDetails(results);
+                
+                // AIO詳細表示
+                this.displayAIO(results);
+                
+                // 具体的な箇所表示
+                this.displaySpecificIssues(results);
+                
+                // 詳細レポート表示
+                this.displayDetailedReport(results);
+                
+                // レポート生成
+                this.generateReport();
+                
+                this.showResults();
+            }
+
+            displaySummary(results) {
+                const summaryContent = document.getElementById('summaryContent');
+                const overallScore = results.overallScore || 0;
+                const aioScore = results.aioOverallScore || 0;
+                const combinedScore = results.combinedScore || 0;
+                
+                // スコア表示の更新
+                document.getElementById('overallScore').textContent = Math.round(overallScore);
+                
+                let html = `
+                    <div class="summary-section">
+                        <h2>📊 総合スコア</h2>
+                        <div class="score-grid">
+                            <div class="score-item">
+                                <div class="score-label">SEOスコア</div>
+                                <div class="score-value ${this.getScoreClass(overallScore)}">${Math.round(overallScore)}</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">AIOスコア</div>
+                                <div class="score-value ${this.getScoreClass(aioScore)}">${Math.round(aioScore)}</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">総合スコア</div>
+                                <div class="score-value ${this.getScoreClass(combinedScore)}">${Math.round(combinedScore)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 簡潔な推奨アクションの表示
+                if (results.conciseRecommendations && results.conciseRecommendations.length > 0) {
+                    html += `
+                        <div class="summary-section">
+                            <h2>🎯 推奨アクション (${results.conciseRecommendations.length}件)</h2>
+                            <div class="recommendations-list">
+                    `;
+                    
+                    results.conciseRecommendations.forEach(rec => {
+                        const priorityClass = this.getPriorityClass(rec.priority);
+                        html += `
+                            <div class="recommendation-item ${priorityClass}">
+                                <div class="recommendation-header">
+                                    <span class="checkmark">✓</span>
+                                    <span class="recommendation-text">${rec.fix}</span>
+                                    <span class="priority-badge ${priorityClass}">${this.getPriorityTitle(rec.priority)}</span>
+                                </div>
+                                <div class="recommendation-details">
+                                    <span class="element-info">${rec.element}</span>
+                                    <span class="location-info">${rec.location}</span>
+                                    ${rec.count > 1 ? `<span class="count-info">${rec.count}件</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                summaryContent.innerHTML = html;
+            }
+
+            displayDetails(results) {
+                const detailsContent = document.getElementById('detailsContent');
+                const categories = [
+                    { key: 'titleTag', name: 'タイトルタグ' },
+                    { key: 'metaDescription', name: 'メタディスクリプション' },
+                    { key: 'headingStructure', name: '見出し構造（H1〜H3）' },
+                    { key: 'imageAltAttributes', name: '画像のalt属性' },
+                    { key: 'internalLinkStructure', name: '内部リンク構造' },
+                    { key: 'structuredData', name: '構造化データ' },
+                    { key: 'otherSEOElements', name: 'その他SEO要素' }
+                ];
+
+                let html = '';
+                
+                categories.forEach(category => {
+                    const check = results.checks[category.key];
+                    const scoreClass = this.getScoreClass(check.score);
+                    
+                    html += `
+                        <div class="category">
+                            <h3>${category.name}</h3>
+                            <div class="category-score ${scoreClass}">スコア: ${check.score}/100</div>
+                            
+                            ${check.current !== undefined ? `<p><strong>現在の値:</strong> ${check.current}</p>` : ''}
+                            
+                            ${check.issues && check.issues.length > 0 ? `
+                                <div class="issues-list">
+                                    <h4>改善点 (${check.issues.length}件)</h4>
+                                    <ul>
+                                        ${check.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${check.recommendations && check.recommendations.length > 0 ? `
+                                <div class="recommendations-list">
+                                    <h4>推奨アクション (${check.recommendations.length}件)</h4>
+                                    <ul>
+                                        ${check.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                detailsContent.innerHTML = html;
+            }
+
+            displayAIO(results) {
+                if (!results.aio) {
+                    document.getElementById('aioContent').innerHTML = '<p>AIOチェック結果がありません</p>';
+                    return;
+                }
+
+                const aioContent = document.getElementById('aioContent');
+                const aioCategories = [
+                    { key: 'contentComprehensiveness', name: 'コンテンツ包括性' },
+                    { key: 'structuredInformation', name: '構造化情報' },
+                    { key: 'credibilitySignals', name: '信頼性シグナル' },
+                    { key: 'aiSearchOptimization', name: 'AI検索最適化' },
+                    { key: 'naturalLanguageQuality', name: '自然言語品質' },
+                    { key: 'contextRelevance', name: 'コンテキスト関連性' }
+                ];
+
+                let html = `
+                    <div class="score-display" style="margin-bottom: 2rem;">
+                        <div class="score-number">${results.aio.overallScore}</div>
+                        <div class="score-label">AIO総合スコア</div>
+                    </div>
+                `;
+                
+                aioCategories.forEach(category => {
+                    const check = results.aio.checks[category.key];
+                    const scoreClass = this.getScoreClass(check.score);
+                    
+                    html += `
+                        <div class="category">
+                            <h3>${category.name}</h3>
+                            <div class="category-score ${scoreClass}">スコア: ${check.score}/100</div>
+                            
+                            ${check.issues && check.issues.length > 0 ? `
+                                <div class="issues-list">
+                                    <h4>改善点 (${check.issues.length}件)</h4>
+                                    <ul>
+                                        ${check.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            ${check.recommendations && check.recommendations.length > 0 ? `
+                                <div class="recommendations-list">
+                                    <h4>推奨アクション (${check.recommendations.length}件)</h4>
+                                    <ul>
+                                        ${check.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                aioContent.innerHTML = html;
+            }
+
+            displaySpecificIssues(results) {
+                if (!results.detailedAnalysis) {
+                    document.getElementById('specificContent').innerHTML = '<p>詳細分析結果がありません</p>';
+                    return;
+                }
+
+                const specificContent = document.getElementById('specificContent');
+                const analysis = results.detailedAnalysis;
+                
+                let html = `
+                    <div class="specific-issues">
+                        <h2>🎯 具体的な問題箇所</h2>
+                        <p class="description">以下の箇所で具体的な問題が発見されました。各項目をクリックすると詳細な修正方法が表示されます。</p>
+                `;
+
+                // 各カテゴリの具体的な問題を表示
+                const categories = [
+                    { key: 'titleTag', name: 'タイトルタグ', icon: '📝' },
+                    { key: 'metaDescription', name: 'メタディスクリプション', icon: '📄' },
+                    { key: 'headingStructure', name: '見出し構造', icon: '📋' },
+                    { key: 'imageAltAttributes', name: '画像alt属性', icon: '🖼️' },
+                    { key: 'internalLinkStructure', name: '内部リンク構造', icon: '🔗' },
+                    { key: 'structuredData', name: '構造化データ', icon: '🏗️' },
+                    { key: 'otherSEOElements', name: 'その他SEO要素', icon: '⚙️' }
+                ];
+
+                categories.forEach(category => {
+                    const categoryData = analysis[category.key];
+                    if (categoryData && categoryData.specificIssues && categoryData.specificIssues.length > 0) {
+                        html += `
+                            <div class="category-section">
+                                <h3>${category.icon} ${category.name}</h3>
+                                <div class="issues-list">
+                        `;
+
+                        categoryData.specificIssues.forEach((issue, index) => {
+                            html += `
+                                <div class="specific-issue" onclick="toggleIssueDetails('${category.key}_${index}')">
+                                    <div class="issue-header">
+                                        <span class="issue-type ${issue.type}">${this.getIssueTypeLabel(issue.type)}</span>
+                                        <span class="issue-location">${issue.location}</span>
+                                        <span class="toggle-icon">▼</span>
+                                    </div>
+                                    <div class="issue-description">
+                                        ${issue.description}
+                                    </div>
+                                    <div class="issue-details" id="${category.key}_${index}" style="display: none;">
+                                        <div class="issue-fix">
+                                            <h4>修正方法:</h4>
+                                            <p>${issue.fix}</p>
+                                        </div>
+                                        ${issue.current ? `
+                                            <div class="issue-current">
+                                                <h4>現在の値:</h4>
+                                                <code>${issue.current}</code>
+                                            </div>
+                                        ` : ''}
+                                        ${issue.length ? `
+                                            <div class="issue-meta">
+                                                <span class="meta-item">文字数: ${issue.length}</span>
+                                            </div>
+                                        ` : ''}
+                                        ${issue.count ? `
+                                            <div class="issue-meta">
+                                                <span class="meta-item">件数: ${issue.count}</span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                html += `
+                    </div>
+                `;
+                
+                specificContent.innerHTML = html;
+            }
+
+            displayDetailedReport(results) {
+                if (!results.detailedReport) {
+                    document.getElementById('detailedContent').innerHTML = '<p>詳細レポートがありません</p>';
+                    return;
+                }
+
+                const detailedContent = document.getElementById('detailedContent');
+                const report = results.detailedReport;
+                
+                let html = `
+                    <div class="detailed-report">
+                        <div class="report-summary">
+                            <h2>📊 総合評価</h2>
+                            <div class="summary-cards">
+                                <div class="summary-card">
+                                    <h3>総合スコア</h3>
+                                    <div class="score-large">${report.summary.overallScore}/100</div>
+                                    <div class="grade">${report.summary.grades.overall}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <h3>SEOスコア</h3>
+                                    <div class="score-large">${report.summary.seoScore}/100</div>
+                                    <div class="grade">${report.summary.grades.seo}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <h3>AIOスコア</h3>
+                                    <div class="score-large">${report.summary.aioScore}/100</div>
+                                    <div class="grade">${report.summary.grades.aio}</div>
+                                </div>
+                            </div>
+                            <div class="status-badge ${this.getStatusClass(report.summary.status)}">
+                                ${report.summary.status}
+                            </div>
+                        </div>
+
+                        <div class="quick-wins">
+                            <h2>⚡ クイックウィン</h2>
+                            <div class="quick-wins-grid">
+                                ${report.summary.quickWins.map(win => `
+                                    <div class="quick-win-card">
+                                        <h4>${win.issue}</h4>
+                                        <div class="win-meta">
+                                            <span class="effort">工数: ${win.effort}</span>
+                                            <span class="impact">影響: ${win.impact}</span>
+                                            <span class="time">時間: ${win.time}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="priority-analysis">
+                            <h2>🎯 優先度分析</h2>
+                            <div class="priority-sections">
+                                ${Object.entries(report.priorityAnalysis).map(([priority, items]) => `
+                                    <div class="priority-section ${priority}">
+                                        <h3>${this.getPriorityTitle(priority)} (${items.length}件)</h3>
+                                        ${items.map(item => `
+                                            <div class="priority-item">
+                                                <h4>${this.getCategoryTitle(item.category)}</h4>
+                                                <div class="item-meta">
+                                                    <span class="impact">影響度: ${item.impact}</span>
+                                                    <span class="effort">工数: ${item.effort}</span>
+                                                    <span class="roi">ROI: ${item.roi.toFixed(1)}</span>
+                                                </div>
+                                                <ul class="item-issues">
+                                                    ${item.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                                </ul>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="implementation-plan">
+                            <h2>📋 実装計画</h2>
+                            ${Object.entries(report.implementationPlan).map(([phase, plan]) => `
+                                <div class="implementation-phase">
+                                    <h3>${plan.title} (${plan.duration})</h3>
+                                    <div class="phase-items">
+                                        ${plan.items.map(item => `
+                                            <div class="implementation-item">
+                                                <h4>${item.title}</h4>
+                                                <div class="implementation-details">
+                                                    <div class="implementation-guide">
+                                                        <h5>実装手順:</h5>
+                                                        <ol>
+                                                            ${item.implementation.map(step => `<li>${step}</li>`).join('')}
+                                                        </ol>
+                                                    </div>
+                                                    <div class="implementation-examples">
+                                                        <h5>例:</h5>
+                                                        <ul>
+                                                            ${item.examples.map(example => `<li>${example}</li>`).join('')}
+                                                        </ul>
+                                                    </div>
+                                                    <div class="implementation-tools">
+                                                        <h5>推奨ツール:</h5>
+                                                        <div class="tools-list">
+                                                            ${item.tools.map(tool => `<span class="tool-tag">${tool}</span>`).join('')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="expected-impact">
+                            <h2>📈 期待される効果</h2>
+                            <div class="impact-cards">
+                                <div class="impact-card">
+                                    <h3>現在のスコア</h3>
+                                    <div class="score">${report.expectedImpact.currentScore}/100</div>
+                                </div>
+                                <div class="impact-card">
+                                    <h3>改善後のスコア</h3>
+                                    <div class="score">${report.expectedImpact.potentialScore}/100</div>
+                                </div>
+                                <div class="impact-card">
+                                    <h3>改善幅</h3>
+                                    <div class="score improvement">+${report.expectedImpact.improvement}</div>
+                                </div>
+                            </div>
+                            <div class="benefits">
+                                <h3>期待される効果:</h3>
+                                <ul>
+                                    <li>SEO: オーガニックトラフィック +${report.expectedImpact.expectedBenefits.seo.organicTraffic}%</li>
+                                    <li>ランキング: +${report.expectedImpact.expectedBenefits.seo.rankingImprovement}位向上</li>
+                                    <li>CTR: +${report.expectedImpact.expectedBenefits.seo.clickThroughRate}</li>
+                                    <li>AIO: AI検索での露出 +${report.expectedImpact.expectedBenefits.aio.aiVisibility}%</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                detailedContent.innerHTML = html;
+            }
+
+            getScoreClass(score) {
+                if (score >= 90) return 'score-excellent';
+                if (score >= 70) return 'score-good';
+                if (score >= 50) return 'score-fair';
+                return 'score-poor';
+            }
+
+            getStatusClass(status) {
+                if (status === '要緊急対応') return 'status-critical';
+                if (status === '良好') return 'status-good';
+                if (status === '改善必要') return 'status-warning';
+                return 'status-poor';
+            }
+
+            getPriorityTitle(priority) {
+                const titles = {
+                    critical: '緊急対応',
+                    high: '高優先度',
+                    medium: '中優先度',
+                    low: '低優先度'
+                };
+                return titles[priority] || priority;
+            }
+
+            getCategoryTitle(category) {
+                const titles = {
+                    titleTag: 'タイトルタグ',
+                    metaDescription: 'メタディスクリプション',
+                    headingStructure: '見出し構造',
+                    imageAltAttributes: '画像alt属性',
+                    internalLinkStructure: '内部リンク構造',
+                    structuredData: '構造化データ',
+                    otherSEOElements: 'その他SEO要素',
+                    contentComprehensiveness: 'コンテンツ包括性',
+                    structuredInformation: '構造化情報',
+                    credibilitySignals: '信頼性シグナル',
+                    aiSearchOptimization: 'AI検索最適化',
+                    naturalLanguageQuality: '自然言語品質',
+                    contextRelevance: 'コンテキスト関連性'
+                };
+                return titles[category] || category;
+            }
+
+            getIssueTypeLabel(type) {
+                const labels = {
+                    missing: '存在しない',
+                    length: '長さの問題',
+                    duplicate: '重複',
+                    format: '形式の問題',
+                    quality: '品質の問題',
+                    hierarchy: '階層の問題',
+                    empty: '空の要素',
+                    count: '数の問題',
+                    missing_alt: 'alt属性なし',
+                    empty_alt: '空のalt属性',
+                    alt_length: 'alt属性の長さ',
+                    alt_quality: 'alt属性の品質',
+                    internal_count: '内部リンク数',
+                    external_missing: '外部リンクなし',
+                    empty_text: '空のリンクテキスト',
+                    generic_text: '汎用的なリンクテキスト',
+                    jsonld_syntax: 'JSON-LD構文エラー',
+                    missing_schema: 'スキーマ不足',
+                    protocol: 'プロトコル',
+                    depth: 'ディレクトリの深さ',
+                    viewport_content: 'viewport内容',
+                    noindex: 'noindex設定'
+                };
+                return labels[type] || type;
+            }
+
+            getPriorityClass(priority) {
+                const classes = {
+                    critical: 'critical',
+                    high: 'high',
+                    medium: 'medium',
+                    low: 'low'
+                };
+                return classes[priority] || 'medium';
+            }
+
+            switchTab(tabName) {
+                // タブボタンの切り替え
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+                // タブコンテンツの切り替え
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
+            }
+
+            showLoading(show) {
+                document.getElementById('loading').style.display = show ? 'block' : 'none';
+                document.getElementById('checkBtn').disabled = show;
+            }
+
+            showResults() {
+                document.getElementById('resultsContainer').style.display = 'block';
+            }
+
+            hideResults() {
+                document.getElementById('resultsContainer').style.display = 'none';
+            }
+
+            showError(message) {
+                this.showMessage(message, 'error');
+            }
+
+            showSuccess(message) {
+                this.showMessage(message, 'success');
+            }
+
+            showMessage(message, type) {
+                // 既存のメッセージを削除
+                const existingMessage = document.querySelector('.error-message, .success-message');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+                messageDiv.textContent = message;
+
+                document.querySelector('.form-container').insertBefore(messageDiv, document.querySelector('.form-container').firstChild);
+
+                // 3秒後にメッセージを削除
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 3000);
+            }
+
+            clearForm() {
+                document.getElementById('seoCheckForm').reset();
+                this.hideResults();
+            }
+        }
+
+        // 問題詳細の表示切り替え関数
+        function toggleIssueDetails(issueId) {
+            const details = document.getElementById(issueId);
+            const icon = details.previousElementSibling.querySelector('.toggle-icon');
+            
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                icon.textContent = '▲';
+            } else {
+                details.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+
+        // アプリケーション初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            new SEOCheckerApp();
+        });
+    </script>
+</body>
+</html>
