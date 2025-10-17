@@ -59,13 +59,20 @@ class DetailedAnalyzer {
    * @returns {Object} 詳細分析結果
    */
   analyzeDetails($, url) {
+    const pageData = {
+      title: $('title').text().trim(),
+      metaDescription: $('meta[name="description"]').attr('content') || '',
+      bodyText: $('body').text().trim(),
+      url: url || ''
+    };
+    
     const analysis = {
       titleTag: this.analyzeTitleTag($),
       metaDescription: this.analyzeMetaDescription($),
       headingStructure: this.analyzeHeadingStructure($),
       imageAltAttributes: this.analyzeImageAltAttributes($),
       internalLinkStructure: this.analyzeInternalLinkStructure($, url),
-      structuredData: this.analyzeStructuredData($),
+      structuredData: this.analyzeStructuredData($, url, pageData),
       otherSEOElements: this.analyzeOtherSEOElements($, url)
     };
 
@@ -637,9 +644,9 @@ class DetailedAnalyzer {
   }
 
   /**
-   * 構造化データの詳細分析
+   * 構造化データの詳細分析（拡張版）
    */
-  analyzeStructuredData($) {
+  analyzeStructuredData($, url = '', pageData = {}) {
     const jsonLd = [];
     const microdata = [];
     const rdfa = [];
@@ -647,70 +654,174 @@ class DetailedAnalyzer {
     const recommendations = [];
     const specificIssues = [];
 
-    // JSON-LD検索
-    $('script[type="application/ld+json"]').each((i, elem) => {
-      try {
-        const data = JSON.parse($(elem).html());
-        jsonLd.push({
-          data: data,
-          position: i + 1,
-          isValid: true
+    // PageTypeAnalyzerとStructuredDataRecommenderを使用するため、
+    // 実際のコードでは外部から渡すかここでインスタンス化する
+    let pageTypeAnalysis = null;
+    let structuredDataRecommendations = null;
+    
+    try {
+      const PageTypeAnalyzer = require('./page-type-analyzer');
+      const StructuredDataRecommender = require('./structured-data-recommender');
+      const SchemaTemplates = require('./schema-templates');
+      
+      const pageTypeAnalyzer = new PageTypeAnalyzer();
+      const recommender = new StructuredDataRecommender();
+      const templates = new SchemaTemplates();
+
+      // ページタイプ分析を実行
+      pageTypeAnalysis = pageTypeAnalyzer.analyzePage($, url);
+      
+      // JSON-LD検索
+      $('script[type="application/ld+json"]').each((i, elem) => {
+        try {
+          const data = JSON.parse($(elem).html());
+          jsonLd.push({
+            data: data,
+            position: i + 1,
+            isValid: true
+          });
+        } catch (e) {
+          jsonLd.push({
+            data: null,
+            position: i + 1,
+            isValid: false,
+            error: e.message
+          });
+          issues.push('JSON-LDの構文エラーがあります');
+          recommendations.push('JSON-LDの構文を修正してください');
+          specificIssues.push({
+            type: 'jsonld_syntax',
+            element: 'script[type="application/ld+json"]',
+            location: 'head/body',
+            position: i + 1,
+            error: e.message,
+            description: `${i + 1}番目のJSON-LDに構文エラーがあります`,
+            fix: 'JSON-LDの構文を修正してください'
+          });
+        }
+      });
+
+      // Microdata検索
+      $('[itemtype]').each((i, elem) => {
+        const itemType = $(elem).attr('itemtype');
+        microdata.push({
+          itemType: itemType,
+          element: elem.tagName.toLowerCase(),
+          position: i + 1
         });
-      } catch (e) {
-        jsonLd.push({
-          data: null,
-          position: i + 1,
-          isValid: false,
-          error: e.message
+      });
+
+      // RDFa検索
+      $('[typeof]').each((i, elem) => {
+        const typeofValue = $(elem).attr('typeof');
+        rdfa.push({
+          typeof: typeofValue,
+          element: elem.tagName.toLowerCase(),
+          position: i + 1
         });
-        issues.push('JSON-LDの構文エラーがあります');
-        recommendations.push('JSON-LDの構文を修正してください');
+      });
+
+      // 既存スキーマの特定
+      const existingSchemas = {
+        jsonLd: jsonLd,
+        microdata: microdata,
+        rdfa: rdfa
+      };
+
+      // 構造化データ推奨を生成
+      structuredDataRecommendations = recommender.generateRecommendations(
+        pageTypeAnalysis, existingSchemas, pageData
+      );
+
+      // 従来の構造化データ存在チェック
+      if (jsonLd.length === 0 && microdata.length === 0 && rdfa.length === 0) {
+        issues.push('構造化データが存在しません');
+        recommendations.push(`このページは「${pageTypeAnalyzer.getTypeDisplayName(pageTypeAnalysis.primaryType)}」と判定されました。適切なスキーマを実装してください。`);
+        
+        // 具体的な実装提案を追加
+        const primarySchema = pageTypeAnalysis.primaryType;
+        const schemaTemplate = templates.generateSchema(primarySchema, pageData, $);
+        
         specificIssues.push({
-          type: 'jsonld_syntax',
-          element: 'script[type="application/ld+json"]',
+          type: 'missing',
+          element: 'structured_data',
           location: 'head/body',
-          position: i + 1,
-          error: e.message,
-          description: `${i + 1}番目のJSON-LDに構文エラーがあります`,
-          fix: 'JSON-LDの構文を修正してください'
+          description: '構造化データが完全に存在しません',
+          fix: `以下のJSON-LDを<head>セクションに追加してください：\n\n<script type="application/ld+json">\n${JSON.stringify(schemaTemplate.schema, null, 2)}\n</script>`,
+          pageType: pageTypeAnalysis.primaryType,
+          confidence: pageTypeAnalysis.confidence,
+          implementationGuide: schemaTemplate.implementationGuide,
+          template: schemaTemplate.schema
         });
       }
-    });
 
-    // Microdata検索
-    $('[itemtype]').each((i, elem) => {
-      const itemType = $(elem).attr('itemtype');
-      microdata.push({
-        itemType: itemType,
-        element: elem.tagName.toLowerCase(),
-        position: i + 1
-      });
-    });
+      // 不足スキーマの具体的な実装提案
+      if (structuredDataRecommendations.recommendations.missing.length > 0) {
+        structuredDataRecommendations.recommendations.missing.forEach((item, index) => {
+          const schemaTemplate = templates.generateSchema(item.schema, pageData, $);
+          
+          specificIssues.push({
+            type: 'missing_schema',
+            element: 'structured_data',
+            location: 'head',
+            schema: item.schema,
+            priority: item.priority,
+            description: item.reason,
+            fix: `以下の${item.schema}スキーマを追加してください：\n\n<script type="application/ld+json">\n${JSON.stringify(schemaTemplate.schema, null, 2)}\n</script>`,
+            implementationGuide: schemaTemplate.implementationGuide,
+            requiredData: schemaTemplate.requiredData,
+            template: schemaTemplate.schema,
+            seoValue: item.seoValue,
+            estimatedTime: this.getImplementationTime(item.schema)
+          });
+        });
+      }
 
-    // RDFa検索
-    $('[typeof]').each((i, elem) => {
-      const typeofValue = $(elem).attr('typeof');
-      rdfa.push({
-        typeof: typeofValue,
-        element: elem.tagName.toLowerCase(),
-        position: i + 1
-      });
-    });
+      // 改善可能なスキーマの提案
+      if (structuredDataRecommendations.recommendations.improvements.length > 0) {
+        structuredDataRecommendations.recommendations.improvements.forEach(item => {
+          const schemaTemplate = templates.generateSchema(item.schema, pageData, $);
+          
+          specificIssues.push({
+            type: 'improvement',
+            element: 'structured_data',
+            location: 'head',
+            schema: item.schema,
+            priority: item.priority,
+            description: item.reason,
+            fix: `以下の${item.schema}スキーマを追加することでSEO効果が向上します：\n\n<script type="application/ld+json">\n${JSON.stringify(schemaTemplate.schema, null, 2)}\n</script>`,
+            implementationGuide: schemaTemplate.implementationGuide,
+            template: schemaTemplate.schema,
+            impact: item.impact,
+            difficulty: item.difficulty
+          });
+        });
+      }
 
-    // 構造化データの存在チェック
-    if (jsonLd.length === 0 && microdata.length === 0 && rdfa.length === 0) {
-      issues.push('構造化データが存在しません');
-      recommendations.push('JSON-LD、Microdata、またはRDFaのいずれかの構造化データを実装してください');
-      specificIssues.push({
-        type: 'missing',
-        element: 'structured_data',
-        location: 'head/body',
-        description: '構造化データが完全に存在しません',
-        fix: 'JSON-LD形式で構造化データを実装してください'
-      });
+      // ページタイプ特有の推奨事項
+      if (structuredDataRecommendations.businessSpecific.length > 0) {
+        structuredDataRecommendations.businessSpecific.forEach(item => {
+          specificIssues.push({
+            type: 'business_specific',
+            element: 'structured_data',
+            location: 'head',
+            businessType: item.type,
+            description: item.description,
+            fix: item.implementation,
+            suggestion: item.suggestion
+          });
+        });
+      }
+
+    } catch (error) {
+      console.error('構造化データ詳細分析エラー:', error);
+      
+      // フォールバック：従来の分析
+      this.performBasicStructuredDataAnalysis(
+        $, jsonLd, microdata, rdfa, issues, recommendations, specificIssues
+      );
     }
 
-    // 必須スキーマのチェック
     const foundSchemas = new Set();
     jsonLd.forEach(schema => {
       if (schema.isValid && schema.data && schema.data['@type']) {
@@ -722,22 +833,6 @@ class DetailedAnalyzer {
       }
     });
 
-    const requiredSchemas = ['Organization', 'WebSite', 'Product', 'BreadcrumbList'];
-    const missingSchemas = requiredSchemas.filter(schema => !foundSchemas.has(schema));
-    
-    if (missingSchemas.length > 0) {
-      issues.push(`必須スキーマが不足しています: ${missingSchemas.join(', ')}`);
-      recommendations.push(`不足しているスキーマを実装してください: ${missingSchemas.join(', ')}`);
-      specificIssues.push({
-        type: 'missing_schema',
-        element: 'structured_data',
-        location: 'head',
-        missingSchemas: missingSchemas,
-        description: `必須スキーマが不足しています: ${missingSchemas.join(', ')}`,
-        fix: `不足しているスキーマを実装してください: ${missingSchemas.join(', ')}`
-      });
-    }
-
     return {
       jsonLd: jsonLd,
       microdata: microdata,
@@ -746,8 +841,105 @@ class DetailedAnalyzer {
       issues: issues,
       recommendations: recommendations,
       specificIssues: specificIssues,
-      score: this.calculateStructuredDataScore(jsonLd, microdata, rdfa)
+      score: this.calculateStructuredDataScore(jsonLd, microdata, rdfa),
+      // 新機能の結果
+      pageTypeAnalysis: pageTypeAnalysis,
+      structuredDataRecommendations: structuredDataRecommendations,
+      implementationPriority: this.calculateImplementationPriority(specificIssues)
     };
+  }
+
+  /**
+   * 基本的な構造化データ分析（フォールバック用）
+   */
+  performBasicStructuredDataAnalysis($, jsonLd, microdata, rdfa, issues, recommendations, specificIssues) {
+    const foundSchemas = new Set();
+    jsonLd.forEach(schema => {
+      if (schema.isValid && schema.data && schema.data['@type']) {
+        if (Array.isArray(schema.data['@type'])) {
+          schema.data['@type'].forEach(type => foundSchemas.add(type));
+        } else {
+          foundSchemas.add(schema.data['@type']);
+        }
+      }
+    });
+
+    const requiredSchemas = ['Organization', 'WebSite', 'Article'];
+    const missingSchemas = requiredSchemas.filter(schema => !foundSchemas.has(schema));
+    
+    if (missingSchemas.length > 0) {
+      issues.push(`推奨スキーマが不足しています: ${missingSchemas.join(', ')}`);
+      recommendations.push(`不足しているスキーマを実装してください: ${missingSchemas.join(', ')}`);
+      specificIssues.push({
+        type: 'missing_schema',
+        element: 'structured_data',
+        location: 'head',
+        missingSchemas: missingSchemas,
+        description: `推奨スキーマが不足しています: ${missingSchemas.join(', ')}`,
+        fix: `不足しているスキーマを実装してください: ${missingSchemas.join(', ')}`
+      });
+    }
+  }
+
+  /**
+   * 実装優先度を計算
+   */
+  calculateImplementationPriority(specificIssues) {
+    const priorities = {
+      critical: [],
+      high: [],
+      medium: [],
+      low: []
+    };
+
+    specificIssues.forEach(issue => {
+      const priority = issue.priority || this.determinePriority(issue);
+      if (priorities[priority]) {
+        priorities[priority].push(issue);
+      } else {
+        priorities.medium.push(issue);
+      }
+    });
+
+    return priorities;
+  }
+
+  /**
+   * 優先度を決定
+   */
+  determinePriority(issue) {
+    if (issue.type === 'missing' || issue.type === 'jsonld_syntax') {
+      return 'critical';
+    } else if (issue.type === 'missing_schema' && 
+               ['Article', 'Product', 'LocalBusiness'].includes(issue.schema)) {
+      return 'high';
+    } else if (issue.type === 'improvement') {
+      return 'medium';
+    } else {
+      return 'low';
+    }
+  }
+
+  /**
+   * 実装時間を取得
+   */
+  getImplementationTime(schema) {
+    const times = {
+      'Article': '30分',
+      'Product': '1-2時間',
+      'LocalBusiness': '1時間',
+      'Recipe': '2-3時間',
+      'Event': '1時間',
+      'FAQPage': '30分',
+      'HowTo': '2-3時間',
+      'Review': '30分',
+      'JobPosting': '1時間',
+      'Course': '1-2時間',
+      'Organization': '45分',
+      'Person': '30分',
+      'BreadcrumbList': '30分'
+    };
+    return times[schema] || '1時間';
   }
 
   /**

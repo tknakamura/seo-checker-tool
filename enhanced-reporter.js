@@ -252,7 +252,7 @@ class EnhancedReporter {
   }
 
   /**
-   * 詳細な推奨事項
+   * 詳細な推奨事項（構造化データ実装例付き）
    */
   generateDetailedRecommendations(results) {
     const recommendations = [];
@@ -260,16 +260,31 @@ class EnhancedReporter {
     // SEO推奨事項
     Object.entries(results.checks).forEach(([key, check]) => {
       if (check.issues && check.issues.length > 0) {
+        let implementation = this.getImplementationGuide(key, 'seo');
+        let examples = this.getExamples(key, 'seo');
+        
+        // 構造化データの場合、新機能の結果を活用
+        if (key === 'structuredData' && check.implementationExamples) {
+          implementation = this.getEnhancedStructuredDataImplementation(check, results);
+          examples = this.getEnhancedStructuredDataExamples(check, results);
+        }
+
         recommendations.push({
           category: key,
           type: 'seo',
           priority: this.calculatePriority(key, check, 'seo'),
           issues: check.issues,
           recommendations: check.recommendations,
-          implementation: this.getImplementationGuide(key, 'seo'),
-          examples: this.getExamples(key, 'seo'),
+          implementation: implementation,
+          examples: examples,
           tools: this.getRecommendedTools(key, 'seo'),
-          metrics: this.getSuccessMetrics(key, 'seo')
+          metrics: this.getSuccessMetrics(key, 'seo'),
+          // 新機能：構造化データの詳細情報
+          ...(key === 'structuredData' && {
+            pageTypeAnalysis: check.pageTypeAnalysis,
+            structuredDataRecommendations: check.structuredDataRecommendations,
+            implementationExamples: check.implementationExamples
+          })
         });
       }
     });
@@ -296,6 +311,270 @@ class EnhancedReporter {
     return recommendations.sort((a, b) => 
       this.priorityWeights[b.priority] - this.priorityWeights[a.priority]
     );
+  }
+
+  /**
+   * 拡張された構造化データ実装ガイドを生成
+   */
+  getEnhancedStructuredDataImplementation(structuredDataCheck, results) {
+    const implementation = [];
+
+    // ページタイプ分析結果
+    if (structuredDataCheck.pageTypeAnalysis) {
+      const analysis = structuredDataCheck.pageTypeAnalysis;
+      implementation.push({
+        step: 1,
+        title: 'ページタイプの確認',
+        description: `このページは「${this.getPageTypeDisplayName(analysis.primaryType)}」として分析されました（信頼度: ${Math.round(analysis.confidence * 100)}%）`,
+        details: [
+          `主要タイプ: ${analysis.primaryType}`,
+          `候補タイプ: ${analysis.secondaryTypes ? analysis.secondaryTypes.join(', ') : 'なし'}`,
+          `分析根拠: ${this.getAnalysisReason(analysis)}`
+        ]
+      });
+    }
+
+    // 推奨スキーマの実装
+    if (structuredDataCheck.structuredDataRecommendations) {
+      const recommendations = structuredDataCheck.structuredDataRecommendations;
+      
+      if (recommendations.recommendations.missing.length > 0) {
+        implementation.push({
+          step: 2,
+          title: '必須スキーマの実装',
+          description: '以下のスキーマは必須です。優先的に実装してください。',
+          details: recommendations.recommendations.missing.map(item => ({
+            schema: item.schema,
+            reason: item.reason,
+            priority: item.priority,
+            impact: item.impact,
+            seoValue: item.seoValue
+          }))
+        });
+      }
+
+      if (recommendations.recommendations.improvements.length > 0) {
+        implementation.push({
+          step: 3,
+          title: '推奨スキーマの実装',
+          description: '以下のスキーマを追加することでSEO効果が向上します。',
+          details: recommendations.recommendations.improvements.map(item => ({
+            schema: item.schema,
+            reason: item.reason,
+            priority: item.priority,
+            impact: item.impact
+          }))
+        });
+      }
+    }
+
+    // 具体的な実装例
+    if (structuredDataCheck.implementationExamples && structuredDataCheck.implementationExamples.immediate) {
+      implementation.push({
+        step: 4,
+        title: '具体的な実装',
+        description: '以下のJSON-LDコードを<head>セクションに追加してください。',
+        codeExamples: structuredDataCheck.implementationExamples.immediate.map(example => ({
+          schema: example.schema,
+          title: example.title,
+          code: this.formatJsonLd(example.jsonLd),
+          validation: example.validation
+        }))
+      });
+    }
+
+    // 検証手順
+    implementation.push({
+      step: 5,
+      title: '検証と確認',
+      description: '実装後は以下のツールで必ず検証してください。',
+      validationSteps: [
+        {
+          tool: 'Google構造化データテストツール',
+          url: 'https://search.google.com/test/rich-results',
+          description: 'Googleでの認識確認'
+        },
+        {
+          tool: 'Schema.org Validator',
+          url: 'https://validator.schema.org/',
+          description: 'スキーマ仕様の準拠確認'
+        },
+        {
+          tool: 'Google Search Console',
+          description: '実装後の効果測定'
+        }
+      ]
+    });
+
+    return implementation;
+  }
+
+  /**
+   * 拡張された構造化データ実装例を生成
+   */
+  getEnhancedStructuredDataExamples(structuredDataCheck, results) {
+    const examples = [];
+
+    // 基本実装例
+    if (structuredDataCheck.implementationExamples && structuredDataCheck.implementationExamples.immediate) {
+      structuredDataCheck.implementationExamples.immediate.forEach(example => {
+        examples.push({
+          type: 'immediate',
+          title: `${example.schema}スキーマの実装例`,
+          description: `${example.title}`,
+          code: this.formatJsonLdForDisplay(example.jsonLd),
+          estimatedTime: this.getEstimatedImplementationTime(example.schema),
+          benefits: this.getImplementationBenefits(example.schema)
+        });
+      });
+    }
+
+    // 詳細実装ガイド例
+    if (structuredDataCheck.implementationExamples && structuredDataCheck.implementationExamples.detailed) {
+      structuredDataCheck.implementationExamples.detailed.forEach(guide => {
+        if (guide.codeExample) {
+          examples.push({
+            type: 'detailed',
+            title: guide.title,
+            description: guide.description,
+            code: guide.codeExample,
+            requiredFields: guide.requiredFields || [],
+            confidence: guide.confidence || 0
+          });
+        }
+      });
+    }
+
+    // ビジネス特化型の例
+    if (structuredDataCheck.structuredDataRecommendations && 
+        structuredDataCheck.structuredDataRecommendations.businessSpecific.length > 0) {
+      structuredDataCheck.structuredDataRecommendations.businessSpecific.forEach(specific => {
+        examples.push({
+          type: 'business_specific',
+          title: `${specific.type}向け最適化`,
+          description: specific.description,
+          suggestion: specific.suggestion,
+          implementation: specific.implementation
+        });
+      });
+    }
+
+    return examples;
+  }
+
+  /**
+   * JSON-LDをフォーマット
+   */
+  formatJsonLd(jsonLd) {
+    if (!jsonLd) return '';
+    
+    try {
+      return JSON.stringify(jsonLd, null, 2);
+    } catch (error) {
+      return String(jsonLd);
+    }
+  }
+
+  /**
+   * JSON-LDを表示用にフォーマット
+   */
+  formatJsonLdForDisplay(jsonLd) {
+    const formatted = this.formatJsonLd(jsonLd);
+    return `<script type="application/ld+json">\n${formatted}\n</script>`;
+  }
+
+  /**
+   * ページタイプの表示名を取得
+   */
+  getPageTypeDisplayName(pageType) {
+    const displayNames = {
+      Article: '記事・ブログ',
+      Product: '商品ページ',
+      LocalBusiness: '店舗・企業',
+      Recipe: 'レシピ',
+      Event: 'イベント',
+      FAQ: 'よくある質問',
+      HowTo: '手順・ガイド',
+      Review: 'レビュー',
+      JobPosting: '求人情報',
+      Course: 'コース・講座'
+    };
+    
+    return displayNames[pageType] || pageType;
+  }
+
+  /**
+   * 分析理由を取得
+   */
+  getAnalysisReason(analysis) {
+    if (analysis.analysisDetails && analysis.analysisDetails.matchedPatterns) {
+      const patterns = analysis.analysisDetails.matchedPatterns;
+      const reasons = [];
+      
+      if (patterns.keywords && patterns.keywords.length > 0) {
+        reasons.push(`キーワード: ${patterns.keywords.slice(0, 3).join(', ')}`);
+      }
+      if (patterns.titlePatterns && patterns.titlePatterns.length > 0) {
+        reasons.push(`タイトルパターン: ${patterns.titlePatterns.slice(0, 2).join(', ')}`);
+      }
+      if (patterns.urlPatterns && patterns.urlPatterns.length > 0) {
+        reasons.push(`URLパターン: ${patterns.urlPatterns.slice(0, 2).join(', ')}`);
+      }
+      
+      return reasons.join(', ') || '内容分析による判定';
+    }
+    
+    return '内容分析による判定';
+  }
+
+  /**
+   * 実装時間の見積もりを取得
+   */
+  getEstimatedImplementationTime(schema) {
+    const times = {
+      Article: '30分',
+      Product: '1-2時間',
+      LocalBusiness: '1時間',
+      Recipe: '2-3時間',
+      Event: '1時間',
+      FAQPage: '30分',
+      HowTo: '2-3時間',
+      Review: '30分',
+      JobPosting: '1時間',
+      Course: '1-2時間'
+    };
+    
+    return times[schema] || '1時間';
+  }
+
+  /**
+   * 実装メリットを取得
+   */
+  getImplementationBenefits(schema) {
+    const benefits = {
+      Article: [
+        'Googleニュースでの露出向上',
+        'リッチスニペット表示の可能性',
+        'author情報の表示'
+      ],
+      Product: [
+        '商品リッチスニペット表示',
+        '価格・在庫情報の表示',
+        'レビュー星評価の表示'
+      ],
+      LocalBusiness: [
+        'Googleマップでの表示改善',
+        '営業時間の表示',
+        'ローカル検索での上位表示'
+      ],
+      Recipe: [
+        'レシピリッチスニペット表示',
+        '調理時間・カロリー表示',
+        'レシピ検索での優遇'
+      ]
+    };
+    
+    return benefits[schema] || ['SEO効果の向上', '検索結果での目立ち度アップ'];
   }
 
   /**

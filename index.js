@@ -11,6 +11,9 @@ const cors = require('cors');
 const AIOChecker = require('./aio-checker');
 const EnhancedReporter = require('./enhanced-reporter');
 const DetailedAnalyzer = require('./detailed-analyzer');
+const PageTypeAnalyzer = require('./page-type-analyzer');
+const StructuredDataRecommender = require('./structured-data-recommender');
+const SchemaTemplates = require('./schema-templates');
 require('dotenv').config();
 
 // ログ設定
@@ -37,6 +40,9 @@ class SEOChecker {
     this.aioChecker = new AIOChecker();
     this.enhancedReporter = new EnhancedReporter();
     this.detailedAnalyzer = new DetailedAnalyzer();
+    this.pageTypeAnalyzer = new PageTypeAnalyzer();
+    this.structuredDataRecommender = new StructuredDataRecommender();
+    this.schemaTemplates = new SchemaTemplates();
   }
 
   /**
@@ -406,7 +412,12 @@ class SEOChecker {
           headingStructure: this.checkHeadingStructure($),
           imageAltAttributes: this.checkImageAltAttributes($),
           internalLinkStructure: this.checkInternalLinkStructure($, url || ''),
-          structuredData: this.checkStructuredData($),
+          structuredData: this.checkStructuredData($, url || '', {
+            title: titleTagResult.current,
+            metaDescription: metaDescriptionResult.current,
+            bodyText: $('body').text().trim(),
+            url: url || ''
+          }),
           otherSEOElements: this.checkOtherSEOElements($, url || '')
         },
         overallScore: 0,
@@ -948,9 +959,9 @@ class SEOChecker {
   }
 
   /**
-   * 構造化データのチェック（AIO向け詳細チェック）
+   * 構造化データのチェック（拡張版：ページタイプ判定と推奨機能付き）
    */
-  checkStructuredData($) {
+  checkStructuredData($, url = '', pageData = {}) {
     const jsonLd = [];
     const microdata = [];
     const rdfa = [];
@@ -981,24 +992,63 @@ class SEOChecker {
       rdfa.push(typeofValue);
     });
 
-    // 構造化データの存在チェック
+    // 既存の構造化データ情報
+    const existingSchemas = {
+      jsonLd: jsonLd,
+      microdata: microdata,
+      rdfa: rdfa
+    };
+
+    // 新機能：ページタイプ分析
+    const pageTypeAnalysis = this.pageTypeAnalyzer.analyzePage($, url);
+    
+    // 新機能：適切な構造化データの推奨
+    const structuredDataRecommendations = this.structuredDataRecommender.generateRecommendations(
+      pageTypeAnalysis, existingSchemas, pageData
+    );
+
+    // 新機能：具体的な実装例の生成
+    const implementationExamples = this.generateImplementationExamples(
+      structuredDataRecommendations, pageData, $
+    );
+
+    // 従来のチェック結果を拡張
     if (jsonLd.length === 0 && microdata.length === 0 && rdfa.length === 0) {
       issues.push('構造化データが存在しません');
-      recommendations.push('JSON-LD、Microdata、またはRDFaのいずれかの構造化データを実装してください');
+      recommendations.push(`このページは「${pageTypeAnalysis.primaryType}」タイプと判定されました。${this.pageTypeAnalyzer.getTypeDisplayName(pageTypeAnalysis.primaryType)}に適したスキーマを実装してください。`);
     }
 
-    // JSON-LDの詳細チェック
+    // JSON-LDの詳細チェック（従来機能）
     const jsonLdIssues = this.checkJsonLdDetails(jsonLd);
     issues.push(...jsonLdIssues.issues);
     recommendations.push(...jsonLdIssues.recommendations);
 
+    // 新機能：ページタイプに基づく追加推奨事項
+    if (structuredDataRecommendations.recommendations.missing.length > 0) {
+      structuredDataRecommendations.recommendations.missing.forEach(item => {
+        issues.push(`${item.schema}スキーマが不足しています`);
+        recommendations.push(item.reason);
+      });
+    }
+
     return {
+      // 従来の結果
       jsonLd: jsonLd,
       microdata: microdata,
       rdfa: rdfa,
       issues: issues,
       recommendations: recommendations,
-      score: this.calculateStructuredDataScore(jsonLd, microdata, rdfa, jsonLdIssues)
+      score: this.calculateStructuredDataScore(jsonLd, microdata, rdfa, jsonLdIssues),
+      
+      // 新機能の結果
+      pageTypeAnalysis: pageTypeAnalysis,
+      structuredDataRecommendations: structuredDataRecommendations,
+      implementationExamples: implementationExamples,
+      
+      // 統合スコア
+      enhancedScore: this.calculateEnhancedStructuredDataScore(
+        jsonLd, microdata, rdfa, pageTypeAnalysis, structuredDataRecommendations
+      )
     };
   }
 
@@ -1420,6 +1470,218 @@ class SEOChecker {
     }
 
     return recommendations;
+  }
+
+  /**
+   * 具体的な実装例を生成
+   * @param {Object} recommendations - 推奨事項
+   * @param {Object} pageData - ページデータ
+   * @param {Object} $ - Cheerioオブジェクト
+   * @returns {Object} 実装例
+   */
+  generateImplementationExamples(recommendations, pageData, $) {
+    const examples = {
+      immediate: [],
+      detailed: [],
+      templates: {}
+    };
+
+    try {
+      // 即座に実装すべき項目の具体例を生成
+      if (recommendations.implementation && recommendations.implementation.immediate) {
+        recommendations.implementation.immediate.forEach(item => {
+          const schemaExample = this.schemaTemplates.generateSchema(
+            item.schema, pageData, $
+          );
+          
+          examples.immediate.push({
+            schema: item.schema,
+            title: item.title,
+            jsonLd: schemaExample.schema,
+            implementation: schemaExample.implementationGuide,
+            validation: this.getValidationInstructions(item.schema)
+          });
+          
+          examples.templates[item.schema] = schemaExample;
+        });
+      }
+
+      // 詳細な実装ガイドを生成
+      const primaryType = recommendations.pageType || 'Article';
+      const detailedGuide = this.generateDetailedImplementationGuide(
+        primaryType, pageData, recommendations
+      );
+      
+      examples.detailed = detailedGuide;
+
+    } catch (error) {
+      logger.error('実装例生成エラー:', error);
+      examples.error = error.message;
+    }
+
+    return examples;
+  }
+
+  /**
+   * 詳細な実装ガイドを生成
+   * @param {string} primaryType - 主要なページタイプ
+   * @param {Object} pageData - ページデータ
+   * @param {Object} recommendations - 推奨事項
+   * @returns {Array} 詳細ガイド
+   */
+  generateDetailedImplementationGuide(primaryType, pageData, recommendations) {
+    const guide = [];
+
+    guide.push({
+      step: 1,
+      title: 'ページタイプの確認',
+      description: `このページは「${this.pageTypeAnalyzer.getTypeDisplayName(primaryType)}」として分析されました。`,
+      details: this.pageTypeAnalyzer.getTypeDescription(primaryType),
+      confidence: recommendations.confidence || 0
+    });
+
+    guide.push({
+      step: 2,
+      title: '基本スキーマの実装',
+      description: `${primaryType}スキーマを実装してください。`,
+      codeExample: this.generateBasicSchemaExample(primaryType, pageData),
+      requiredFields: this.schemaTemplates.getRequiredData(primaryType)
+    });
+
+    if (recommendations.businessSpecific && recommendations.businessSpecific.length > 0) {
+      guide.push({
+        step: 3,
+        title: 'ビジネス特化型の最適化',
+        description: 'ビジネスタイプに特化した構造化データを追加してください。',
+        specifics: recommendations.businessSpecific
+      });
+    }
+
+    guide.push({
+      step: 4,
+      title: '検証と確認',
+      description: '実装後は必ず検証ツールで確認してください。',
+      validationSteps: recommendations.validationSteps || []
+    });
+
+    return guide;
+  }
+
+  /**
+   * 基本スキーマの例を生成
+   * @param {string} schemaType - スキーマタイプ
+   * @param {Object} pageData - ページデータ
+   * @returns {string} JSON-LD文字列
+   */
+  generateBasicSchemaExample(schemaType, pageData) {
+    try {
+      const template = this.schemaTemplates.getTemplate(schemaType);
+      if (!template) {
+        return this.getGenericSchemaExample(schemaType);
+      }
+
+      // 基本的なデータで埋めた例を生成
+      const basicExample = Object.assign({}, template);
+      
+      // プレースホルダーを実際の値またはサンプル値で置換
+      let exampleStr = JSON.stringify(basicExample, null, 2);
+      
+      const replacements = {
+        '{{title}}': pageData.title || 'ページのタイトル',
+        '{{description}}': pageData.metaDescription || 'ページの説明文',
+        '{{url}}': pageData.url || 'https://example.com',
+        '{{authorName}}': '著者名',
+        '{{publisherName}}': 'サイト名',
+        '{{publishDate}}': new Date().toISOString().split('T')[0]
+      };
+
+      Object.entries(replacements).forEach(([placeholder, value]) => {
+        exampleStr = exampleStr.replace(new RegExp(placeholder, 'g'), value);
+      });
+
+      return exampleStr;
+    } catch (error) {
+      logger.error('スキーマ例生成エラー:', error);
+      return this.getGenericSchemaExample(schemaType);
+    }
+  }
+
+  /**
+   * 汎用的なスキーマ例を取得
+   * @param {string} schemaType - スキーマタイプ
+   * @returns {string} JSON-LD文字列
+   */
+  getGenericSchemaExample(schemaType) {
+    return JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": schemaType,
+      "name": "ページタイトル",
+      "description": "ページの説明"
+    }, null, 2);
+  }
+
+  /**
+   * 検証手順を取得
+   * @param {string} schemaType - スキーマタイプ
+   * @returns {Array} 検証手順
+   */
+  getValidationInstructions(schemaType) {
+    return [
+      {
+        tool: 'Google構造化データテストツール',
+        url: 'https://search.google.com/test/rich-results',
+        description: 'Googleのリッチリザルトテストでスキーマが正しく認識されるか確認'
+      },
+      {
+        tool: 'Schema.org Validator',
+        url: 'https://validator.schema.org/',
+        description: 'Schema.org仕様への準拠を確認'
+      },
+      {
+        tool: 'JSON-LD Playground',
+        url: 'https://json-ld.org/playground/',
+        description: 'JSON-LD構文の確認'
+      }
+    ];
+  }
+
+  /**
+   * 拡張された構造化データスコアを計算
+   * @param {Array} jsonLd - JSON-LDデータ
+   * @param {Array} microdata - Microdataデータ
+   * @param {Array} rdfa - RDFaデータ
+   * @param {Object} pageTypeAnalysis - ページタイプ分析結果
+   * @param {Object} recommendations - 推奨事項
+   * @returns {number} 拡張スコア
+   */
+  calculateEnhancedStructuredDataScore(jsonLd, microdata, rdfa, pageTypeAnalysis, recommendations) {
+    let score = 0;
+
+    // 基本の構造化データ存在スコア
+    if (jsonLd.length > 0) score += 30;
+    if (microdata.length > 0) score += 20;
+    if (rdfa.length > 0) score += 20;
+
+    // ページタイプとの適合性スコア
+    if (pageTypeAnalysis.confidence > 0.8) {
+      score += 20;
+    } else if (pageTypeAnalysis.confidence > 0.5) {
+      score += 15;
+    } else {
+      score += 10;
+    }
+
+    // 推奨スキーマの実装状況
+    const totalRecommended = recommendations.recommendations.missing.length + 
+                            recommendations.recommendations.improvements.length;
+    const implemented = Math.max(0, jsonLd.length - recommendations.recommendations.missing.length);
+    
+    if (totalRecommended > 0) {
+      const implementationRate = implemented / (implemented + totalRecommended);
+      score += Math.round(implementationRate * 30);
+    }
+
+    return Math.min(score, 100);
   }
 
   /**

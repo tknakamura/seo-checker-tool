@@ -840,6 +840,286 @@
             color: #856404;
         }
 
+        /* 構造化データ専用スタイル */
+        .structured-data-analysis {
+            max-width: 100%;
+        }
+
+        .page-type-analysis {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .page-type-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-type-confidence {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .page-type-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .page-type-detail {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .schema-recommendations {
+            margin-bottom: 2rem;
+        }
+
+        .schema-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .schema-section h3 {
+            background: #f8f9fa;
+            padding: 1rem;
+            margin: 0;
+            border-bottom: 1px solid #e1e5e9;
+            font-size: 1.2rem;
+        }
+
+        .schema-items {
+            padding: 1rem;
+        }
+
+        .schema-item {
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .schema-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .schema-header {
+            background: #f8f9fa;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+
+        .schema-header:hover {
+            background: #e9ecef;
+        }
+
+        .schema-type {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .schema-priority {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .schema-priority.critical { background: #dc3545; }
+        .schema-priority.high { background: #fd7e14; }
+        .schema-priority.medium { background: #ffc107; color: #212529; }
+        .schema-priority.low { background: #28a745; }
+
+        .schema-seo-value {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .schema-time {
+            background: #6c757d;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .schema-content {
+            padding: 1.5rem;
+            display: none;
+        }
+
+        .schema-content.active {
+            display: block;
+        }
+
+        .schema-description {
+            margin-bottom: 1.5rem;
+            color: #495057;
+            line-height: 1.6;
+        }
+
+        .implementation-code {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .implementation-guide {
+            margin: 1.5rem 0;
+        }
+
+        .implementation-guide h4 {
+            color: #495057;
+            margin-bottom: 0.75rem;
+        }
+
+        .implementation-guide ol {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .implementation-guide li {
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .validation-tools {
+            margin-top: 1.5rem;
+        }
+
+        .validation-tools h4 {
+            color: #495057;
+            margin-bottom: 0.75rem;
+        }
+
+        .validation-tool {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: #e3f2fd;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .validation-tool:last-child {
+            margin-bottom: 0;
+        }
+
+        .validation-tool a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .validation-tool a:hover {
+            text-decoration: underline;
+        }
+
+        .copy-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .copy-button:hover {
+            background: #218838;
+        }
+
+        .copy-button:active {
+            background: #1e7e34;
+        }
+
+        .benefits-list {
+            margin-top: 1rem;
+        }
+
+        .benefits-list h5 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        .benefits-list ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .benefits-list li {
+            color: #28a745;
+            margin-bottom: 0.25rem;
+        }
+
+        .expected-benefits {
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .expected-benefits h3 {
+            color: #155724;
+            margin-bottom: 1rem;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .benefit-item {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .benefit-percentage {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 0.5rem;
+        }
+
+        .benefit-description {
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -943,6 +1223,7 @@
                 <button class="tab active" data-tab="summary">サマリー</button>
                 <button class="tab" data-tab="details">SEO詳細</button>
                 <button class="tab" data-tab="aio">AIO詳細</button>
+                <button class="tab" data-tab="structured-data">構造化データ</button>
                 <button class="tab" data-tab="specific">具体的な箇所</button>
                 <button class="tab" data-tab="detailed">詳細レポート</button>
                 <button class="tab" data-tab="report">Markdownレポート</button>
@@ -958,6 +1239,10 @@
 
             <div class="tab-content" id="aio">
                 <div id="aioContent"></div>
+            </div>
+
+            <div class="tab-content" id="structured-data">
+                <div id="structuredDataContent"></div>
             </div>
 
             <div class="tab-content" id="specific">
@@ -1093,6 +1378,9 @@
                 
                 // AIO詳細表示
                 this.displayAIO(results);
+                
+                // 構造化データ詳細表示
+                this.displayStructuredData(results);
                 
                 // 具体的な箇所表示
                 this.displaySpecificIssues(results);
@@ -1273,6 +1561,297 @@
                 });
                 
                 aioContent.innerHTML = html;
+            }
+
+            displayStructuredData(results) {
+                const structuredDataContent = document.getElementById('structuredDataContent');
+                const structuredDataCheck = results.checks.structuredData;
+                
+                if (!structuredDataCheck) {
+                    structuredDataContent.innerHTML = '<p>構造化データのチェック結果がありません</p>';
+                    return;
+                }
+
+                let html = `<div class="structured-data-analysis">`;
+
+                // ページタイプ分析結果
+                if (structuredDataCheck.pageTypeAnalysis) {
+                    const analysis = structuredDataCheck.pageTypeAnalysis;
+                    const confidence = Math.round(analysis.confidence * 100);
+                    
+                    html += `
+                        <div class="page-type-analysis">
+                            <div class="page-type-title">📄 ページタイプ分析結果</div>
+                            <div class="page-type-confidence">判定: ${this.getPageTypeDisplayName(analysis.primaryType)} (信頼度: ${confidence}%)</div>
+                            <div class="page-type-details">
+                                <div class="page-type-detail">
+                                    <h4>主要タイプ</h4>
+                                    <p>${analysis.primaryType}</p>
+                                </div>
+                                ${analysis.secondaryTypes && analysis.secondaryTypes.length > 0 ? `
+                                    <div class="page-type-detail">
+                                        <h4>候補タイプ</h4>
+                                        <p>${analysis.secondaryTypes.join(', ')}</p>
+                                    </div>
+                                ` : ''}
+                                <div class="page-type-detail">
+                                    <h4>分析根拠</h4>
+                                    <p>${this.getAnalysisReason(analysis)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // 構造化データ推奨事項
+                if (structuredDataCheck.structuredDataRecommendations) {
+                    const recommendations = structuredDataCheck.structuredDataRecommendations;
+                    
+                    html += `<div class="schema-recommendations">`;
+
+                    // 不足スキーマ（必須）
+                    if (recommendations.recommendations.missing.length > 0) {
+                        html += `
+                            <div class="schema-section">
+                                <h3>🚨 必須スキーマ (${recommendations.recommendations.missing.length}件)</h3>
+                                <div class="schema-items">
+                        `;
+                        
+                        recommendations.recommendations.missing.forEach((item, index) => {
+                            const schemaId = `missing_${index}`;
+                            html += this.generateSchemaItem(item, schemaId, structuredDataCheck);
+                        });
+                        
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // 推奨スキーマ
+                    if (recommendations.recommendations.improvements.length > 0) {
+                        html += `
+                            <div class="schema-section">
+                                <h3>⭐ 推奨スキーマ (${recommendations.recommendations.improvements.length}件)</h3>
+                                <div class="schema-items">
+                        `;
+                        
+                        recommendations.recommendations.improvements.forEach((item, index) => {
+                            const schemaId = `improvement_${index}`;
+                            html += this.generateSchemaItem(item, schemaId, structuredDataCheck);
+                        });
+                        
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // オプションスキーマ
+                    if (recommendations.recommendations.optional.length > 0) {
+                        html += `
+                            <div class="schema-section">
+                                <h3>💡 オプションスキーマ (${recommendations.recommendations.optional.length}件)</h3>
+                                <div class="schema-items">
+                        `;
+                        
+                        recommendations.recommendations.optional.forEach((item, index) => {
+                            const schemaId = `optional_${index}`;
+                            html += this.generateSchemaItem(item, schemaId, structuredDataCheck);
+                        });
+                        
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    html += `</div>`; // schema-recommendations
+
+                    // 期待される効果
+                    if (recommendations.expectedBenefits) {
+                        const benefits = recommendations.expectedBenefits;
+                        html += `
+                            <div class="expected-benefits">
+                                <h3>📈 期待される効果</h3>
+                                <div class="benefits-grid">
+                                    <div class="benefit-item">
+                                        <div class="benefit-percentage">${benefits.richSnippets.probability}%</div>
+                                        <div class="benefit-description">${benefits.richSnippets.description}</div>
+                                    </div>
+                                    <div class="benefit-item">
+                                        <div class="benefit-percentage">+${benefits.searchRanking.improvement}%</div>
+                                        <div class="benefit-description">${benefits.searchRanking.description}</div>
+                                    </div>
+                                    <div class="benefit-item">
+                                        <div class="benefit-percentage">+${benefits.clickThroughRate.improvement}%</div>
+                                        <div class="benefit-description">${benefits.clickThroughRate.description}</div>
+                                    </div>
+                                    ${benefits.localSearch ? `
+                                        <div class="benefit-item">
+                                            <div class="benefit-percentage">+${benefits.localSearch.visibility}%</div>
+                                            <div class="benefit-description">${benefits.localSearch.description}</div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                html += `</div>`; // structured-data-analysis
+
+                structuredDataContent.innerHTML = html;
+            }
+
+            generateSchemaItem(item, schemaId, structuredDataCheck) {
+                // 実装例を取得（あれば）
+                let implementationCode = '';
+                if (structuredDataCheck.implementationExamples && 
+                    structuredDataCheck.implementationExamples.templates && 
+                    structuredDataCheck.implementationExamples.templates[item.schema]) {
+                    const template = structuredDataCheck.implementationExamples.templates[item.schema];
+                    if (template.schema) {
+                        implementationCode = JSON.stringify(template.schema, null, 2);
+                    }
+                }
+
+                return `
+                    <div class="schema-item">
+                        <div class="schema-header" onclick="toggleSchemaContent('${schemaId}')">
+                            <div class="schema-type">${item.schema}</div>
+                            <div class="schema-priority ${item.priority}">${this.getPriorityTitle(item.priority)}</div>
+                            ${item.seoValue ? `<div class="schema-seo-value">SEO値: ${item.seoValue}</div>` : ''}
+                            ${this.getEstimatedTime(item.schema) ? `<div class="schema-time">${this.getEstimatedTime(item.schema)}</div>` : ''}
+                        </div>
+                        <div class="schema-content" id="${schemaId}">
+                            <div class="schema-description">
+                                ${item.reason}
+                            </div>
+                            ${implementationCode ? `
+                                <div class="implementation-code" id="code_${schemaId}">
+&lt;script type="application/ld+json"&gt;
+${implementationCode}
+&lt;/script&gt;
+                                </div>
+                                <button class="copy-button" onclick="copyToClipboard('code_${schemaId}')">
+                                    📋 コードをコピー
+                                </button>
+                            ` : ''}
+                            <div class="validation-tools">
+                                <h4>🔍 検証ツール</h4>
+                                <div class="validation-tool">
+                                    <span>🔗</span>
+                                    <a href="https://search.google.com/test/rich-results" target="_blank">Google構造化データテストツール</a>
+                                    <span>- Googleでの認識確認</span>
+                                </div>
+                                <div class="validation-tool">
+                                    <span>✅</span>
+                                    <a href="https://validator.schema.org/" target="_blank">Schema.org Validator</a>
+                                    <span>- スキーマ仕様の準拠確認</span>
+                                </div>
+                            </div>
+                            ${this.getImplementationBenefits(item.schema) ? `
+                                <div class="benefits-list">
+                                    <h5>💰 実装メリット:</h5>
+                                    <ul>
+                                        ${this.getImplementationBenefits(item.schema).map(benefit => `<li>${benefit}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            getPageTypeDisplayName(pageType) {
+                const displayNames = {
+                    Article: '記事・ブログ',
+                    Product: '商品ページ',
+                    LocalBusiness: '店舗・企業',
+                    Recipe: 'レシピ',
+                    Event: 'イベント',
+                    FAQ: 'よくある質問',
+                    HowTo: '手順・ガイド',
+                    Review: 'レビュー',
+                    JobPosting: '求人情報',
+                    Course: 'コース・講座'
+                };
+                return displayNames[pageType] || pageType;
+            }
+
+            getAnalysisReason(analysis) {
+                if (analysis.analysisDetails && analysis.analysisDetails.matchedPatterns) {
+                    const patterns = analysis.analysisDetails.matchedPatterns;
+                    const reasons = [];
+                    
+                    if (patterns.keywords && patterns.keywords.length > 0) {
+                        reasons.push(`キーワード: ${patterns.keywords.slice(0, 3).join(', ')}`);
+                    }
+                    if (patterns.titlePatterns && patterns.titlePatterns.length > 0) {
+                        reasons.push(`タイトルパターン: ${patterns.titlePatterns.slice(0, 2).join(', ')}`);
+                    }
+                    if (patterns.urlPatterns && patterns.urlPatterns.length > 0) {
+                        reasons.push(`URLパターン: ${patterns.urlPatterns.slice(0, 2).join(', ')}`);
+                    }
+                    
+                    return reasons.join(', ') || '内容分析による判定';
+                }
+                
+                return '内容分析による判定';
+            }
+
+            getEstimatedTime(schema) {
+                const times = {
+                    Article: '30分',
+                    Product: '1-2時間',
+                    LocalBusiness: '1時間',
+                    Recipe: '2-3時間',
+                    Event: '1時間',
+                    FAQPage: '30分',
+                    HowTo: '2-3時間',
+                    Review: '30分',
+                    JobPosting: '1時間',
+                    Course: '1-2時間'
+                };
+                return times[schema] || '1時間';
+            }
+
+            getImplementationBenefits(schema) {
+                const benefits = {
+                    Article: [
+                        'Googleニュースでの露出向上',
+                        'リッチスニペット表示の可能性',
+                        'author情報の表示'
+                    ],
+                    Product: [
+                        '商品リッチスニペット表示',
+                        '価格・在庫情報の表示',
+                        'レビュー星評価の表示'
+                    ],
+                    LocalBusiness: [
+                        'Googleマップでの表示改善',
+                        '営業時間の表示',
+                        'ローカル検索での上位表示'
+                    ],
+                    Recipe: [
+                        'レシピリッチスニペット表示',
+                        '調理時間・カロリー表示',
+                        'レシピ検索での優遇'
+                    ]
+                };
+                
+                return benefits[schema] || ['SEO効果の向上', '検索結果での目立ち度アップ'];
+            }
+
+            getPriorityTitle(priority) {
+                const titles = {
+                    critical: '緊急',
+                    high: '高',
+                    medium: '中',
+                    low: '低'
+                };
+                return titles[priority] || '不明';
             }
 
             displaySpecificIssues(results) {
@@ -1656,6 +2235,36 @@
             } else {
                 details.style.display = 'none';
                 icon.textContent = '▼';
+            }
+        }
+
+        // グローバルヘルパー関数
+        function toggleSchemaContent(schemaId) {
+            const content = document.getElementById(schemaId);
+            if (content) {
+                content.classList.toggle('active');
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                const text = element.textContent || element.innerText;
+                navigator.clipboard.writeText(text).then(() => {
+                    // 一時的にボタンのテキストを変更
+                    const button = event.target;
+                    const originalText = button.textContent;
+                    button.textContent = '✅ コピー完了！';
+                    button.style.background = '#28a745';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.background = '';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('コピーに失敗しました:', err);
+                    alert('コピーに失敗しました。手動でコピーしてください。');
+                });
             }
         }
 
