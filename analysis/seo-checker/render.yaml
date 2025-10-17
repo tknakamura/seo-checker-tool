@@ -1,14 +1,13 @@
-# render.yaml - 最適化版設定
+# render.yaml - Docker最適化版設定
 # メルカリSEOチェックツール（全角文字数カウント対応）
 
 services:
   - type: web
     name: seo-checker-tool
-    env: node
+    env: docker
     region: oregon
     plan: free
-    buildCommand: npm install --only=production
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeploy: true
     branch: main
@@ -16,7 +15,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 3001
       - key: NODE_OPTIONS
         value: --max-old-space-size=512
     # render.com最適化設定
