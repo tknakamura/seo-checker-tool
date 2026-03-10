@@ -83,14 +83,16 @@ mercari-seo-checker-tool/
 
 ### 環境変数
 ```bash
-PORT=3001                 # サーバーポート
+PORT=3001                 # サーバーポート（Render では自動設定）
 LOG_LEVEL=info           # ログレベル
 NODE_ENV=development     # 環境
+CORS_ORIGIN=https://...  # 本番で別オリジンから API を呼ぶ場合
 ```
 
 ### 設定ファイル
+- `seo-config.json`: SEO/AIO のしきい値（タイトル長・メタ説明長・待機時間など）。省略時はコード内デフォルトを使用
 - `config.production.js`: 本番環境設定
-- `deploy.sh`: デプロイスクリプト
+- `deploy.sh` / `deploy-render.sh`: デプロイスクリプト
 
 ## 📊 ログ
 
@@ -100,7 +102,17 @@ NODE_ENV=development     # 環境
 
 ## 🚀 デプロイ
 
-### 本番環境
+### Render.com でリリース
+1. [Render](https://render.com) にログインし、**New → Web Service** を選択
+2. このリポジトリ（GitHub）を接続し、ブランチ `main` を指定
+3. 設定例: **Build Command** `npm install`、**Start Command** `npm start`
+4. **Environment**: `NODE_ENV=production`（PORT は Render が自動設定）
+5. **Deploy** 後、`https://<サービス名>.onrender.com` でアクセス可能
+6. オプション: 環境変数に `CORS_ORIGIN`（フロントの URL）、`MONGODB_URI`（履歴保存用）を追加可能
+
+詳細は [render.yaml](render.yaml) および [render-dashboard-checklist.md](render-dashboard-checklist.md) を参照。
+
+### 本番環境（その他）
 ```bash
 # デプロイスクリプト実行
 ./deploy.sh

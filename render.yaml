@@ -1,36 +1,23 @@
 # render.com デプロイ設定
-# 全角文字数カウント修正版 SEO・AIOチェックツール
+# SEO・AIOチェックツール（PORT は Render が自動設定するため envVars で指定不要）
 
 services:
   - type: web
     name: mercari-seo-checker
     env: node
-    plan: free  # または starter
+    plan: free
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3001
-    
-    # 自動デプロイ設定
+    # オプション（必要に応じて Dashboard で追加）:
+    # - CORS_ORIGIN: フロントのオリジン（複数はカンマ区切り）
+    # - MONGODB_URI: 分析履歴用
+    # - LOG_LEVEL: info | warn | error
     autoDeploy: true
-    branch: main  # または master
-    
-    # ヘルスチェック設定
+    branch: main
     healthCheck:
-      httpPath: /
+      httpPath: /api/health
       timeoutSeconds: 30
-    
-    # ドメイン設定（オプション）
-    # domains:
-    #   - api.checkseoaio.com
-    
-    # 環境変数（プライベート情報はWeb UIで設定）
-    # envVars:
-    #   - key: DATABASE_URL
-    #     fromDatabase:
-    #       name: my-database
-    #       property: connectionString

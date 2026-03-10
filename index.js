@@ -19,15 +19,20 @@ const { connectDB, isDBConnected } = require('./db');
 const AnalysisHistory = require('./models/AnalysisHistory');
 require('dotenv').config();
 
-// ログ設定
+// ログ用ディレクトリを用意（Render 等では存在しない場合がある）
+const logsDir = path.join(__dirname, 'logs');
+try {
+  fs.mkdirSync(logsDir, { recursive: true });
+} catch (_) { /* 無視 */ }
+
 const logger = winston.createLogger({
-  level: 'info',
+  level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({ filename: 'logs/seo-checker.log' }),
+    ...(fs.existsSync(logsDir) ? [new winston.transports.File({ filename: path.join(logsDir, 'seo-checker.log') })] : []),
     new winston.transports.Console()
   ]
 });
@@ -94,43 +99,36 @@ class SEOChecker {
   }
 
   /**
-   * 設定ファイルの読み込み
+   * 設定ファイルの読み込み（seo-config.json があれば使用、なければデフォルト）
    */
   loadConfig() {
+    const defaults = {
+      titleMaxLength: 30,
+      titleMinLength: 15,
+      descriptionMaxLength: 80,
+      descriptionMinLength: 60,
+      h1MaxCount: 1,
+      h2MinCount: 2,
+      h3MinCount: 3,
+      imageAltRequired: true,
+      internalLinksMin: 10,
+      structuredDataRequired: true,
+      jsWaitTime: 3000,
+      jsTimeout: 30000
+    };
+    const configPath = path.join(__dirname, 'seo-config.json');
     try {
-      const configPath = path.join(__dirname, '../../config/seo-config.yaml');
-      // YAMLファイルの読み込みは後で実装
-      return {
-        titleMaxLength: 30,  // 全角基準に変更（30全角文字）
-        titleMinLength: 15,  // 全角基準に変更（15全角文字）
-        descriptionMaxLength: 80,  // 全角基準に変更（80全角文字）
-        descriptionMinLength: 60,  // 全角基準に変更（60全角文字）
-        h1MaxCount: 1,
-        h2MinCount: 2,
-        h3MinCount: 3,
-        imageAltRequired: true,
-        internalLinksMin: 10,
-        structuredDataRequired: true,
-        jsWaitTime: 3000, // JavaScript実行待機時間（ミリ秒）
-        jsTimeout: 30000  // Puppeteerタイムアウト（ミリ秒）
-      };
+      if (fs.existsSync(configPath)) {
+        const raw = fs.readFileSync(configPath, 'utf8');
+        const loaded = JSON.parse(raw);
+        const merged = { ...defaults, ...loaded };
+        logger.info('設定を seo-config.json から読み込みました');
+        return merged;
+      }
     } catch (error) {
-      logger.warn('設定ファイルの読み込みに失敗、デフォルト設定を使用');
-      return {
-        titleMaxLength: 30,  // 全角基準に変更（30全角文字）
-        titleMinLength: 15,  // 全角基準に変更（15全角文字）
-        descriptionMaxLength: 80,  // 全角基準に変更（80全角文字）
-        descriptionMinLength: 60,  // 全角基準に変更（60全角文字）
-        h1MaxCount: 1,
-        h2MinCount: 2,
-        h3MinCount: 3,
-        imageAltRequired: true,
-        internalLinksMin: 10,
-        structuredDataRequired: true,
-        jsWaitTime: 3000, // JavaScript実行待機時間（ミリ秒）
-        jsTimeout: 30000  // Puppeteerタイムアウト（ミリ秒）
-      };
+      logger.warn('設定ファイルの読み込みに失敗、デフォルト設定を使用:', error.message);
     }
+    return defaults;
   }
 
   /**
@@ -256,13 +254,19 @@ class SEOChecker {
   async fetchHTMLWithAxios(url) {
     try {
       logger.info(`AxiosでHTML取得開始: ${url}`);
-      
+      // 403 を避けるためブラウザと同様の User-Agent とヘッダーを使用
+      const browserHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br'
+      };
       const response = await axios.get(url, {
         timeout: 10000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; SEO-Checker/1.0)'
-        },
-        responseType: 'arraybuffer'
+        headers: browserHeaders,
+        responseType: 'arraybuffer',
+        maxRedirects: 5,
+        validateStatus: (status) => status >= 200 && status < 400
       });
       
       // 文字エンコーディングを検出して正しくデコード
@@ -371,11 +375,21 @@ class SEOChecker {
       if (html) {
         pageContent = html;
       } else {
-        // JavaScript実行待機が必要な場合はPuppeteerを使用
+        // JavaScript実行待機が必要な場合、または Axios が 403 の場合は Puppeteer を使用
         if (waitForJS) {
           pageContent = await this.fetchHTMLWithPuppeteer(url);
         } else {
-          pageContent = await this.fetchHTMLWithAxios(url);
+          try {
+            pageContent = await this.fetchHTMLWithAxios(url);
+          } catch (axiosError) {
+            const status = axiosError.response && axiosError.response.status;
+            if (status === 403 || status === 429 || status === 401) {
+              logger.warn(`Axios で ${status} のため Puppeteer にフォールバック: ${url}`);
+              pageContent = await this.fetchHTMLWithPuppeteer(url);
+            } else {
+              throw axiosError;
+            }
+          }
         }
       }
 
@@ -1806,13 +1820,15 @@ class SEOChecker {
 
 // Express アプリケーション設定
 const app = express();
-const port = 3001;
+const port = Number(process.env.PORT) || 3001;
 
-// CORS設定
-app.use(cors({
-  origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
+// CORS設定（Render 等では CORS_ORIGIN で指定、未設定時は localhost + 同一オリジン許可）
+const corsOrigin = process.env.CORS_ORIGIN;
+const corsOptions = {
+  origin: corsOrigin ? corsOrigin.split(',').map(s => s.trim()) : ['http://localhost:3001', 'http://127.0.0.1:3001'],
   credentials: true
-}));
+};
+app.use(cors(corsOptions));
 
 // レスポンスを gzip 圧縮（大きい JSON を制限内に収めるため）
 app.use(compression({ threshold: 1024 }));
@@ -1923,6 +1939,11 @@ app.post('/api/report/detailed', async (req, res) => {
   }
 });
 
+// ヘルスチェック（Render 等の監視用）
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // 分析履歴一覧（MONGODB_URI 設定時のみ有効）
 app.get('/api/history', async (req, res) => {
   if (!isDBConnected()) {
@@ -1965,11 +1986,12 @@ setInterval(() => {
   }
 }, 30000); // 30秒ごとにチェック
 
-// サーバー起動
+// サーバー起動（Render 等では 0.0.0.0 でバインド）
 async function start() {
   await connectDB();
-  app.listen(port, () => {
-    logger.info(`SEOチェックサーバー起動: ポート ${port}`);
+  const host = process.env.HOST || '0.0.0.0';
+  app.listen(port, host, () => {
+    logger.info(`SEOチェックサーバー起動: ${host}:${port}`);
     console.log(`🚀 SEO・AIOチェックツールが起動しました！`);
     console.log(`📱 Webインターフェース: http://localhost:${port}`);
     console.log(`🔧 API エンドポイント: http://localhost:${port}/api/check/seo`);

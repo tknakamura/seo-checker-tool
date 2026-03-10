@@ -1,0 +1,14 @@
+{
+  "titleMaxLength": 30,
+  "titleMinLength": 15,
+  "descriptionMaxLength": 80,
+  "descriptionMinLength": 60,
+  "h1MaxCount": 1,
+  "h2MinCount": 2,
+  "h3MinCount": 3,
+  "imageAltRequired": true,
+  "internalLinksMin": 10,
+  "structuredDataRequired": true,
+  "jsWaitTime": 3000,
+  "jsTimeout": 30000
+}
