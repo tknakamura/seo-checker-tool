@@ -19,6 +19,11 @@ const { connectDB, isDBConnected } = require('./db');
 const AnalysisHistory = require('./models/AnalysisHistory');
 require('dotenv').config();
 
+// Puppeteer の Chrome キャッシュをプロジェクト内に（Render ビルドと実行で同じパスになるよう）
+if (!process.env.PUPPETEER_CACHE_DIR) {
+  process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
+}
+
 // ログ用ディレクトリを用意（Render 等では存在しない場合がある）
 const logsDir = path.join(__dirname, 'logs');
 try {
@@ -385,7 +390,17 @@ class SEOChecker {
             const status = axiosError.response && axiosError.response.status;
             if (status === 403 || status === 429 || status === 401) {
               logger.warn(`Axios で ${status} のため Puppeteer にフォールバック: ${url}`);
-              pageContent = await this.fetchHTMLWithPuppeteer(url);
+              try {
+                pageContent = await this.fetchHTMLWithPuppeteer(url);
+              } catch (puppeteerError) {
+                const msg = puppeteerError && puppeteerError.message ? puppeteerError.message : '';
+                if (/Could not find Chrome|Browser was not found|executablePath/i.test(msg)) {
+                  const err = new Error('このURLはアクセス制限のため取得できません。ページのHTMLをコピーして「HTMLを直接入力」に貼り付けてチェックしてください。');
+                  err.code = 'CHROME_UNAVAILABLE';
+                  throw err;
+                }
+                throw puppeteerError;
+              }
             } else {
               throw axiosError;
             }
@@ -1898,7 +1913,9 @@ app.post('/api/check/seo', async (req, res) => {
     return sendApiSuccess(res, data);
   } catch (error) {
     logger.error(`API エラー: ${error.message}`);
-    return sendApiError(res, 500, error.message, 'INTERNAL_ERROR');
+    const code = error.code === 'CHROME_UNAVAILABLE' ? 'CHROME_UNAVAILABLE' : 'INTERNAL_ERROR';
+    const status = code === 'CHROME_UNAVAILABLE' ? 503 : 500;
+    return sendApiError(res, status, error.message, code);
   }
 });
 

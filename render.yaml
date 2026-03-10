@@ -1,17 +1,21 @@
 # render.com デプロイ設定
-# SEO・AIOチェックツール（PORT は Render が自動設定するため envVars で指定不要）
+# SEO・AIOチェックツール（PORT は Render が自動設定）
+# 403 フォールバック用にビルド時に Chrome をインストール
 
 services:
   - type: web
     name: mercari-seo-checker
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && npx puppeteer browsers install chrome
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      # Chrome をプロジェクト内にキャッシュ（ビルド→実行で共有）
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/project/src/.cache/puppeteer
     # オプション（必要に応じて Dashboard で追加）:
     # - CORS_ORIGIN: フロントのオリジン（複数はカンマ区切り）
     # - MONGODB_URI: 分析履歴用

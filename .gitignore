@@ -89,6 +89,7 @@ temp/
 
 # Logs
 logs
+.cache
 *.log
 
 # Runtime data
