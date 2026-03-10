@@ -1,11 +1,18 @@
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
+
+// Puppeteer が require される前にキャッシュパスを設定（Render でビルド時に入れた Chrome を参照するため）
+if (!process.env.PUPPETEER_CACHE_DIR) {
+  process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
+}
+
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const lighthouse = require('lighthouse');
 const puppeteer = require('puppeteer');
 const winston = require('winston');
-const fs = require('fs');
-const path = require('path');
 const iconv = require('iconv-lite');
 const cors = require('cors');
 const compression = require('compression');
@@ -17,12 +24,6 @@ const StructuredDataRecommender = require('./structured-data-recommender');
 const SchemaTemplates = require('./schema-templates');
 const { connectDB, isDBConnected } = require('./db');
 const AnalysisHistory = require('./models/AnalysisHistory');
-require('dotenv').config();
-
-// Puppeteer の Chrome キャッシュをプロジェクト内に（Render ビルドと実行で同じパスになるよう）
-if (!process.env.PUPPETEER_CACHE_DIR) {
-  process.env.PUPPETEER_CACHE_DIR = path.join(__dirname, '.cache', 'puppeteer');
-}
 
 // ログ用ディレクトリを用意（Render 等では存在しない場合がある）
 const logsDir = path.join(__dirname, 'logs');
