@@ -1,0 +1,303 @@
+openapi: 3.0.3
+info:
+  title: Mercari SEO Checker Tool API
+  description: WebページのSEO・AIOチェックおよびレポート生成を行うAPI
+  version: 1.0.0
+  contact:
+    name: Mercari Japan Team
+
+servers:
+  - url: http://localhost:3001
+    description: ローカル開発
+  - url: /
+    description: 相対パス（デプロイ環境）
+
+tags:
+  - name: SEO Check
+    description: SEOチェック
+  - name: Report
+    description: レポート生成
+  - name: History
+    description: 分析履歴（MONGODB_URI 設定時のみ）
+
+paths:
+  /api/check/seo:
+    post:
+      tags:
+        - SEO Check
+      summary: SEOチェック実行
+      description: URLまたはHTMLを指定してSEO・AIOの包括チェックを実行する
+      operationId: checkSeo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeoCheckRequest'
+      responses:
+        '200':
+          description: チェック成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeoCheckSuccessResponse'
+        '400':
+          description: リクエスト不正（URL/HTML未指定）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/report/seo:
+    post:
+      tags:
+        - Report
+      summary: SEOレポート生成
+      description: チェック実行とMarkdown形式レポートの生成を行う
+      operationId: reportSeo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeoCheckRequest'
+      responses:
+        '200':
+          description: レポート生成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportSuccessResponse'
+        '400':
+          description: リクエスト不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/report/detailed:
+    post:
+      tags:
+        - Report
+      summary: 詳細レポート取得
+      description: チェック結果と詳細レポートオブジェクトを返す
+      operationId: reportDetailed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeoCheckRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedReportSuccessResponse'
+        '400':
+          description: リクエスト不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/history:
+    get:
+      tags:
+        - History
+      summary: 分析履歴一覧
+      description: 過去の分析履歴を取得する。MONGODB_URI が設定されている場合のみ利用可能。
+      operationId: getHistory
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: 取得件数
+        - name: sessionId
+          in: query
+          schema:
+            type: string
+          description: セッションIDでフィルタ
+        - name: userId
+          in: query
+          schema:
+            type: string
+          description: ユーザーIDでフィルタ
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AnalysisHistoryItem'
+        '503':
+          description: データベース未接続
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SeoCheckRequest:
+      type: object
+      description: URL または html のいずれか必須
+      properties:
+        url:
+          type: string
+          format: uri
+          description: チェック対象のWebページURL
+          example: https://example.com
+        html:
+          type: string
+          description: チェック対象のHTML（直接貼り付け）
+        waitForJS:
+          type: boolean
+          default: false
+          description: true の場合 JavaScript 実行を待ってから解析（SPA対応）
+      minProperties: 1
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: エラーメッセージ
+        code:
+          type: string
+          description: エラーコード（任意）
+        timestamp:
+          type: string
+          format: date-time
+          description: エラー発生時刻（任意）
+
+    SeoCheckSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: SEOチェック結果（overallScore, checks, aio, conciseRecommendations, detailedAnalysis, detailedReport 等）
+
+    ReportSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - results
+            - report
+          properties:
+            results:
+              type: object
+              description: SEOチェック結果
+            report:
+              type: string
+              description: Markdown形式のレポート本文
+
+    AnalysisHistoryItem:
+      type: object
+      properties:
+        _id:
+          type: string
+        url:
+          type: string
+          nullable: true
+        inputType:
+          type: string
+          enum: [url, html]
+        waitForJS:
+          type: boolean
+        overallScore:
+          type: number
+        aioOverallScore:
+          type: number
+        combinedScore:
+          type: number
+        sessionId:
+          type: string
+          nullable: true
+        userId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    DetailedReportSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - results
+            - detailedReport
+          properties:
+            results:
+              type: object
+              description: SEOチェック結果
+            detailedReport:
+              type: object
+              description: 詳細レポートオブジェクト

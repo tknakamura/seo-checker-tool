@@ -14,6 +14,8 @@ const DetailedAnalyzer = require('./detailed-analyzer');
 const PageTypeAnalyzer = require('./page-type-analyzer');
 const StructuredDataRecommender = require('./structured-data-recommender');
 const SchemaTemplates = require('./schema-templates');
+const { connectDB, isDBConnected } = require('./db');
+const AnalysisHistory = require('./models/AnalysisHistory');
 require('dotenv').config();
 
 // ログ設定
@@ -1816,94 +1818,125 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 分析履歴をDBに保存（MONGODB_URI が設定されている場合のみ）
+async function saveAnalysisHistory(results, options = {}) {
+  if (!isDBConnected()) return;
+  const { url, html, waitForJS = false, sessionId = null, userId = null } = options;
+  try {
+    await AnalysisHistory.create({
+      url: url || null,
+      inputType: url ? 'url' : 'html',
+      waitForJS: !!waitForJS,
+      overallScore: results.overallScore,
+      aioOverallScore: results.aioOverallScore,
+      combinedScore: results.combinedScore,
+      sessionId: sessionId || null,
+      userId: userId || null,
+    });
+  } catch (err) {
+    logger.warn('Failed to save analysis history:', err.message);
+  }
+}
+
+// 統一APIレスポンスヘルパー（OpenAPI仕様に準拠）
+function sendApiError(res, statusCode, message, code = null) {
+  const body = {
+    success: false,
+    error: message,
+    ...(code && { code }),
+    timestamp: new Date().toISOString()
+  };
+  return res.status(statusCode).json(body);
+}
+
+function sendApiSuccess(res, data) {
+  return res.json({ success: true, data });
+}
+
+// バリデーション: URL または HTML 必須
+function validateSeoRequest(body) {
+  const { url, html } = body || {};
+  if (!url && !html) {
+    return { valid: false, error: 'URLまたはHTMLが必要です', code: 'MISSING_INPUT' };
+  }
+  return { valid: true };
+}
+
 // SEOチェックエンドポイント
 app.post('/api/check/seo', async (req, res) => {
   try {
-    const { url, html, waitForJS = false } = req.body;
-    
-    if (!url && !html) {
-      return res.status(400).json({
-        success: false,
-        error: 'URLまたはHTMLが必要です'
-      });
+    const validation = validateSeoRequest(req.body);
+    if (!validation.valid) {
+      return sendApiError(res, 400, validation.error, validation.code);
     }
-
+    const { url, html, waitForJS = false, sessionId, userId } = req.body;
     const checker = new SEOChecker();
     const results = await checker.checkSEO(url, html, waitForJS);
-    
-    res.json({
-      success: true,
-      data: results
-    });
+    await saveAnalysisHistory(results, { url, html, waitForJS, sessionId, userId });
+    return sendApiSuccess(res, results);
   } catch (error) {
     logger.error(`API エラー: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    return sendApiError(res, 500, error.message, 'INTERNAL_ERROR');
   }
 });
 
 // レポート生成エンドポイント
 app.post('/api/report/seo', async (req, res) => {
   try {
-    const { url, html, waitForJS = false } = req.body;
-    
-    if (!url && !html) {
-      return res.status(400).json({
-        success: false,
-        error: 'URLまたはHTMLが必要です'
-      });
+    const validation = validateSeoRequest(req.body);
+    if (!validation.valid) {
+      return sendApiError(res, 400, validation.error, validation.code);
     }
-
+    const { url, html, waitForJS = false, sessionId, userId } = req.body;
     const checker = new SEOChecker();
     const results = await checker.checkSEO(url, html, waitForJS);
+    await saveAnalysisHistory(results, { url, html, waitForJS, sessionId, userId });
     const report = checker.generateReport(results);
-    
-    res.json({
-      success: true,
-      data: {
-        results: results,
-        report: report
-      }
-    });
+    return sendApiSuccess(res, { results, report });
   } catch (error) {
     logger.error(`レポート生成エラー: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    return sendApiError(res, 500, error.message, 'REPORT_ERROR');
   }
 });
 
 // 詳細レポート生成エンドポイント
 app.post('/api/report/detailed', async (req, res) => {
   try {
-    const { url, html, waitForJS = false } = req.body;
-    
-    if (!url && !html) {
-      return res.status(400).json({
-        success: false,
-        error: 'URLまたはHTMLが必要です'
-      });
+    const validation = validateSeoRequest(req.body);
+    if (!validation.valid) {
+      return sendApiError(res, 400, validation.error, validation.code);
     }
-
+    const { url, html, waitForJS = false, sessionId, userId } = req.body;
     const checker = new SEOChecker();
     const results = await checker.checkSEO(url, html, waitForJS);
-    
-    res.json({
-      success: true,
-      data: {
-        results: results,
-        detailedReport: results.detailedReport
-      }
-    });
+    await saveAnalysisHistory(results, { url, html, waitForJS, sessionId, userId });
+    return sendApiSuccess(res, { results, detailedReport: results.detailedReport });
   } catch (error) {
     logger.error(`詳細レポート生成エラー: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    return sendApiError(res, 500, error.message, 'DETAILED_REPORT_ERROR');
+  }
+});
+
+// 分析履歴一覧（MONGODB_URI 設定時のみ有効）
+app.get('/api/history', async (req, res) => {
+  if (!isDBConnected()) {
+    return sendApiError(res, 503, '履歴機能は利用できません（データベース未接続）', 'DB_UNAVAILABLE');
+  }
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const sessionId = req.query.sessionId || null;
+    const userId = req.query.userId || null;
+    const filter = {};
+    if (sessionId) filter.sessionId = sessionId;
+    if (userId) filter.userId = userId;
+    const items = await AnalysisHistory.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    return sendApiSuccess(res, { items });
+  } catch (error) {
+    logger.error(`履歴取得エラー: ${error.message}`);
+    return sendApiError(res, 500, error.message, 'HISTORY_ERROR');
   }
 });
 
@@ -1927,11 +1960,24 @@ setInterval(() => {
 }, 30000); // 30秒ごとにチェック
 
 // サーバー起動
-app.listen(port, () => {
-  logger.info(`SEOチェックサーバー起動: ポート ${port}`);
-  console.log(`🚀 SEO・AIOチェックツールが起動しました！`);
-  console.log(`📱 Webインターフェース: http://localhost:${port}`);
-  console.log(`🔧 API エンドポイント: http://localhost:${port}/api/check/seo`);
-});
+async function start() {
+  await connectDB();
+  app.listen(port, () => {
+    logger.info(`SEOチェックサーバー起動: ポート ${port}`);
+    console.log(`🚀 SEO・AIOチェックツールが起動しました！`);
+    console.log(`📱 Webインターフェース: http://localhost:${port}`);
+    console.log(`🔧 API エンドポイント: http://localhost:${port}/api/check/seo`);
+    if (isDBConnected()) {
+      console.log(`📊 分析履歴: MONGODB_URI 接続済み - /api/history が利用可能です`);
+    }
+  });
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  start().catch((err) => {
+    logger.error('Server start failed:', err);
+    process.exit(1);
+  });
+}
 
 module.exports = SEOChecker;

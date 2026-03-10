@@ -7,7 +7,10 @@
     "start": "node --max-old-space-size=512 --expose-gc index.js",
     "dev": "nodemon --max-old-space-size=512 --expose-gc index.js",
     "test": "jest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "build:client": "cd client && npm install && npm run build",
+    "dev:client": "cd client && npm run dev"
   },
   "keywords": [
     "seo",
@@ -46,6 +49,7 @@
     "eslint": "^8.54.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.1",
+    "typescript": "^5.2.2",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },
