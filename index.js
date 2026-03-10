@@ -147,8 +147,8 @@ class SEOChecker {
     let page = null;
     try {
       logger.info(`PuppeteerでHTML取得開始: ${url}`);
-      
-      browser = await puppeteer.launch({
+
+      const launchOptions = {
         headless: true,
         args: [
           '--no-sandbox',
@@ -161,7 +161,21 @@ class SEOChecker {
           '--memory-pressure-off',
           '--max_old_space_size=512'
         ]
-      });
+      };
+
+      // Render 等の本番環境では @sparticuz/chromium のバイナリを使用（ビルド成果物に Chrome が含まれないため）
+      if (process.env.NODE_ENV === 'production') {
+        try {
+          const chromium = require('@sparticuz/chromium');
+          launchOptions.executablePath = await chromium.executablePath();
+          launchOptions.args = chromium.args || launchOptions.args;
+          launchOptions.headless = 'shell'; // @sparticuz/chromium 推奨
+        } catch (chromiumErr) {
+          logger.warn('@sparticuz/chromium の読み込みに失敗、通常の Puppeteer を使用:', chromiumErr.message);
+        }
+      }
+
+      browser = await puppeteer.launch(launchOptions);
       
       page = await browser.newPage();
       
