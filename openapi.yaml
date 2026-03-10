@@ -194,6 +194,10 @@ components:
           type: boolean
           default: false
           description: true の場合 JavaScript 実行を待ってから解析（SPA対応）
+        slim:
+          type: boolean
+          default: false
+          description: true の場合 detailedAnalysis と detailedReport を省略しレスポンスを軽量化（サイズ制限対策）
       minProperties: 1
 
     ErrorResponse:

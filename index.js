@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const iconv = require('iconv-lite');
 const cors = require('cors');
+const compression = require('compression');
 const AIOChecker = require('./aio-checker');
 const EnhancedReporter = require('./enhanced-reporter');
 const DetailedAnalyzer = require('./detailed-analyzer');
@@ -1813,6 +1814,9 @@ app.use(cors({
   credentials: true
 }));
 
+// レスポンスを gzip 圧縮（大きい JSON を制限内に収めるため）
+app.use(compression({ threshold: 1024 }));
+
 // リクエストサイズ制限を適切に設定（10MB）
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -1869,11 +1873,13 @@ app.post('/api/check/seo', async (req, res) => {
     if (!validation.valid) {
       return sendApiError(res, 400, validation.error, validation.code);
     }
-    const { url, html, waitForJS = false, sessionId, userId } = req.body;
+    const { url, html, waitForJS = false, sessionId, userId, slim = false } = req.body;
     const checker = new SEOChecker();
     const results = await checker.checkSEO(url, html, waitForJS);
     await saveAnalysisHistory(results, { url, html, waitForJS, sessionId, userId });
-    return sendApiSuccess(res, results);
+    // レスポンスサイズ制限対策: slim 時は詳細を省略
+    const data = slim ? { ...results, detailedAnalysis: undefined, detailedReport: undefined } : results;
+    return sendApiSuccess(res, data);
   } catch (error) {
     logger.error(`API エラー: ${error.message}`);
     return sendApiError(res, 500, error.message, 'INTERNAL_ERROR');
