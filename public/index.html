@@ -841,8 +841,8 @@
         }
 
         /* Phase 1: 推奨アクション拡張表示 */
-        .recommendation-item[data-toggle] { cursor: pointer; }
-        .recommendation-item[data-toggle]:hover { background: #f1f3f5; }
+        .recommendation-header[data-toggle] { cursor: pointer; }
+        .recommendation-header[data-toggle]:hover { background: #f1f3f5; }
 
         .toggle-icon {
             margin-left: 0.5rem;
@@ -1520,16 +1520,16 @@
                             ? `<div class="recommendation-extra" id="${detailsId}" style="display:none;">${issueLine}${codeBlock}${docLink}</div>`
                             : '';
                         html += `
-                            <div class="recommendation-item ${priorityClass}" ${hasDetails ? `data-toggle="${detailsId}"` : ''}>
-                                <div class="recommendation-header">
+                            <div class="recommendation-item ${priorityClass}">
+                                <div class="recommendation-header" ${hasDetails ? `data-toggle="${detailsId}"` : ''}>
                                     <span class="checkmark">✓</span>
-                                    <span class="recommendation-text">${rec.fix}</span>
+                                    <span class="recommendation-text">${this.escapeHtml(rec.fix)}</span>
                                     <span class="priority-badge ${priorityClass}">${this.getPriorityTitle(rec.priority)}</span>
                                     ${toggle}
                                 </div>
                                 <div class="recommendation-details">
-                                    <span class="element-info">${rec.element}</span>
-                                    <span class="location-info">${rec.location}</span>
+                                    <span class="element-info">${this.escapeHtml(rec.element)}</span>
+                                    <span class="location-info">${this.escapeHtml(rec.location)}</span>
                                     ${rec.count > 1 ? `<span class="count-info">${rec.count}件</span>` : ''}
                                     ${typeBadge}
                                 </div>
@@ -2265,7 +2265,7 @@ ${implementationCode}
             }
 
             attachRecommendationToggles() {
-                document.querySelectorAll('[data-toggle]').forEach(el => {
+                document.querySelectorAll('.recommendation-header[data-toggle]').forEach(el => {
                     if (el.dataset.bound === '1') return;
                     el.dataset.bound = '1';
                     el.addEventListener('click', (e) => {
@@ -2279,6 +2279,12 @@ ${implementationCode}
                         panel.style.display = isOpen ? 'none' : 'block';
                         if (icon) icon.textContent = isOpen ? '▼' : '▲';
                     });
+                });
+                // 展開エリア内のクリックは折りたたみ伝播を止める（コピー可能に）
+                document.querySelectorAll('.recommendation-extra').forEach(el => {
+                    if (el.dataset.bound === '1') return;
+                    el.dataset.bound = '1';
+                    el.addEventListener('click', (e) => e.stopPropagation());
                 });
             }
 

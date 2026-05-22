@@ -81,7 +81,7 @@ curl -X POST http://localhost:3001/api/check/seo \
 ## 📁 プロジェクト構成
 
 ```
-mercari-seo-checker-tool/
+seo-checker-tool/
 ├── index.js              # メインサーバーファイル
 ├── detailed-analyzer.js  # 詳細分析機能
 ├── enhanced-reporter.js  # レポート生成機能
@@ -161,7 +161,7 @@ CMD ["npm", "start"]
 ## 🆘 サポート
 
 問題が発生した場合：
-1. [Issues](https://github.com/mercari/mercari-seo-checker-tool/issues) で既存の問題を確認
+1. [Issues](https://github.com/tknakamura/seo-checker-tool/issues) で既存の問題を確認
 2. 新しいIssueを作成
 3. ログファイルを添付
 
@@ -176,4 +176,4 @@ CMD ["npm", "start"]
 
 ---
 
-**Mercari Japan Team** - SEOチェックツール
+**SEO AIO Doctor** — Maintained by [@tknakamura](https://github.com/tknakamura)

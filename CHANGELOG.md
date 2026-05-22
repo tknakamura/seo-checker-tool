@@ -2,6 +2,16 @@
 
 ## [1.1.0] - 2026-05-23 — Phase 1: AIO Doctor リブランド & 推奨アクション具体化
 
+### 🔧 レビュー対応（PR #1 review round 1）
+- 🔴 `public/index.html` で `rec.fix` `rec.element` `rec.location` に `escapeHtml` を適用（HTMLタグを含む文言の表示崩れを修正）
+- 🟠 クリック領域を `.recommendation-header` のみに限定し、`<pre><code>` のコピーが可能に
+- 🟠 展開エリア `.recommendation-extra` で `stopPropagation` してテキスト選択時の意図しない折りたたみを防止
+- 🟠 リブランド取り残しを解消（`client/package.json`、`README.md` の構造図・サポートリンク・著者表記、`openapi.yaml`、起動ログ、`render.yaml` のコメント）
+- 🟠 件数表示の二重化を解消（`description` への `(N件)` 付与をやめ、count-info に統一）
+- 🟠 `getDocLink` のカバレッジ穴を解消（AI検索スキーマ不足、比較、専門用語、受動態、接続詞、URL関連性、カテゴリ等を網羅）
+- 🟡 回帰テスト `__tests__/recommendations.test.js` を新規追加（AIO 25種すべてが固有メッセージ・docLinkを返すことを担保）
+
+
 ### 🩺 リブランド
 - ツール名を「Mercari SEOチェックツール」から **「SEO AIO Doctor」** に変更
 - `package.json`, `README.md`, ヘッダー、ページタイトルを更新

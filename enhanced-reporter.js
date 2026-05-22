@@ -656,11 +656,8 @@ class EnhancedReporter {
       issueGroups[key].count++;
     });
 
-    // グループ化された問題を配列に変換
+    // グループ化された問題を配列に変換（descriptionは生のまま保持し、件数は表示側で count フィールドから出す）
     Object.values(issueGroups).forEach(issue => {
-      if (issue.count > 1) {
-        issue.description = `${issue.description} (${issue.count}件)`;
-      }
       conciseIssues.push(issue);
     });
 
@@ -1049,9 +1046,11 @@ class EnhancedReporter {
 
   /**
    * 参考ドキュメントリンク（Phase 1-B）
+   * 全推奨アクションが何らかの公式リファレンスを持つように網羅
    */
   getDocLink(issue, category) {
-    if (issue.includes('構造化データ') || issue.includes('JSON-LD')) {
+    // 構造化データ・スキーマ系
+    if (issue.includes('構造化データ') || issue.includes('JSON-LD') || issue.includes('スキーマが不足')) {
       return 'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data?hl=ja';
     }
     if (issue.includes('FAQ')) {
@@ -1060,6 +1059,7 @@ class EnhancedReporter {
     if (issue.includes('手順・ステップ')) {
       return 'https://developers.google.com/search/docs/appearance/structured-data/how-to?hl=ja';
     }
+    // HTML/メタ系
     if (issue.includes('viewport')) {
       return 'https://developer.mozilla.org/ja/docs/Web/HTML/Viewport_meta_tag';
     }
@@ -1078,8 +1078,49 @@ class EnhancedReporter {
     if (issue.includes('noindex')) {
       return 'https://developers.google.com/search/docs/crawling-indexing/block-indexing?hl=ja';
     }
+    // E-E-A-T / 信頼性系
     if (issue.includes('著者') || issue.includes('E-E-A-T')) {
       return 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja';
+    }
+    if (issue.includes('日付情報') || issue.includes('引用') || issue.includes('参考文献')) {
+      return 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja';
+    }
+    if (issue.includes('連絡先') || issue.includes('権威のある外部サイト')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/local-business?hl=ja';
+    }
+    // 見出し・リンク系
+    if (issue.includes('H1') || issue.includes('見出し')) {
+      return 'https://developer.mozilla.org/ja/docs/Web/HTML/Element/Heading_Elements';
+    }
+    if (issue.includes('リンクテキスト') || issue.includes('内部リンク') || issue.includes('外部リンク')) {
+      return 'https://developers.google.com/search/docs/crawling-indexing/links-crawlable?hl=ja';
+    }
+    // URL系
+    if (issue.includes('URL')) {
+      return 'https://developers.google.com/search/docs/crawling-indexing/url-structure?hl=ja';
+    }
+    // コンテンツ品質・AIO系
+    if (issue.includes('コンテンツが短') || issue.includes('コンテンツが長') ||
+        issue.includes('段落') || issue.includes('リスト形式') ||
+        issue.includes('見出しに対してコンテンツ')) {
+      return 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja';
+    }
+    if (issue.includes('定義リスト')) {
+      return 'https://developer.mozilla.org/ja/docs/Web/HTML/Element/dl';
+    }
+    if (issue.includes('質問形式') || issue.includes('比較・対比') ||
+        issue.includes('具体的な数値')) {
+      return 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja';
+    }
+    // 自然言語品質系
+    if (issue.includes('文章が長') || issue.includes('専門用語') ||
+        issue.includes('受動態') || issue.includes('接続詞')) {
+      return 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja';
+    }
+    // コンテキスト関連性系
+    if (issue.includes('URLとコンテンツの関連性') || issue.includes('内部リンクの関連性') ||
+        issue.includes('カテゴリやタグ')) {
+      return 'https://developers.google.com/search/docs/crawling-indexing/url-structure?hl=ja';
     }
     return null;
   }

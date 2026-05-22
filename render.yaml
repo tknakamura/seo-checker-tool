@@ -1,6 +1,8 @@
 # render.com デプロイ設定
-# SEO・AIOチェックツール（PORT は Render が自動設定）
+# SEO AIO Doctor（PORT は Render が自動設定）
 # 403 フォールバックは @sparticuz/chromium のバイナリを使用（ビルドで Chrome インストール不要）
+# 注: name はRenderダッシュボード上の既存サービスIDと一致させる必要があるため、
+#     リネームする際はダッシュボードで先にサービス名を変更してください。
 
 services:
   - type: web

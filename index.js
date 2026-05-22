@@ -2024,7 +2024,7 @@ async function start() {
   const host = process.env.HOST || '0.0.0.0';
   app.listen(port, host, () => {
     logger.info(`SEOチェックサーバー起動: ${host}:${port}`);
-    console.log(`🚀 SEO・AIOチェックツールが起動しました！`);
+    console.log(`🚀 SEO AIO Doctor が起動しました！`);
     console.log(`📱 Webインターフェース: http://localhost:${port}`);
     console.log(`🔧 API エンドポイント: http://localhost:${port}/api/check/seo`);
     if (isDBConnected()) {
