@@ -596,6 +596,8 @@ class EnhancedReporter {
             element: issue.element,
             location: issue.location,
             fix: issue.fix,
+            codeExample: issue.codeExample || null,
+            docLink: issue.docLink || null,
             count: issue.count || 1
           });
         });
@@ -616,6 +618,8 @@ class EnhancedReporter {
               element: issue.element,
               location: issue.location,
               fix: issue.fix,
+              codeExample: issue.codeExample || null,
+              docLink: issue.docLink || null,
               count: issue.count || 1
             });
           });
@@ -644,6 +648,8 @@ class EnhancedReporter {
           element: this.getElementName(category),
           location: this.getLocationName(category),
           fix: this.getConciseFix(issue, category),
+          codeExample: this.getCodeExample(issue, category),
+          docLink: this.getDocLink(issue, category),
           count: 0
         };
       }
@@ -714,7 +720,34 @@ class EnhancedReporter {
     if (issue.includes('ディレクトリが深すぎます')) {
       return 'url_too_deep';
     }
-    
+
+    // ---------- AIO関連 ----------
+    if (issue.includes('コンテンツが短すぎます')) return 'aio_content_too_short';
+    if (issue.includes('コンテンツが長すぎる可能性')) return 'aio_content_too_long';
+    if (issue.includes('段落が少なすぎます')) return 'aio_few_paragraphs';
+    if (issue.includes('リスト形式のコンテンツがありません')) return 'aio_no_lists';
+    if (issue.includes('見出しに対してコンテンツが少なすぎます')) return 'aio_thin_under_headings';
+    if (issue.includes('JSON-LD構造化データがありません')) return 'aio_no_jsonld';
+    if (issue.includes('AI検索に重要なスキーマが不足')) return 'aio_missing_schemas';
+    if (issue.includes('FAQ形式のコンテンツがありません')) return 'aio_no_faq';
+    if (issue.includes('定義リストがありません')) return 'aio_no_definition_list';
+    if (issue.includes('著者情報がありません')) return 'aio_no_author';
+    if (issue.includes('日付情報がありません')) return 'aio_no_date';
+    if (issue.includes('引用や参考文献がありません')) return 'aio_no_citations';
+    if (issue.includes('権威のある外部サイト')) return 'aio_no_authority_links';
+    if (issue.includes('連絡先情報がありません')) return 'aio_no_contact';
+    if (issue.includes('質問形式のコンテンツがありません')) return 'aio_no_questions';
+    if (issue.includes('比較・対比のコンテンツ')) return 'aio_no_comparison';
+    if (issue.includes('手順・ステップ形式')) return 'aio_no_howto';
+    if (issue.includes('具体的な数値データが少なすぎ')) return 'aio_few_numbers';
+    if (issue.includes('文章が長すぎます')) return 'aio_sentence_too_long';
+    if (issue.includes('専門用語が多すぎます')) return 'aio_too_many_jargon';
+    if (issue.includes('受動態が多すぎます')) return 'aio_too_much_passive';
+    if (issue.includes('接続詞が少なすぎます')) return 'aio_few_connectives';
+    if (issue.includes('URLとコンテンツの関連性')) return 'aio_url_irrelevant';
+    if (issue.includes('内部リンクの関連性が低い')) return 'aio_internal_link_irrelevant';
+    if (issue.includes('カテゴリやタグがありません')) return 'aio_no_taxonomy';
+
     return issue; // デフォルトは元の文字列
   }
 
@@ -729,7 +762,14 @@ class EnhancedReporter {
       imageAltAttributes: 'img',
       internalLinkStructure: 'a[href]',
       structuredData: 'script[type="application/ld+json"]',
-      otherSEOElements: 'meta, url'
+      otherSEOElements: 'meta, url',
+      // AIOカテゴリ
+      contentComprehensiveness: '本文 / 見出し',
+      structuredInformation: '構造化マークアップ',
+      credibilitySignals: '著者・出典・連絡先',
+      aiSearchOptimization: 'FAQ / HowTo / 比較',
+      naturalLanguageQuality: '文章スタイル',
+      contextRelevance: 'URL / 内部リンク / カテゴリ'
     };
     return elementNames[category] || category;
   }
@@ -745,7 +785,14 @@ class EnhancedReporter {
       imageAltAttributes: 'body',
       internalLinkStructure: 'body',
       structuredData: 'head/body',
-      otherSEOElements: 'head/url'
+      otherSEOElements: 'head/url',
+      // AIOカテゴリ（具体的な場所をユーザーに伝える）
+      contentComprehensiveness: 'body（本文セクション）',
+      structuredInformation: 'head（JSON-LDスクリプト）',
+      credibilitySignals: 'body / footer',
+      aiSearchOptimization: 'body（FAQ・HowTo・比較セクション）',
+      naturalLanguageQuality: 'body（本文）',
+      contextRelevance: 'URL / nav / sidebar'
     };
     return locationNames[category] || 'unknown';
   }
@@ -808,8 +855,233 @@ class EnhancedReporter {
     if (issue.includes('ディレクトリが深すぎます')) {
       return 'URLのディレクトリを5階層以下にしてください';
     }
-    
+
+    // ---------- AIO関連の具体fix ----------
+    if (issue.includes('コンテンツが短すぎます')) {
+      return '本文を300語以上に拡充してください。AI検索エンジンは内容が薄いページを引用元として選びにくくなります。';
+    }
+    if (issue.includes('コンテンツが長すぎる可能性')) {
+      return '記事を複数ページに分割するか、要約・目次・FAQを追加して読みやすさを保ってください。';
+    }
+    if (issue.includes('段落が少なすぎます')) {
+      return '段落を3つ以上に分け、1段落あたり2〜4文を目安に整えてください。';
+    }
+    if (issue.includes('リスト形式のコンテンツがありません')) {
+      return '箇条書き（<ul>/<ol>）を1箇所以上追加してください。AIは構造化された情報を引用しやすい傾向があります。';
+    }
+    if (issue.includes('見出しに対してコンテンツが少なすぎます')) {
+      return '各見出し直下に150字以上の本文を入れ、見出しと内容のバランスを取ってください。';
+    }
+    if (issue.includes('JSON-LD構造化データがありません')) {
+      return 'ページ種別に応じた JSON-LD（Article / FAQPage / Product など）を <head> に追加してください。AI検索の理解度が大幅に上がります。';
+    }
+    if (issue.includes('AI検索に重要なスキーマが不足')) {
+      return 'FAQPage / HowTo / Article / BreadcrumbList のうちページに合うものを実装してください。AI回答で引用される確率が上がります。';
+    }
+    if (issue.includes('FAQ形式のコンテンツがありません')) {
+      return 'Q&A形式のセクションを追加し、FAQPageスキーマも併用してください。ChatGPT/Perplexity等で引用されやすくなります。';
+    }
+    if (issue.includes('定義リストがありません')) {
+      return '専門用語の定義に <dl><dt><dd> を使うか、「〇〇とは〜です」という定義文を冒頭に置いてください。';
+    }
+    if (issue.includes('著者情報がありません')) {
+      return '著者名・肩書きを明示し、可能なら Person スキーマや <meta name="author"> を追加してください。E-E-A-Tに直結します。';
+    }
+    if (issue.includes('日付情報がありません')) {
+      return '公開日・更新日を本文に表示し、Article スキーマの datePublished / dateModified にも反映してください。';
+    }
+    if (issue.includes('引用や参考文献がありません')) {
+      return '<cite> や脚注、参考文献リストで出典を明示してください。情報の信頼性をAIに伝えられます。';
+    }
+    if (issue.includes('権威のある外部サイト')) {
+      return '官公庁・業界団体・主要メディアなど信頼性の高い外部サイトへの参照リンクを1〜3本追加してください。';
+    }
+    if (issue.includes('連絡先情報がありません')) {
+      return 'フッターまたは専用ページに会社情報・問い合わせ先を掲載し、Organization スキーマも実装してください。';
+    }
+    if (issue.includes('質問形式のコンテンツがありません')) {
+      return '見出しに「〜とは？」「なぜ〜？」「どうやって〜？」など疑問形を盛り込んでください。AI検索クエリに直接マッチします。';
+    }
+    if (issue.includes('比較・対比のコンテンツ')) {
+      return '比較表（<table>）や「Aと違い、Bは〜」といった対比表現を追加してください。AI回答の比較質問に強くなります。';
+    }
+    if (issue.includes('手順・ステップ形式')) {
+      return '番号付きステップ（<ol>）に加え、HowToスキーマを実装すると「やり方」系のAI検索で選ばれやすくなります。';
+    }
+    if (issue.includes('具体的な数値データが少なすぎ')) {
+      return '統計値・割合・年次データなど具体的な数値を本文に追加し、出典も合わせて記載してください。';
+    }
+    if (issue.includes('文章が長すぎます')) {
+      return '1文を60字以内、長くても80字以内に収めてください。AIも人間も読みやすくなります。';
+    }
+    if (issue.includes('専門用語が多すぎます')) {
+      return '専門用語の初出時に1文の平易な定義を併記してください（例: "LCP（読み込み速度の指標）"）。';
+    }
+    if (issue.includes('受動態が多すぎます')) {
+      return '「〜される」を能動態に書き換えてください。主語と動作が明確だとAIの抽出精度が上がります。';
+    }
+    if (issue.includes('接続詞が少なすぎます')) {
+      return '「しかし」「そのため」「一方で」など論理関係を示す接続詞を増やし、文の流れを明示してください。';
+    }
+    if (issue.includes('URLとコンテンツの関連性')) {
+      return 'URLスラッグにページ主題のキーワードを含め、コンテンツとの一致度を高めてください。';
+    }
+    if (issue.includes('内部リンクの関連性が低い')) {
+      return 'アンカーテキストとリンク先のテーマを一致させ、文脈に沿った関連ページへのリンクに置き換えてください。';
+    }
+    if (issue.includes('カテゴリやタグがありません')) {
+      return 'パンくず（BreadcrumbList）やカテゴリ、タグを設置してページ間の関係性をAIに伝えてください。';
+    }
+
     return '適切な修正を行ってください';
+  }
+
+  /**
+   * 修正例コード（Phase 1-B）
+   * 各issueに対応するスニペットを返す。ない場合は null
+   */
+  getCodeExample(issue, category) {
+    // SEO
+    if (issue.includes('構造化データが存在しません') || issue.includes('JSON-LD構造化データがありません')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "Article",',
+        '  "headline": "記事タイトル",',
+        '  "author": { "@type": "Person", "name": "著者名" },',
+        '  "datePublished": "2025-01-01",',
+        '  "dateModified": "2025-01-15"',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('viewportメタタグがありません')) {
+      return '<meta name="viewport" content="width=device-width, initial-scale=1">';
+    }
+    if (issue.includes('noindexに設定されています')) {
+      return '<!-- 削除する -->\n<meta name="robots" content="noindex">';
+    }
+    if (issue.includes('alt属性がありません')) {
+      return '<img src="photo.jpg" alt="商品の使用シーン: 〇〇を使う様子">';
+    }
+    if (issue.includes('リンクテキストが空です')) {
+      return '<a href="/about">会社概要を見る</a>';
+    }
+    if (issue.includes('H1タグが存在しません')) {
+      return '<h1>ページの主題を表す見出し</h1>';
+    }
+    // AIO
+    if (issue.includes('FAQ形式のコンテンツがありません')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "FAQPage",',
+        '  "mainEntity": [{',
+        '    "@type": "Question",',
+        '    "name": "〇〇とは何ですか？",',
+        '    "acceptedAnswer": {',
+        '      "@type": "Answer",',
+        '      "text": "〇〇は〜です。"',
+        '    }',
+        '  }]',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('手順・ステップ形式')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "HowTo",',
+        '  "name": "〇〇のやり方",',
+        '  "step": [',
+        '    { "@type": "HowToStep", "text": "ステップ1: ..." },',
+        '    { "@type": "HowToStep", "text": "ステップ2: ..." }',
+        '  ]',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('著者情報がありません')) {
+      return [
+        '<meta name="author" content="著者名">',
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "Person",',
+        '  "name": "著者名",',
+        '  "jobTitle": "編集長",',
+        '  "url": "https://example.com/author/xxx"',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('定義リストがありません')) {
+      return [
+        '<dl>',
+        '  <dt>SEO</dt>',
+        '  <dd>検索エンジン最適化のこと。検索結果での表示順を改善する施策。</dd>',
+        '</dl>'
+      ].join('\n');
+    }
+    if (issue.includes('連絡先情報がありません')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "Organization",',
+        '  "name": "会社名",',
+        '  "url": "https://example.com",',
+        '  "contactPoint": {',
+        '    "@type": "ContactPoint",',
+        '    "contactType": "customer support",',
+        '    "email": "support@example.com"',
+        '  }',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    return null;
+  }
+
+  /**
+   * 参考ドキュメントリンク（Phase 1-B）
+   */
+  getDocLink(issue, category) {
+    if (issue.includes('構造化データ') || issue.includes('JSON-LD')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data?hl=ja';
+    }
+    if (issue.includes('FAQ')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/faqpage?hl=ja';
+    }
+    if (issue.includes('手順・ステップ')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/how-to?hl=ja';
+    }
+    if (issue.includes('viewport')) {
+      return 'https://developer.mozilla.org/ja/docs/Web/HTML/Viewport_meta_tag';
+    }
+    if (issue.includes('alt')) {
+      return 'https://developer.mozilla.org/ja/docs/Web/HTML/Element/img#alt';
+    }
+    if (issue.includes('タイトル')) {
+      return 'https://developers.google.com/search/docs/appearance/title-link?hl=ja';
+    }
+    if (issue.includes('メタディスクリプション')) {
+      return 'https://developers.google.com/search/docs/appearance/snippet?hl=ja';
+    }
+    if (issue.includes('HTTPS')) {
+      return 'https://developers.google.com/search/docs/advanced/security/https?hl=ja';
+    }
+    if (issue.includes('noindex')) {
+      return 'https://developers.google.com/search/docs/crawling-indexing/block-indexing?hl=ja';
+    }
+    if (issue.includes('著者') || issue.includes('E-E-A-T')) {
+      return 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content?hl=ja';
+    }
+    return null;
   }
 
   /**

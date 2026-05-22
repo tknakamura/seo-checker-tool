@@ -841,6 +841,82 @@ body {
     color: #856404;
 }
 
+/* Phase 1: 推奨アクション拡張表示 */
+.toggle-icon {
+    margin-left: 0.5rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.type-badge {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.type-badge.type-seo { background: #0d6efd; color: white; }
+.type-badge.type-aio { background: #6f42c1; color: white; }
+
+.hint {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin: 0.5rem 0 1rem;
+}
+
+.recommendation-extra {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-left: 3px solid #667eea;
+    border-radius: 4px;
+}
+
+.rec-issue {
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.rec-code {
+    margin-bottom: 0.75rem;
+}
+
+.rec-code h4 {
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem;
+    color: #343a40;
+}
+
+.rec-code pre {
+    background: #282c34;
+    color: #abb2bf;
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.rec-code code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    color: inherit;
+    background: transparent;
+    padding: 0;
+}
+
+.rec-doc a {
+    color: #667eea;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.rec-doc a:hover {
+    text-decoration: underline;
+}
+
 /* 構造化データ専用スタイル */
 .structured-data-analysis {
     max-width: 100%;
