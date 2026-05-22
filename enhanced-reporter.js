@@ -718,6 +718,11 @@ class EnhancedReporter {
       return 'url_too_deep';
     }
 
+    // ---------- AIO高優先キー（SEO汎用ルールに先食いされる前に判定） ----------
+    // 'AI検索に重要なスキーマが不足しています: ...' は後段の 'スキーマが不足しています' に
+    // 先食いされるため、ここで先に確定させる（Phase 1.1 レビュー fix）
+    if (issue.includes('AI検索に重要なスキーマが不足')) return 'aio_missing_schemas';
+
     // ---------- SEO関連の追加マッピング（Phase 1.1） ----------
     if (issue.includes('H2タグが少なすぎます')) return 'few_h2';
     if (issue.includes('H3タグが少なすぎます')) return 'few_h3';
@@ -885,6 +890,15 @@ class EnhancedReporter {
     }
     if (issue.includes('ディレクトリが深すぎます')) {
       return 'URLのディレクトリを5階層以下にしてください';
+    }
+
+    // ---------- AIO高優先fix（SEO汎用ルールに先食いされる前に判定） ----------
+    // 'AI検索に重要なスキーマが不足しています: FAQPage, HowTo, Article' のような
+    // AIO 文脈のissueは、SEO側の '〇〇スキーマが不足' / 'Article' / 'HowTo' 等の
+    // 個別判定にマッチして誤った fix を返してしまうため、必ず先に確定させる
+    // （Phase 1.1 レビュー fix）
+    if (issue.includes('AI検索に重要なスキーマが不足')) {
+      return 'FAQPage / HowTo / Article / BreadcrumbList のうちページに合うものを実装してください。AI回答で引用される確率が上がります。';
     }
 
     // ---------- SEO関連の追加fix（Phase 1.1） ----------
@@ -1358,6 +1372,13 @@ class EnhancedReporter {
    * 注: 具体的なスキーマ名は一般的な「構造化データ」より先に判定する
    */
   getDocLink(issue, category) {
+    // AIO高優先（SEOスキーマ系のincludes判定に先食いされないよう最初に確定）
+    // 'AI検索に重要なスキーマが不足しています: FAQPage, HowTo, Article' は
+    // 'Article' を含むため後段の Article 専用ドキュメントへ飛ばされてしまう。
+    // ここで先に AIO 用の構造化データ入門ドキュメントへ確定させる。
+    if (issue.includes('AI検索に重要なスキーマが不足')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data?hl=ja';
+    }
     // 具体スキーマを最優先で判定
     if (issue.includes('LocalBusiness')) {
       return 'https://developers.google.com/search/docs/appearance/structured-data/local-business?hl=ja';
