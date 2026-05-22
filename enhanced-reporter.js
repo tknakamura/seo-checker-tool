@@ -718,6 +718,40 @@ class EnhancedReporter {
       return 'url_too_deep';
     }
 
+    // ---------- SEO関連の追加マッピング（Phase 1.1） ----------
+    if (issue.includes('H2タグが少なすぎます')) return 'few_h2';
+    if (issue.includes('H3タグが少なすぎます')) return 'few_h3';
+    if (issue.includes('見出しの階層が飛び越されています')) return 'heading_hierarchy_skip';
+    if (issue.includes('タグが空です')) return 'empty_heading';
+    if (issue.includes('タグが長すぎます')) return 'heading_too_long';
+    if (issue.includes('タグに重複する内容があります')) return 'duplicate_heading';
+    if (issue.includes('画像が存在しません')) return 'no_images';
+    if (issue.includes('alt属性が長すぎます')) return 'alt_too_long';
+    if (issue.includes('alt属性に「image」や「picture」など')) return 'alt_unnecessary_words';
+    if (issue.includes('リンクが存在しません')) return 'no_links';
+    if (issue.includes('汎用的なリンクテキストがあります')) return 'generic_link_text';
+    if (issue.includes('メタディスクリプションがすべて小文字')) return 'meta_lowercase';
+    if (issue.includes('メタディスクリプションに省略記号')) return 'meta_ellipsis';
+    if (issue.includes('タイトルに重複するキーワード')) return 'title_duplicate_keywords';
+    if (issue.includes('タイトルにパイプ')) return 'title_too_many_pipes';
+    if (issue.includes('JSON-LDの構文エラー')) return 'jsonld_syntax_error';
+    if (issue.includes('スキーマが不足しています')) {
+      // 「LocalBusinessスキーマが不足しています」「Organizationスキーマが不足」など、スキーマ名を含む
+      const m = issue.match(/^(\S+?)スキーマが不足しています$/);
+      return m ? `missing_schema_${m[1]}` : 'missing_schema';
+    }
+    if (issue.includes('推奨スキーマが不足しています')) return 'missing_recommended_schemas';
+    if (issue.includes('@typeがありません')) return 'jsonld_no_type';
+    if (issue.includes('Organizationスキーマに')) return 'organization_missing_field';
+    if (issue.includes('WebSiteスキーマに')) return 'website_missing_field';
+    if (issue.includes('Productスキーマに')) return 'product_missing_field';
+    if (issue.includes('BreadcrumbListスキーマに')) return 'breadcrumb_missing_field';
+    if (issue.includes('viewportメタタグにwidth=device-widthがありません')) return 'viewport_no_width';
+    if (issue.includes('viewportメタタグにinitial-scale=1がありません')) return 'viewport_no_scale';
+    if (issue.includes('URLパラメータが多すぎ')) return 'url_too_many_params';
+    if (issue.includes('URLの形式が正しくありません')) return 'invalid_url';
+    if (issue.includes('タッチターゲットが小さすぎます')) return 'small_touch_targets';
+
     // ---------- AIO関連 ----------
     if (issue.includes('コンテンツが短すぎます')) return 'aio_content_too_short';
     if (issue.includes('コンテンツが長すぎる可能性')) return 'aio_content_too_long';
@@ -853,6 +887,137 @@ class EnhancedReporter {
       return 'URLのディレクトリを5階層以下にしてください';
     }
 
+    // ---------- SEO関連の追加fix（Phase 1.1） ----------
+    if (issue.includes('H2タグが少なすぎます')) {
+      return 'コンテンツの主要セクションごとに <h2> を追加してください。3個以上を目安にすると検索エンジンが構造を理解しやすくなります。';
+    }
+    if (issue.includes('H3タグが少なすぎます')) {
+      return '各 <h2> セクション配下に <h3> を配置し、サブトピックを明示してください。階層的な見出しはAI検索でも有利です。';
+    }
+    if (issue.includes('見出しの階層が飛び越されています')) {
+      return '見出しは H1 → H2 → H3 と1段ずつ進めてください（例: H2 → H4 はNG）。階層が崩れるとアクセシビリティとSEO評価が下がります。';
+    }
+    if (issue.includes('タグが空です')) {
+      return '空の見出しタグを削除するか、意味のあるテキストを入れてください。中身のない見出しはSEO上マイナスです。';
+    }
+    if (issue.includes('タグが長すぎます')) {
+      return '見出しは70文字以内（できれば40文字以内）にしてください。長すぎる見出しは要点が伝わりません。';
+    }
+    if (issue.includes('タグに重複する内容があります')) {
+      return '同じ文言の見出しを統合または書き換えてください。各見出しは固有の主題を表すべきです。';
+    }
+    if (issue.includes('画像が存在しません')) {
+      return 'コンテンツに関連する画像（製品写真・図解・スクリーンショット等）を追加し、必ず alt 属性で内容を説明してください。視覚情報はCVR向上にも寄与します。';
+    }
+    if (issue.includes('alt属性が長すぎます')) {
+      return 'alt属性は125文字以内に簡潔にまとめてください。長すぎるとスクリーンリーダー利用者の体験が悪化します。';
+    }
+    if (issue.includes('alt属性に「image」や「picture」など')) {
+      return 'alt属性から「image of」「picture of」などの冗長な表現を削除し、画像の内容そのものを簡潔に記述してください。';
+    }
+    if (issue.includes('リンクが存在しません')) {
+      return 'ページ内に内部リンクを追加し、関連コンテンツへ誘導してください。リンクがないページはクロールされにくくなります。';
+    }
+    if (issue.includes('汎用的なリンクテキストがあります')) {
+      return '「こちら」「詳細はこちら」「click here」などの汎用テキストを、リンク先の内容が分かる具体的な文言（例: 「料金プランを見る」）に置き換えてください。';
+    }
+    if (issue.includes('メタディスクリプションがすべて小文字')) {
+      return 'メタディスクリプションに固有名詞・文頭を適切に大文字化し、自然な表記にしてください。すべて小文字だと品質が低く見えます。';
+    }
+    if (issue.includes('メタディスクリプションに省略記号')) {
+      return '省略記号（…）を使わず、文を完結させてください。文字数制限内で要点を伝えるように書き直しを推奨します。';
+    }
+    if (issue.includes('タイトルに重複するキーワード')) {
+      return 'タイトル内で同じキーワードが2回以上出ないよう、言い換えや削除で整理してください。';
+    }
+    if (issue.includes('タイトルにパイプ')) {
+      return 'タイトル区切りのパイプ「|」は2個以内に抑えてください。多すぎると視認性が悪く、CTRが下がります。';
+    }
+    if (issue.includes('JSON-LDの構文エラー')) {
+      return 'JSON-LDのJSON構文エラーを修正してください。Google Rich Results Test ( https://search.google.com/test/rich-results ) で検証できます。';
+    }
+    if (issue.includes('LocalBusinessスキーマが不足')) {
+      return '実店舗・拠点を持つ事業者の場合、LocalBusiness スキーマ（住所・電話・営業時間・地理座標）を実装してください。Google マップやAI回答での露出に直結します。';
+    }
+    if (issue.includes('Organizationスキーマが不足')) {
+      return 'Organization スキーマ（会社名・URL・ロゴ・SNSプロフィール）を実装してください。ブランドの信頼性をAIに伝えられます。';
+    }
+    if (issue.includes('WebSiteスキーマが不足')) {
+      return 'WebSite スキーマ（サイト名・URL・potentialAction=SearchAction）を実装すると、サイトリンク検索ボックスの表示候補になります。';
+    }
+    if (issue.includes('Productスキーマが不足')) {
+      return 'Product スキーマ（商品名・価格・在庫・レビュー）を実装すると、リッチリザルトと商品AI回答に表示される可能性が高まります。';
+    }
+    if (issue.includes('BreadcrumbListスキーマが不足')) {
+      return 'BreadcrumbList スキーマを実装してください。検索結果でパンくず表示が出やすくなり、AIにも階層を伝えられます。';
+    }
+    if (issue.includes('FAQPageスキーマが不足')) {
+      return 'よくある質問セクションがあるなら FAQPage スキーマを実装してください。AI回答での引用率が上がります。';
+    }
+    if (issue.includes('Articleスキーマが不足') || issue.includes('NewsArticleスキーマが不足') || issue.includes('BlogPostingスキーマが不足')) {
+      return '記事ページなら Article（または NewsArticle / BlogPosting）スキーマで著者・公開日・更新日を構造化してください。';
+    }
+    if (issue.includes('HowToスキーマが不足')) {
+      return '手順を扱うページなら HowTo スキーマでステップ・所要時間・必要な道具を構造化してください。';
+    }
+    if (issue.includes('VideoObjectスキーマが不足')) {
+      return '動画があるなら VideoObject スキーマでサムネイル・公開日・説明・尺を構造化してください。';
+    }
+    if (issue.includes('スキーマが不足しています')) {
+      // 上記でカバーされなかった「〇〇スキーマが不足」の汎用fallback
+      const m = issue.match(/^(\S+?)スキーマが不足しています$/);
+      const schema = m ? m[1] : 'スキーマ';
+      return `${schema} スキーマを実装し、ページ種別に応じた情報を構造化してください。schema.org のリファレンス ( https://schema.org/${m ? m[1] : ''} ) を参照してください。`;
+    }
+    if (issue.includes('推奨スキーマが不足しています')) {
+      return 'ページ種別に応じた推奨スキーマを実装してください。ページタイプ判定結果に表示されるスキーマから優先的に追加することを推奨します。';
+    }
+    if (issue.includes('@typeがありません')) {
+      return 'JSON-LDの各オブジェクトに `@type` を必ず指定してください（例: `"@type": "Article"`）。@typeがないとGoogleが認識できません。';
+    }
+    if (issue.includes('Organizationスキーマにnameがありません')) {
+      return 'Organization の `name` プロパティに組織名を設定してください（必須プロパティ）。';
+    }
+    if (issue.includes('Organizationスキーマにurlがありません')) {
+      return 'Organization の `url` プロパティに公式サイトのURLを設定してください。';
+    }
+    if (issue.includes('WebSiteスキーマにnameがありません')) {
+      return 'WebSite の `name` プロパティにサイト名を設定してください。';
+    }
+    if (issue.includes('WebSiteスキーマにurlがありません')) {
+      return 'WebSite の `url` プロパティにサイトURLを設定してください。';
+    }
+    if (issue.includes('WebSiteスキーマにpotentialActionがありません')) {
+      return 'WebSite に `potentialAction`（SearchAction）を追加すると、Google のサイトリンク検索ボックス候補になります。';
+    }
+    if (issue.includes('Productスキーマにnameがありません')) {
+      return 'Product の `name` プロパティに商品名を設定してください（必須）。';
+    }
+    if (issue.includes('Productスキーマにdescriptionがありません')) {
+      return 'Product の `description` プロパティに商品説明を設定してください。';
+    }
+    if (issue.includes('Productスキーマにoffersがありません')) {
+      return 'Product に `offers`（価格・在庫情報）を追加するとリッチリザルト対象になります。';
+    }
+    if (issue.includes('BreadcrumbListスキーマにitemListElement')) {
+      return 'BreadcrumbList の `itemListElement` 配列にパンくずの各階層を順番に列挙してください。';
+    }
+    if (issue.includes('viewportメタタグにwidth=device-widthがありません')) {
+      return 'viewport メタタグに `width=device-width` を追加してください（例: `<meta name="viewport" content="width=device-width, initial-scale=1">`）。';
+    }
+    if (issue.includes('viewportメタタグにinitial-scale=1がありません')) {
+      return 'viewport メタタグに `initial-scale=1` を追加してください。';
+    }
+    if (issue.includes('URLパラメータが多すぎ')) {
+      return 'URLのクエリパラメータを減らし、必要なものだけに絞ってください。トラッキング用パラメータは Canonical タグで正規化を推奨します。';
+    }
+    if (issue.includes('URLの形式が正しくありません')) {
+      return 'URLに使用できない文字（スペース、日本語等）が含まれていないか確認し、適切にエンコードしてください。';
+    }
+    if (issue.includes('タッチターゲットが小さすぎます')) {
+      return 'タップ可能な要素（ボタン・リンク・アイコン）を 48×48px（最低 44×44px）以上にし、要素間の余白も8px以上確保してください。モバイルUX とCore Web Vitals の INP 改善に直結します。';
+    }
+
     // ---------- AIO関連の具体fix ----------
     if (issue.includes('コンテンツが短すぎます')) {
       return '本文を300語以上に拡充してください。AI検索エンジンは内容が薄いページを引用元として選びにくくなります。';
@@ -930,7 +1095,35 @@ class EnhancedReporter {
       return 'パンくず（BreadcrumbList）やカテゴリ、タグを設置してページ間の関係性をAIに伝えてください。';
     }
 
-    return '適切な修正を行ってください';
+    // ---------- 最終フォールバック ----------
+    // ここに来た時点で個別マッピング漏れ。何の問題かをそのまま表示し、カテゴリ別のヒントを付与する。
+    const categoryHint = this.getCategoryHint(category);
+    if (issue && typeof issue === 'string' && issue.length > 0) {
+      return categoryHint ? `${issue} → ${categoryHint}` : issue;
+    }
+    return categoryHint || '該当箇所の改善をご検討ください';
+  }
+
+  /**
+   * カテゴリ別の汎用ヒント（最終フォールバック時に使用、Phase 1.1）
+   */
+  getCategoryHint(category) {
+    const hints = {
+      titleTag: 'タイトルタグの見直しが必要です（15〜30全角文字、固有のキーワードを含む）',
+      metaDescription: 'メタディスクリプションの見直しが必要です（60〜80全角文字、ページ内容を要約）',
+      headingStructure: '見出し構造の見直しが必要です（H1〜H6を階層的に使用）',
+      imageAltAttributes: '画像のalt属性の見直しが必要です',
+      internalLinkStructure: '内部リンク・外部リンクの構造を見直してください',
+      structuredData: '構造化データ（JSON-LD）の見直しが必要です',
+      otherSEOElements: 'その他SEO要素（viewport, robots, URL等）を確認してください',
+      contentComprehensiveness: 'コンテンツのボリュームと構造を見直してください',
+      structuredInformation: '構造化情報（JSON-LD等）の実装を見直してください',
+      credibilitySignals: '信頼性シグナル（著者・出典・連絡先）を強化してください',
+      aiSearchOptimization: 'AI検索向けのコンテンツ構造（FAQ/HowTo/比較）を強化してください',
+      naturalLanguageQuality: '文章の読みやすさ（文長・専門用語・接続詞）を見直してください',
+      contextRelevance: 'URL・内部リンク・カテゴリの文脈関連性を見直してください'
+    };
+    return hints[category] || null;
   }
 
   /**
@@ -1041,15 +1234,153 @@ class EnhancedReporter {
         '</script>'
       ].join('\n');
     }
+    // ---------- Phase 1.1: SEO追加サンプル ----------
+    if (issue.includes('LocalBusinessスキーマが不足')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "LocalBusiness",',
+        '  "name": "店舗名",',
+        '  "image": "https://example.com/photo.jpg",',
+        '  "address": {',
+        '    "@type": "PostalAddress",',
+        '    "streetAddress": "東京都港区六本木1-2-3",',
+        '    "addressLocality": "港区",',
+        '    "addressRegion": "東京都",',
+        '    "postalCode": "106-0032",',
+        '    "addressCountry": "JP"',
+        '  },',
+        '  "telephone": "+81-3-1234-5678",',
+        '  "openingHours": "Mo-Fr 09:00-18:00",',
+        '  "geo": { "@type": "GeoCoordinates", "latitude": 35.6638, "longitude": 139.7298 }',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('BreadcrumbListスキーマが不足') || issue.includes('BreadcrumbListスキーマにitemListElement')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "BreadcrumbList",',
+        '  "itemListElement": [',
+        '    { "@type": "ListItem", "position": 1, "name": "ホーム", "item": "https://example.com/" },',
+        '    { "@type": "ListItem", "position": 2, "name": "カテゴリ", "item": "https://example.com/category/" },',
+        '    { "@type": "ListItem", "position": 3, "name": "現在のページ" }',
+        '  ]',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('Productスキーマ')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "Product",',
+        '  "name": "商品名",',
+        '  "description": "商品説明",',
+        '  "image": "https://example.com/product.jpg",',
+        '  "offers": {',
+        '    "@type": "Offer",',
+        '    "price": "9800",',
+        '    "priceCurrency": "JPY",',
+        '    "availability": "https://schema.org/InStock"',
+        '  }',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('WebSiteスキーマ')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "WebSite",',
+        '  "name": "サイト名",',
+        '  "url": "https://example.com",',
+        '  "potentialAction": {',
+        '    "@type": "SearchAction",',
+        '    "target": "https://example.com/search?q={search_term_string}",',
+        '    "query-input": "required name=search_term_string"',
+        '  }',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('Organizationスキーマが不足') || issue.includes('Organizationスキーマに')) {
+      return [
+        '<script type="application/ld+json">',
+        '{',
+        '  "@context": "https://schema.org",',
+        '  "@type": "Organization",',
+        '  "name": "会社名",',
+        '  "url": "https://example.com",',
+        '  "logo": "https://example.com/logo.png",',
+        '  "sameAs": [',
+        '    "https://twitter.com/company",',
+        '    "https://www.facebook.com/company"',
+        '  ]',
+        '}',
+        '</script>'
+      ].join('\n');
+    }
+    if (issue.includes('H2タグが少なすぎます') || issue.includes('H3タグが少なすぎます')) {
+      return [
+        '<h2>主要セクションの見出し</h2>',
+        '<p>セクション本文...</p>',
+        '  <h3>サブトピックの見出し</h3>',
+        '  <p>サブ本文...</p>'
+      ].join('\n');
+    }
+    if (issue.includes('viewportメタタグにwidth=device-widthがありません') || issue.includes('viewportメタタグにinitial-scale=1がありません')) {
+      return '<meta name="viewport" content="width=device-width, initial-scale=1">';
+    }
+    if (issue.includes('タッチターゲットが小さすぎます')) {
+      return [
+        '/* タップ可能要素は最低 44x44px、推奨 48x48px */',
+        '.btn, a.button {',
+        '  min-width: 48px;',
+        '  min-height: 48px;',
+        '  padding: 12px 16px;',
+        '}',
+        '/* 要素間の余白 */',
+        '.btn + .btn { margin-left: 8px; }'
+      ].join('\n');
+    }
     return null;
   }
 
   /**
    * 参考ドキュメントリンク（Phase 1-B）
    * 全推奨アクションが何らかの公式リファレンスを持つように網羅
+   * 注: 具体的なスキーマ名は一般的な「構造化データ」より先に判定する
    */
   getDocLink(issue, category) {
-    // 構造化データ・スキーマ系
+    // 具体スキーマを最優先で判定
+    if (issue.includes('LocalBusiness')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/local-business?hl=ja';
+    }
+    if (issue.includes('BreadcrumbList')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/breadcrumb?hl=ja';
+    }
+    if (issue.includes('Product')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/product?hl=ja';
+    }
+    if (issue.includes('Organization')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/logo?hl=ja';
+    }
+    if (issue.includes('WebSite') || issue.includes('SearchAction') || issue.includes('potentialAction')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/sitelinks-searchbox?hl=ja';
+    }
+    if (issue.includes('Article') || issue.includes('NewsArticle') || issue.includes('BlogPosting')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/article?hl=ja';
+    }
+    if (issue.includes('VideoObject')) {
+      return 'https://developers.google.com/search/docs/appearance/structured-data/video?hl=ja';
+    }
+    // 構造化データ・スキーマ系（汎用）
     if (issue.includes('構造化データ') || issue.includes('JSON-LD') || issue.includes('スキーマが不足')) {
       return 'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data?hl=ja';
     }
@@ -1089,10 +1420,13 @@ class EnhancedReporter {
       return 'https://developers.google.com/search/docs/appearance/structured-data/local-business?hl=ja';
     }
     // 見出し・リンク系
-    if (issue.includes('H1') || issue.includes('見出し')) {
+    if (issue.includes('H1') || issue.includes('H2タグが') || issue.includes('H3タグが') ||
+        issue.includes('H4タグが') || issue.includes('見出し') || issue.includes('タグが空です') ||
+        issue.includes('タグが長すぎます')) {
       return 'https://developer.mozilla.org/ja/docs/Web/HTML/Element/Heading_Elements';
     }
-    if (issue.includes('リンクテキスト') || issue.includes('内部リンク') || issue.includes('外部リンク')) {
+    if (issue.includes('リンクテキスト') || issue.includes('内部リンク') || issue.includes('外部リンク') ||
+        issue.includes('リンクが存在しません') || issue.includes('汎用的なリンク')) {
       return 'https://developers.google.com/search/docs/crawling-indexing/links-crawlable?hl=ja';
     }
     // URL系
@@ -1121,6 +1455,22 @@ class EnhancedReporter {
     if (issue.includes('URLとコンテンツの関連性') || issue.includes('内部リンクの関連性') ||
         issue.includes('カテゴリやタグ')) {
       return 'https://developers.google.com/search/docs/crawling-indexing/url-structure?hl=ja';
+    }
+    // Phase 1.1 追加（特定スキーマは先頭で判定済み）
+    if (issue.includes('JSON-LDの構文エラー') || issue.includes('@type')) {
+      return 'https://search.google.com/test/rich-results?hl=ja';
+    }
+    if (issue.includes('タッチターゲット')) {
+      return 'https://web.dev/articles/accessible-tap-targets?hl=ja';
+    }
+    if (issue.includes('URLパラメータ')) {
+      return 'https://developers.google.com/search/docs/crawling-indexing/url-structure?hl=ja';
+    }
+    if (issue.includes('画像')) {
+      return 'https://developers.google.com/search/docs/appearance/google-images?hl=ja';
+    }
+    if (issue.includes('スキーマ')) {
+      return 'https://schema.org/';
     }
     return null;
   }

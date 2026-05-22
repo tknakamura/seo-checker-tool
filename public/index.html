@@ -844,6 +844,34 @@
         .recommendation-header[data-toggle] { cursor: pointer; }
         .recommendation-header[data-toggle]:hover { background: #f1f3f5; }
 
+        /* Phase 1.1: フォールバック警告バナー */
+        .warnings-banner { margin: 0 0 1.25rem; }
+        .warning-item {
+            background: #fff8e5;
+            border: 1px solid #facc15;
+            border-left: 4px solid #f59e0b;
+            color: #78350f;
+            padding: 0.9rem 1rem;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+        .warning-item strong { display: block; font-size: 0.85rem; margin-bottom: 0.25rem; color: #92400e; letter-spacing: 0.5px; }
+        .warning-item details { margin-top: 0.5rem; font-size: 0.85rem; }
+        .warning-item details summary { cursor: pointer; color: #92400e; }
+        .warning-item details code {
+            display: block;
+            margin-top: 0.4rem;
+            background: rgba(0,0,0,0.05);
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.85rem;
+            color: #78350f;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
         .toggle-icon {
             margin-left: 0.5rem;
             font-size: 0.85rem;
@@ -1465,11 +1493,21 @@
                 const overallScore = results.overallScore || 0;
                 const aioScore = results.aioOverallScore || 0;
                 const combinedScore = results.combinedScore || 0;
-                
+
                 // スコア表示の更新
                 document.getElementById('overallScore').textContent = Math.round(overallScore);
-                
-                let html = `
+
+                // 警告バナー（Advanced→Simple フォールバック等）
+                let warningsHtml = '';
+                if (Array.isArray(results.warnings) && results.warnings.length > 0) {
+                    warningsHtml = '<div class="warnings-banner">' +
+                        results.warnings.map(w =>
+                            `<div class="warning-item"><strong>⚠️ ${this.escapeHtml(w.code || 'WARNING')}</strong><div>${this.escapeHtml(w.message || '')}</div>${w.detail ? `<details><summary>詳細</summary><code>${this.escapeHtml(w.detail)}</code></details>` : ''}</div>`
+                        ).join('') +
+                        '</div>';
+                }
+
+                let html = warningsHtml + `
                     <div class="summary-section">
                         <h2>📊 総合スコア</h2>
                         <div class="score-grid">

@@ -9,6 +9,6 @@
   "imageAltRequired": true,
   "internalLinksMin": 10,
   "structuredDataRequired": true,
-  "jsWaitTime": 3000,
-  "jsTimeout": 30000
+  "jsWaitTime": 2500,
+  "jsTimeout": 20000
 }
