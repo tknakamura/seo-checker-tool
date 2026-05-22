@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.1.1] - 2026-05-23 — Phase 1.1: SEO残存フォールバック解消 & Advanced Check 安定化
+
+### 🎯 解決した問題
+Phase 1 リリース後の本番チェック（ads.mercari.com）で以下が判明:
+1. AIO はカバーしたが SEO 側に「適切な修正を行ってください」が6件残存していた
+2. Advanced Check (JavaScript実行モード) が Render free plan で 502 エラー
+3. JS実行できないSPAサイトでは見出し・画像・構造化データが全て検出不能
+
+### ✨ 追加 / 改善
+
+#### 残存フォールバックの解消（SEO側 30 種以上を新規追加）
+- `enhanced-reporter.js`
+  - `getIssueKey`: 見出し、画像、リンク、各種スキーマ、viewport、URL、タッチターゲット等を網羅
+  - `getConciseFix`: 同上、それぞれに具体メッセージを実装
+  - `getCodeExample`: LocalBusiness / BreadcrumbList / Product / WebSite / Organization 等のスキーマ実装サンプル、H2/H3 階層サンプル、viewport、タッチターゲット用CSS等を追加
+  - `getDocLink`: 具体スキーマ専用ドキュメントを最優先で判定するよう順序を変更
+  - **最終フォールバック改良**: マッピング漏れがあっても、元のissue文＋カテゴリ別ヒント（例: 「タイトルタグの見直しが必要です（15〜30全角文字、固有のキーワードを含む）」）を返す `getCategoryHint()` メソッドを新規追加。「適切な修正を行ってください」が二度と表示されないよう保証
+
+#### Advanced Check (Puppeteer) の安定化
+- `index.js#fetchHTMLWithPuppeteer`
+  - **画像 / フォント / メディアのリソースをブロック** （メモリ削減・高速化）
+  - **トラッキング系ドメイン（GA, GTM, doubleclick, Facebook 等）をブロック**
+  - `waitUntil` を `networkidle2` → `domcontentloaded` に変更（SPAで終わらない問題を解消）
+  - `waitForNetworkIdle` の追加待機を `jsWaitTime` 上限付きで実施
+  - ビューポートを 1280x800 に固定（省メモリ）
+- `index.js#checkSEO`
+  - **Advanced Check 失敗時に自動的に Simple Check にフォールバック**
+  - フォールバックが起きた場合は `results.warnings` に `ADVANCED_FALLBACK_TO_SIMPLE` 警告を含めて 200 で返す（502 ではなく）
+  - Simple Check も失敗した場合のみ明示的なエラー
+- `seo-config.json`: `jsTimeout` を 30s → 20s、`jsWaitTime` を 3s → 2.5s に短縮
+
+#### UI改善
+- `public/index.html`: サマリータブ冒頭に **警告バナー** を表示（フォールバック時にユーザーへ通知）
+  - 警告コード（`ADVANCED_FALLBACK_TO_SIMPLE`）、メッセージ、詳細を見られる折りたたみ式
+  - SPA 系サイトで Simple Check の結果が出ても誤解しないよう注意喚起
+
+#### テスト
+- `__tests__/seo-coverage.test.js` 新規（SEO 30種類 + 最終フォールバック挙動を担保）
+- node 単体で 55/55 PASS 確認
+
+### 📦 Breaking Changes
+- なし。`results.warnings` は optional フィールドで既存クライアントの動作に影響しません。
+
+---
+
 ## [1.1.0] - 2026-05-23 — Phase 1: AIO Doctor リブランド & 推奨アクション具体化
 
 ### 🔧 レビュー対応（PR #1 review round 1）

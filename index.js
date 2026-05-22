@@ -176,31 +176,60 @@ class SEOChecker {
       }
 
       browser = await puppeteer.launch(launchOptions);
-      
+
       page = await browser.newPage();
-      
+
       // メモリ使用量を制限
       await page.setCacheEnabled(false);
       await page.setJavaScriptEnabled(true);
-      
+
+      // 小さめのビューポート (省メモリ)
+      await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 });
+
       // ユーザーエージェントを設定
-      await page.setUserAgent('Mozilla/5.0 (compatible; SEO-Checker/1.0)');
-      
+      await page.setUserAgent('Mozilla/5.0 (compatible; SEO-AIO-Doctor/1.1)');
+
+      // 🆙 Phase 1.1: メモリ&時間節約のため不要リソースをブロック
+      //   - 画像/フォント/メディア: SEO診断には不要（alt属性等の解析はDOMで完結）
+      //   - トラッキングや広告系のドメインを軽くブロックして処理を高速化
+      await page.setRequestInterception(true);
+      const blockedResourceTypes = new Set(['image', 'media', 'font']);
+      const blockedDomainsRegex = /(googletagmanager|google-analytics|doubleclick|facebook\.net|hotjar|segment|adsystem|amazon-adsystem|criteo|optimizely|gtag|adservice|cdn\.taboola|cdn\.outbrain)/i;
+      page.on('request', (req) => {
+        try {
+          const type = req.resourceType();
+          const reqUrl = req.url();
+          if (blockedResourceTypes.has(type) || blockedDomainsRegex.test(reqUrl)) {
+            return req.abort();
+          }
+          return req.continue();
+        } catch (_) {
+          try { req.continue(); } catch (_) { /* ignore */ }
+        }
+      });
+
       // ページの読み込みとJavaScript実行待機
+      // 🆙 networkidle2 は SPA だとサードパーティ通信が止まらず常にタイムアウトしがち。
+      //    domcontentloaded で確実に止めつつ、後段で待機を入れて動的コンテンツに対応する。
       await page.goto(url, {
-        waitUntil: 'networkidle2', // ネットワークがアイドル状態になるまで待機
+        waitUntil: 'domcontentloaded',
         timeout: this.config.jsTimeout
       });
-      
+
       // 追加の待機時間（JavaScriptで動的に生成されるコンテンツを待つ）
       await new Promise(resolve => setTimeout(resolve, this.config.jsWaitTime));
-      
+
+      // ネットワークがアイドルになるなら追加で待機（最大 jsWaitTime までで打ち切り）
+      try {
+        await page.waitForNetworkIdle({ idleTime: 500, timeout: this.config.jsWaitTime });
+      } catch (_) { /* タイムアウトは無視（SPAで永久にidleにならない場合がある） */ }
+
       // メタディスクリプションとタイトルタグが動的に生成される場合の追加待機
       await this.waitForDynamicContent(page);
-      
+
       // HTMLコンテンツを取得
       const htmlContent = await page.content();
-      
+
       logger.info(`PuppeteerでHTML取得完了: ${htmlContent.length}文字`);
       return htmlContent;
       
@@ -392,12 +421,33 @@ class SEOChecker {
       logger.info(`SEOチェック開始: ${url || 'HTMLコンテンツ'}, JS待機: ${waitForJS}`);
       
       let pageContent = '';
+      // Advanced Check で Puppeteer が失敗した場合に Simple Check へフォールバックしたかの記録
+      // （後段でメタ情報として results.warnings に積む）
+      let advancedFallbackReason = null;
       if (html) {
         pageContent = html;
       } else {
         // JavaScript実行待機が必要な場合、または Axios が 403 の場合は Puppeteer を使用
         if (waitForJS) {
-          pageContent = await this.fetchHTMLWithPuppeteer(url);
+          try {
+            pageContent = await this.fetchHTMLWithPuppeteer(url);
+          } catch (puppeteerError) {
+            const msg = puppeteerError && puppeteerError.message ? puppeteerError.message : 'unknown';
+            logger.warn(`Advanced Check (Puppeteer) 失敗、Simple Check にフォールバック: ${msg}`);
+            advancedFallbackReason = msg;
+            // Puppeteer失敗時は通常のAxiosフェッチに自動フォールバック
+            try {
+              pageContent = await this.fetchHTMLWithAxios(url);
+            } catch (axiosError2) {
+              // Axiosも失敗した場合のみ元のエラーを投げる
+              const status = axiosError2.response && axiosError2.response.status;
+              const err = new Error(
+                `JavaScript実行モード(Advanced)に失敗し、フォールバックの通常取得も失敗しました（Puppeteer: ${msg}, Axios: ${status || axiosError2.message}）。URLが正しいか、サイトがアクセス可能かをご確認ください。`
+              );
+              err.code = 'BOTH_FETCH_FAILED';
+              throw err;
+            }
+          }
         } else {
           try {
             pageContent = await this.fetchHTMLWithAxios(url);
@@ -468,7 +518,12 @@ class SEOChecker {
           otherSEOElements: this.checkOtherSEOElements($, url || '')
         },
         overallScore: 0,
-        recommendations: []
+        recommendations: [],
+        warnings: advancedFallbackReason ? [{
+          code: 'ADVANCED_FALLBACK_TO_SIMPLE',
+          message: `Advanced Check（JS実行）に失敗したため、Simple Check（静的HTML取得）の結果を表示しています。SPAサイトの場合、JS実行後にしか出ない見出し・画像・構造化データが検出されない可能性があります。`,
+          detail: advancedFallbackReason
+        }] : []
       };
 
       // AIOチェックの実行

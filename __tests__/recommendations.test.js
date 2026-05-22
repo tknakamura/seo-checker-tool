@@ -92,6 +92,20 @@ describe('Phase 1: AIO recommendation coverage', () => {
     expect(recs[0].fix).not.toBe(FALLBACK);
   });
 
+  test('AI検索に重要なスキーマ issue は AIO 扱いを維持する (Phase 1.1 review regression)', () => {
+    const issue = 'AI検索に重要なスキーマが不足しています: FAQPage, HowTo, Article';
+    expect(reporter.getIssueKey(issue, 'structuredInformation')).toBe('aio_missing_schemas');
+    const fix = reporter.getConciseFix(issue, 'structuredInformation');
+    // 'schema.org/' を含む汎用フォールバック文言になっていないこと
+    expect(fix).not.toMatch(/schema\.org\//);
+    // AIO固有メッセージのキーワードが含まれていること
+    expect(fix).toMatch(/FAQPage|HowTo|引用/);
+    // docLink は intro-structured-data を指し、Article 専用ページへ誤マッチしないこと
+    const link = reporter.getDocLink(issue, 'structuredInformation');
+    expect(link).toContain('intro-structured-data');
+    expect(link).not.toContain('article');
+  });
+
   test('description should not be polluted with (N件) suffix (count-info handles it)', () => {
     const fakeResults = {
       checks: {},
