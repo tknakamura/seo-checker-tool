@@ -1,7 +1,7 @@
 {
-  "name": "mercari-seo-checker-tool",
-  "version": "1.0.0",
-  "description": "Mercari Japan SEOチェックツール - 日本語文字化け対応版",
+  "name": "seo-aio-doctor",
+  "version": "1.1.0",
+  "description": "SEO AIO Doctor - WebページのSEOとAI最適化（AIO）を一括診断する日本語対応ツール",
   "main": "index.js",
   "scripts": {
     "start": "node --max-old-space-size=512 --expose-gc index.js",
@@ -14,14 +14,17 @@
   },
   "keywords": [
     "seo",
+    "aio",
+    "ai-optimization",
     "checker",
     "tool",
-    "mercari",
     "optimization",
     "japanese",
-    "character-encoding"
+    "structured-data",
+    "json-ld",
+    "llms-txt"
   ],
-  "author": "Mercari Japan Team",
+  "author": "tknakamura",
   "license": "MIT",
   "dependencies": {
     "@sparticuz/chromium": "^140.0.0",
@@ -60,10 +63,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mercari/mercari-seo-checker-tool.git"
+    "url": "https://github.com/tknakamura/seo-checker-tool.git"
   },
   "bugs": {
-    "url": "https://github.com/mercari/mercari-seo-checker-tool/issues"
+    "url": "https://github.com/tknakamura/seo-checker-tool/issues"
   },
-  "homepage": "https://github.com/mercari/mercari-seo-checker-tool#readme"
+  "homepage": "https://github.com/tknakamura/seo-checker-tool#readme"
 }

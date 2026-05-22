@@ -30,6 +30,11 @@ export interface ConciseRecommendation {
   element: string;
   location: string;
   count?: number;
+  codeExample?: string | null;
+  docLink?: string | null;
+  category?: string;
+  type?: 'seo' | 'aio';
+  issue?: string;
 }
 
 export interface DetailedAnalysis {

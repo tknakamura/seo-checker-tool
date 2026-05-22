@@ -1,10 +1,11 @@
 openapi: 3.0.3
 info:
-  title: Mercari SEO Checker Tool API
-  description: WebページのSEO・AIOチェックおよびレポート生成を行うAPI
-  version: 1.0.0
+  title: SEO AIO Doctor API
+  description: WebページのSEO・AIO（AI検索最適化）診断およびレポート生成を行うAPI
+  version: 1.1.0
   contact:
-    name: Mercari Japan Team
+    name: SEO AIO Doctor
+    url: https://github.com/tknakamura/seo-checker-tool
 
 servers:
   - url: http://localhost:3001

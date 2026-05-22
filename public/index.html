@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEO・AIOチェックツール - Mercari Japan</title>
+    <title>SEO AIO Doctor - SEO・AIO総合診断ツール</title>
     <style>
         * {
             margin: 0;
@@ -840,6 +840,72 @@
             color: #856404;
         }
 
+        /* Phase 1: 推奨アクション拡張表示 */
+        .recommendation-header[data-toggle] { cursor: pointer; }
+        .recommendation-header[data-toggle]:hover { background: #f1f3f5; }
+
+        .toggle-icon {
+            margin-left: 0.5rem;
+            font-size: 0.85rem;
+            color: #6c757d;
+            user-select: none;
+        }
+
+        .type-badge {
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .type-badge.type-seo { background: #0d6efd; color: white; }
+        .type-badge.type-aio { background: #6f42c1; color: white; }
+
+        .recommendation-extra {
+            margin-top: 0.75rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+        }
+
+        .rec-issue {
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .rec-code { margin-bottom: 0.75rem; }
+        .rec-code h4 {
+            font-size: 0.9rem;
+            margin: 0 0 0.5rem;
+            color: #343a40;
+        }
+        .rec-code pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        .rec-code code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            color: inherit;
+            background: transparent;
+            padding: 0;
+            white-space: pre;
+        }
+
+        .rec-doc a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .rec-doc a:hover { text-decoration: underline; }
+
         /* 構造化データ専用スタイル */
         .structured-data-analysis {
             max-width: 100%;
@@ -1164,8 +1230,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>SEO・AIOチェックツール</h1>
-            <p>WebページのSEO最適化とAI最適化を包括的にチェックします</p>
+            <h1>🩺 SEO AIO Doctor</h1>
+            <p>WebページのSEO最適化とAI検索最適化（AIO）を一括診断し、具体的な改善コードまで提示します</p>
         </div>
 
         <div class="form-container">
@@ -1431,20 +1497,43 @@
                             <div class="recommendations-list">
                     `;
                     
-                    results.conciseRecommendations.forEach(rec => {
+                    results.conciseRecommendations.forEach((rec, idx) => {
                         const priorityClass = this.getPriorityClass(rec.priority);
+                        const hasDetails = !!(rec.codeExample || rec.docLink);
+                        const detailsId = `rec-details-${idx}`;
+                        const typeBadge = rec.type
+                            ? `<span class="type-badge type-${rec.type}">${rec.type.toUpperCase()}</span>`
+                            : '';
+                        const codeBlock = rec.codeExample
+                            ? `<div class="rec-code"><h4>修正例</h4><pre><code>${this.escapeHtml(rec.codeExample)}</code></pre></div>`
+                            : '';
+                        const docLink = rec.docLink
+                            ? `<div class="rec-doc"><a href="${rec.docLink}" target="_blank" rel="noopener noreferrer">📖 参考ドキュメント →</a></div>`
+                            : '';
+                        const issueLine = rec.issue
+                            ? `<div class="rec-issue"><strong>検出された問題:</strong> ${this.escapeHtml(rec.issue)}</div>`
+                            : '';
+                        const toggle = hasDetails
+                            ? `<span class="toggle-icon" data-target="${detailsId}">▼</span>`
+                            : '';
+                        const extra = hasDetails
+                            ? `<div class="recommendation-extra" id="${detailsId}" style="display:none;">${issueLine}${codeBlock}${docLink}</div>`
+                            : '';
                         html += `
                             <div class="recommendation-item ${priorityClass}">
-                                <div class="recommendation-header">
+                                <div class="recommendation-header" ${hasDetails ? `data-toggle="${detailsId}"` : ''}>
                                     <span class="checkmark">✓</span>
-                                    <span class="recommendation-text">${rec.fix}</span>
+                                    <span class="recommendation-text">${this.escapeHtml(rec.fix)}</span>
                                     <span class="priority-badge ${priorityClass}">${this.getPriorityTitle(rec.priority)}</span>
+                                    ${toggle}
                                 </div>
                                 <div class="recommendation-details">
-                                    <span class="element-info">${rec.element}</span>
-                                    <span class="location-info">${rec.location}</span>
+                                    <span class="element-info">${this.escapeHtml(rec.element)}</span>
+                                    <span class="location-info">${this.escapeHtml(rec.location)}</span>
                                     ${rec.count > 1 ? `<span class="count-info">${rec.count}件</span>` : ''}
+                                    ${typeBadge}
                                 </div>
+                                ${extra}
                             </div>
                         `;
                     });
@@ -1456,6 +1545,7 @@
                 }
                 
                 summaryContent.innerHTML = html;
+                this.attachRecommendationToggles();
             }
 
             displayDetails(results) {
@@ -2162,6 +2252,40 @@ ${implementationCode}
                     low: 'low'
                 };
                 return classes[priority] || 'medium';
+            }
+
+            escapeHtml(str) {
+                if (str == null) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            attachRecommendationToggles() {
+                document.querySelectorAll('.recommendation-header[data-toggle]').forEach(el => {
+                    if (el.dataset.bound === '1') return;
+                    el.dataset.bound = '1';
+                    el.addEventListener('click', (e) => {
+                        // 内部リンクのクリックは無視
+                        if (e.target.tagName === 'A') return;
+                        const targetId = el.dataset.toggle;
+                        const panel = document.getElementById(targetId);
+                        const icon = el.querySelector('.toggle-icon');
+                        if (!panel) return;
+                        const isOpen = panel.style.display !== 'none';
+                        panel.style.display = isOpen ? 'none' : 'block';
+                        if (icon) icon.textContent = isOpen ? '▼' : '▲';
+                    });
+                });
+                // 展開エリア内のクリックは折りたたみ伝播を止める（コピー可能に）
+                document.querySelectorAll('.recommendation-extra').forEach(el => {
+                    if (el.dataset.bound === '1') return;
+                    el.dataset.bound = '1';
+                    el.addEventListener('click', (e) => e.stopPropagation());
+                });
             }
 
             switchTab(tabName) {
