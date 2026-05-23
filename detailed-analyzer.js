@@ -1,10 +1,36 @@
 /**
  * 詳細分析機能
  * HTMLの具体的な箇所を特定して問題点を詳細に分析
+ *
+ * Phase 1.5: seo-config.json の閾値を読み込んで判定基準を統一する
  */
+const fs = require('fs');
+const path = require('path');
+
+function loadSeoConfig() {
+  const defaults = {
+    titleMaxLength: 32,
+    titleMinLength: 15,
+    descriptionMaxLength: 120,
+    descriptionMinLength: 70,
+    h1MaxCount: 1,
+    h2MinCount: 2,
+    h3MinCount: 3,
+  };
+  try {
+    const configPath = path.join(__dirname, 'seo-config.json');
+    if (fs.existsSync(configPath)) {
+      const data = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      return { ...defaults, ...data };
+    }
+  } catch (_) { /* ignore, use defaults */ }
+  return defaults;
+}
+
 class DetailedAnalyzer {
   constructor() {
     this.issues = [];
+    this.config = loadSeoConfig();
   }
 
   /**
@@ -102,10 +128,12 @@ class DetailedAnalyzer {
         fix: '<title>適切なタイトルを追加</title>'
       });
     } else {
-      // 長さチェック（全角基準）
-      if (titleLength < 15) {
+      // 長さチェック（全角基準） Phase 1.5: config 経由
+      const titleMin = this.config.titleMinLength;
+      const titleMax = this.config.titleMaxLength;
+      if (titleLength < titleMin) {
         issues.push(`タイトルが短すぎます（${titleLength}全角文字）`);
-        recommendations.push(`タイトルを15全角文字以上にしてください`);
+        recommendations.push(`タイトルを${titleMin}全角文字以上にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'title',
@@ -113,13 +141,13 @@ class DetailedAnalyzer {
           current: titleText,
           length: titleLength,
           description: `現在のタイトル「${titleText}」は${titleLength}全角文字で短すぎます`,
-          fix: 'タイトルを15-30全角文字の範囲で拡張してください'
+          fix: `タイトルを${titleMin}-${titleMax}全角文字の範囲で拡張してください`
         });
       }
-      
-      if (titleLength > 30) {
+
+      if (titleLength > titleMax) {
         issues.push(`タイトルが長すぎます（${titleLength}全角文字）`);
-        recommendations.push(`タイトルを30全角文字以下にしてください`);
+        recommendations.push(`タイトルを${titleMax}全角文字以下にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'title',
@@ -127,7 +155,7 @@ class DetailedAnalyzer {
           current: titleText,
           length: titleLength,
           description: `現在のタイトル「${titleText}」は${titleLength}全角文字で長すぎます`,
-          fix: 'タイトルを30全角文字以下に短縮してください'
+          fix: `タイトルを${titleMax}全角文字以下に短縮してください`
         });
       }
 
@@ -198,10 +226,12 @@ class DetailedAnalyzer {
         fix: '<meta name="description" content="適切な説明文を追加">'
       });
     } else {
-      // 長さチェック（全角基準）
-      if (descriptionLength < 60) {
+      // 長さチェック（全角基準） Phase 1.5: config 経由
+      const descMin = this.config.descriptionMinLength;
+      const descMax = this.config.descriptionMaxLength;
+      if (descriptionLength < descMin) {
         issues.push(`メタディスクリプションが短すぎます（${descriptionLength}全角文字）`);
-        recommendations.push(`メタディスクリプションを60全角文字以上にしてください`);
+        recommendations.push(`メタディスクリプションを${descMin}全角文字以上にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'meta[name="description"]',
@@ -209,13 +239,13 @@ class DetailedAnalyzer {
           current: description,
           length: descriptionLength,
           description: `現在の説明文「${description}」は${descriptionLength}全角文字で短すぎます`,
-          fix: '説明文を60-80全角文字の範囲で拡張してください'
+          fix: `説明文を${descMin}-${descMax}全角文字の範囲で拡張してください`
         });
       }
-      
-      if (descriptionLength > 80) {
+
+      if (descriptionLength > descMax) {
         issues.push(`メタディスクリプションが長すぎます（${descriptionLength}全角文字）`);
-        recommendations.push(`メタディスクリプションを80全角文字以下にしてください`);
+        recommendations.push(`メタディスクリプションを${descMax}全角文字以下にしてください`);
         specificIssues.push({
           type: 'length',
           element: 'meta[name="description"]',
@@ -223,7 +253,7 @@ class DetailedAnalyzer {
           current: description,
           length: descriptionLength,
           description: `現在の説明文「${description}」は${descriptionLength}全角文字で長すぎます`,
-          fix: '説明文を80全角文字以下に短縮してください'
+          fix: `説明文を${descMax}全角文字以下に短縮してください`
         });
       }
 
