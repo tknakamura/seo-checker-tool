@@ -7,20 +7,20 @@ export function getScoreClass(score: number): string {
 
 export function getPriorityTitle(priority: string): string {
   const titles: Record<string, string> = {
-    critical: '緊急',
-    high: '高',
-    medium: '中',
-    low: '低',
+    critical: 'Critical',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
   };
   return titles[priority] || priority;
 }
 
 export function getPriorityTitleLong(priority: string): string {
   const titles: Record<string, string> = {
-    critical: '緊急対応',
-    high: '高優先度',
-    medium: '中優先度',
-    low: '低優先度',
+    critical: 'Critical',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low',
   };
   return titles[priority] || priority;
 }

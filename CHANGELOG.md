@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.2.0] - 2026-05-23 — Phase 1.2: Claw 風 UI リブランド
+
+### 🎨 UI リブランド（`public/index.html`、+668 / -1098）
+- ヘッダーから `🩺` 絵文字を撤去し、白背景 + 細い下線のミニマルデザインへ
+- カードシャドウを全廃、角丸を 8px に統一
+- 配色を紫グラデから Claw 系の青 (#2563eb) に変更
+- 優先度バッジを **英語化**: 緊急/高/中/低 → **Critical / High / Medium / Low**
+- スコア表示を大型紫ブロック → サマリー3カードに統一
+- コードブロックをダーク (#282c34) → ライト (#f8f8f8) に
+- タブ・見出しの装飾絵文字を最小化（📊🎯⚡等を撤去）
+- CSS は大幅にスリム化（実質 -430 行）
+
+### 🔧 整合性修正（レビュー対応）
+- `client/src/components/Header.tsx` の h1 から `🩺` 絵文字を撤去（`public/index.html` と統一）
+- `client/src/utils/helpers.ts` の `getPriorityTitle` / `getPriorityTitleLong` を Critical/High/Medium/Low に揃え、React 版とも整合
+- `public/index.html` 内に重複していた `getPriorityTitle` を 1 箇所に整理（行 1798 側を削除）
+- `package.json` / `client/package.json` を `1.1.0` → `1.2.0` に bump
+
+### 📦 Breaking Changes
+- なし。表示文言のみの変更で API レスポンス形状や URL は不変。
+
+### 📝 次回予定（Phase 1.3 候補）
+- a11y 強化（`role="alert"` / `aria-live` / `aria-expanded` / `<button>` 化）
+- React 版 `SummaryTab.tsx` の Claw 風スタイル追従
+- llms.txt 対応チェック / 競合URL比較モード
+
+---
+
 ## [1.1.1] - 2026-05-23 — Phase 1.1: SEO残存フォールバック解消 & Advanced Check 安定化
 
 ### 🎯 解決した問題
