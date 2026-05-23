@@ -2028,9 +2028,188 @@ app.post('/api/report/detailed', async (req, res) => {
   }
 });
 
+// Phase 2-B: 競合URL比較エンドポイント
+// 2つのURLを並列診断し、自分(primary) vs 競合(competitor) のスコア差分を返す。
+// 片方が失敗しても続行（partial failure 対応）。
+app.post('/api/compare', async (req, res) => {
+  try {
+    const { primaryUrl, competitorUrl, waitForJS = false, sessionId, userId } = req.body || {};
+    if (!primaryUrl || typeof primaryUrl !== 'string') {
+      return sendApiError(res, 400, 'primaryUrl は必須です', 'MISSING_PRIMARY_URL');
+    }
+    if (!competitorUrl || typeof competitorUrl !== 'string') {
+      return sendApiError(res, 400, 'competitorUrl は必須です', 'MISSING_COMPETITOR_URL');
+    }
+    // 簡易URLバリデーション
+    for (const u of [primaryUrl, competitorUrl]) {
+      try { new URL(u); } catch (_) {
+        return sendApiError(res, 400, `URLが不正です: ${u}`, 'INVALID_URL');
+      }
+    }
+    if (primaryUrl === competitorUrl) {
+      return sendApiError(res, 400, '比較対象URLが同じです。別のURLを指定してください', 'SAME_URL');
+    }
+
+    logger.info(`比較診断開始: primary=${primaryUrl} vs competitor=${competitorUrl}, JS待機=${waitForJS}`);
+    const checker = new SEOChecker();
+
+    // 並列実行。Promise.allSettled で片方失敗でも結果を返す
+    const settled = await Promise.allSettled([
+      checker.checkSEO(primaryUrl, null, waitForJS),
+      checker.checkSEO(competitorUrl, null, waitForJS),
+    ]);
+
+    const primary = settled[0].status === 'fulfilled' ? settled[0].value : null;
+    const competitor = settled[1].status === 'fulfilled' ? settled[1].value : null;
+    const primaryError = settled[0].status === 'rejected' ? (settled[0].reason && settled[0].reason.message) : null;
+    const competitorError = settled[1].status === 'rejected' ? (settled[1].reason && settled[1].reason.message) : null;
+
+    if (!primary && !competitor) {
+      return sendApiError(res, 502, `両方のURLの取得に失敗しました (primary: ${primaryError}, competitor: ${competitorError})`, 'BOTH_FETCH_FAILED');
+    }
+
+    // 比較結果を組み立てる
+    const comparison = buildComparison(primary, competitor);
+
+    // 履歴保存（成功した方のみ）
+    if (primary) await saveAnalysisHistory(primary, { url: primaryUrl, waitForJS, sessionId, userId, comparedWith: competitorUrl });
+    if (competitor) await saveAnalysisHistory(competitor, { url: competitorUrl, waitForJS, sessionId, userId, comparedWith: primaryUrl });
+
+    return sendApiSuccess(res, {
+      primary,
+      competitor,
+      comparison,
+      warnings: [
+        ...(primaryError ? [{ code: 'PRIMARY_FETCH_FAILED', message: `自分のサイトの取得に失敗: ${primaryError}`, detail: primaryError }] : []),
+        ...(competitorError ? [{ code: 'COMPETITOR_FETCH_FAILED', message: `競合サイトの取得に失敗: ${competitorError}`, detail: competitorError }] : []),
+      ]
+    });
+  } catch (error) {
+    logger.error(`比較診断エラー: ${error.message}`);
+    return sendApiError(res, 500, error.message, 'COMPARE_ERROR');
+  }
+});
+
+/**
+ * 比較結果オブジェクトを構築
+ * - スコア差分（SEO/AIO/総合）
+ * - カテゴリ別差分
+ * - 勝ち負け判定（あなたが優位 / 競合が優位 / 同等）
+ * - 「競合が対応していてあなたが未対応」のハイライト項目
+ */
+function buildComparison(primary, competitor) {
+  if (!primary || !competitor) {
+    return {
+      available: false,
+      reason: '片方の診断データが取得できなかったため、比較できません'
+    };
+  }
+  const sp = primary.overallScore || 0;
+  const sc = competitor.overallScore || 0;
+  const ap = (primary.aio && primary.aio.overallScore) || 0;
+  const ac = (competitor.aio && competitor.aio.overallScore) || 0;
+  const cp = primary.combinedScore || Math.round((sp + ap) / 2);
+  const cc = competitor.combinedScore || Math.round((sc + ac) / 2);
+
+  // カテゴリ別差分
+  const categoryDiffs = [];
+  // SEO 側
+  const seoKeys = Object.keys(primary.checks || {});
+  for (const key of seoKeys) {
+    const myScore = (primary.checks[key] && primary.checks[key].score) || 0;
+    const competitorScore = (competitor.checks && competitor.checks[key] && competitor.checks[key].score) || 0;
+    categoryDiffs.push({
+      category: key,
+      type: 'seo',
+      primary: myScore,
+      competitor: competitorScore,
+      diff: myScore - competitorScore,
+      winner: myScore > competitorScore ? 'primary' : myScore < competitorScore ? 'competitor' : 'tie',
+    });
+  }
+  // AIO 側
+  const aioKeys = Object.keys((primary.aio && primary.aio.checks) || {});
+  for (const key of aioKeys) {
+    const myScore = (primary.aio.checks[key] && primary.aio.checks[key].score) || 0;
+    const competitorScore = (competitor.aio && competitor.aio.checks && competitor.aio.checks[key] && competitor.aio.checks[key].score) || 0;
+    categoryDiffs.push({
+      category: key,
+      type: 'aio',
+      primary: myScore,
+      competitor: competitorScore,
+      diff: myScore - competitorScore,
+      winner: myScore > competitorScore ? 'primary' : myScore < competitorScore ? 'competitor' : 'tie',
+    });
+  }
+
+  // 「競合が対応していてあなたが未対応」のハイライト
+  // = 競合のスコアが80以上、かつ あなたのスコアが50未満
+  const gapsToClose = categoryDiffs.filter(d =>
+    d.competitor >= 80 && d.primary < 50
+  ).sort((a, b) => (b.competitor - b.primary) - (a.competitor - a.primary));
+
+  // 「あなたが優位、競合が未対応」のハイライト
+  const myAdvantages = categoryDiffs.filter(d =>
+    d.primary >= 80 && d.competitor < 50
+  ).sort((a, b) => (a.competitor - a.primary) - (b.competitor - b.primary));
+
+  // 勝ち負け判定（5点以上の差で勝敗、それ以下は引き分け扱い）
+  const TIE_THRESHOLD = 5;
+  function judge(myScore, theirScore) {
+    if (Math.abs(myScore - theirScore) <= TIE_THRESHOLD) return 'tie';
+    return myScore > theirScore ? 'primary' : 'competitor';
+  }
+  const verdict = {
+    seo: { primary: sp, competitor: sc, diff: sp - sc, winner: judge(sp, sc) },
+    aio: { primary: ap, competitor: ac, diff: ap - ac, winner: judge(ap, ac) },
+    combined: { primary: cp, competitor: cc, diff: cp - cc, winner: judge(cp, cc) },
+  };
+
+  // カテゴリ別の勝ち数集計
+  const winCounts = {
+    primary: categoryDiffs.filter(d => d.winner === 'primary').length,
+    competitor: categoryDiffs.filter(d => d.winner === 'competitor').length,
+    tie: categoryDiffs.filter(d => d.winner === 'tie').length,
+  };
+
+  return {
+    available: true,
+    verdict,
+    categoryDiffs,
+    gapsToClose,
+    myAdvantages,
+    winCounts,
+    totalCategories: categoryDiffs.length,
+  };
+}
+
 // ヘルスチェック（Render 等の監視用）
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// バージョン情報（Phase 2-B: フッタの動的バージョン表示用）
+// package.json から version / license / name を読み込んで返す
+// 起動時に1度だけ読み込みキャッシュ
+let _versionInfo = null;
+function getVersionInfo() {
+  if (_versionInfo) return _versionInfo;
+  try {
+    const pkg = require('./package.json');
+    _versionInfo = {
+      name: pkg.name || 'seo-aio-doctor',
+      version: pkg.version || '0.0.0',
+      license: pkg.license || 'UNLICENSED',
+    };
+  } catch (e) {
+    _versionInfo = { name: 'seo-aio-doctor', version: '0.0.0', license: 'UNLICENSED' };
+  }
+  return _versionInfo;
+}
+app.get('/api/version', (req, res) => {
+  // 軽くキャッシュ（5分。リリース時はnew deployで自然更新）
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(getVersionInfo());
 });
 
 // 分析履歴一覧（MONGODB_URI 設定時のみ有効）

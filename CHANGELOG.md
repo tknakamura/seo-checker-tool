@@ -1,5 +1,89 @@
 # Changelog
 
+## [2.2.0] - 2026-05-24 — Phase 2-B: 競合URL比較モード + LIKEPASS フッタ
+
+### ✨ 新機能: 競合URL比較モード
+
+2つのURLを並列診断してスコアを横並びで比較できる機能を追加。SEO/AIO改善のベンチマーキングに使えます。
+
+#### 🆕 `/api/compare` エンドポイント
+- POST 経由で `primaryUrl` + `competitorUrl` を受け取り、並列診断
+- `Promise.allSettled` で **片方失敗でも結果を返す**（partial failure 対応）
+- 両方失敗した場合のみ 502 を返す
+- 同一URL指定や URL バリデーション失敗は 400
+
+#### 🆕 `buildComparison()` ロジック
+- カテゴリ別差分（SEO 7 + AIO 7 = 14カテゴリ）
+- 勝敗判定（5点差以下は tie、それ以上で勝敗判定）
+- **`gapsToClose`** ハイライト: 競合 80+ かつ 自分 50未満
+- **`myAdvantages`** ハイライト: 自分 80+ かつ 競合 50未満
+- カテゴリ別勝ち数集計 (`winCounts`)
+
+#### 🎨 UI (vanilla)
+- 既存フォームに **「比較対象URL」欄** を追加（UI配置 C）
+  - 青の border-left + 淡背景でアクセント
+  - 「（オプション）」のヒント文付き
+- 入力時のみ比較モード起動、空欄なら従来通り単独診断
+- 比較結果サマリー:
+  - **勝敗カード**: SEO / AIO / 総合 をそれぞれ自分 vs 競合のスコアで表示
+  - **カテゴリ別勝ち負け**: バーチャートで視覚化（あなた優位/同等/競合優位）
+  - **競合が先行している項目**: 「キャッチアップすべき」リスト
+  - **あなたが先行している項目**: 「優位を維持」リスト
+  - **全カテゴリ詳細テーブル**: 14カテゴリ全部のスコア・差分・勝敗
+- 比較モード中は他タブを「サマリーのみ」案内に切り替え
+
+### ✨ 新機能: LIKEPASS フッタ + 動的バージョン表示
+
+#### 🆕 `/api/version` エンドポイント
+- `package.json` の `name` / `version` / `license` を返す
+- `Cache-Control: public, max-age=300` で軽くキャッシュ
+- 起動時に1度だけ読み込み
+
+#### 🎨 フッタ (vanilla)
+- レイアウト B: ロゴ左、クレジット中央（3カラムグリッド）
+- **LIKEPASS ロゴ**: 20px、`https://likepass.net` へリンク（新タブ）
+- **`Developed by TK Nakamura`**: 中央、本文色
+- **動的バージョン**: `v2.2.0 · MIT License` を `/api/version` から取得
+- a11y: `aria-label`、`:focus-visible` フォーカスリング
+- レスポンシブ: モバイルでは縦並び
+
+### 🧹 リポジトリ整理
+
+#### `node_modules` の tracked 解除
+- `git rm -r --cached node_modules` で **21,299 ファイル** を削除
+- `.gitignore` の重複していた `node_modules/` 行も整理
+
+#### GitHub Actions のメジャー更新
+- `actions/checkout@v4` → `@v5`
+- `actions/setup-node@v4` → `@v5`
+- 2026年6月の強制移行への先行対応
+
+### 🧪 テスト
+- `__tests__/compare-api.test.js` 新規追加（10+項目）
+  - `buildComparison` のロジック検証
+  - 5点差以下は tie 判定
+  - null 入力時の `available: false`
+  - combinedScore の fallback ロジック
+  - `/api/version` の package.json 連携
+
+### ✅ 実機検証
+
+| シナリオ | 結果 |
+|---|---|
+| ads.mercari.com vs llmstxt.org の比較 | ✅ 14カテゴリ全部の差分、勝敗カード、ギャップハイライト全部表示 |
+| `/api/version` | ✅ `{"name":"seo-aio-doctor","version":"2.2.0","license":"MIT"}` |
+| LIKEPASS ロゴ → https://likepass.net | ✅ 新タブで開く |
+| フッタの動的バージョン | ✅ `v2.2.0 · MIT License` |
+| モバイルレスポンシブ | ✅ フッタ縦並び、テーブル縮小 |
+
+### 📦 Breaking Changes
+なし。既存の `/api/check/seo` 単独診断は完全維持、`/api/compare` は新規追加。
+
+### 📦 version bump
+`2.1.1` → `2.2.0` (minor: 新機能2つ追加)
+
+---
+
 ## [2.1.1] - 2026-05-24 — chore: Render の puppeteer Chrome ダウンロードをスキップ (IaC化)
 
 PR #7 マージ時の Render デプロイで `npm install` が `puppeteer/install.mjs` の
