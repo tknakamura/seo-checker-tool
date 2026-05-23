@@ -1,5 +1,60 @@
 # Changelog
 
+## [2.1.0] - 2026-05-24 — Phase 2-A.1: AIO 重み付け調整 / effortMap 追加
+
+PR #5 (Phase 2-A) レビュー時に中村さんから Nice-to-have として送られた2点を反映。
+
+### 🎯 AIO 重み付けを「旧 impactScores 比率維持」に再調整
+
+#### 背景
+Phase 2-A で llms.txt を 15% 比重で導入した際、残り 85% を6カテゴリに **均一に近い形** (17%/17%/17%/17%/9%/8%) で配分していた。
+しかし旧 `impactScores` では `structuredInformation` (25%) が最重要、`naturalLanguageQuality` / `contextRelevance` (10%) が軽量、という明確な優先度設計があった。
+今回これを厳密に保ったまま llms.txt 15% を追加する。
+
+#### 新しい重み (`aio-checker.js#calculateAIOOverallScore`)
+| カテゴリ | 旧 impactScores 比率 | × 0.85 = 新重み |
+|---|---|---|
+| structuredInformation    | 25% | **0.2125** |
+| contentComprehensiveness | 20% | **0.17** |
+| aiSearchOptimization     | 20% | **0.17** |
+| credibilitySignals       | 15% | **0.1275** |
+| naturalLanguageQuality   | 10% | **0.085** |
+| contextRelevance         | 10% | **0.085** |
+| **llmsTxtCompliance**    | （新規） | **0.15** |
+| 合計 | 100% | **1.00** |
+
+#### 効果
+- 「構造化情報が AIO で最も重要」という旧設計の意図を回復
+- llmstxt.org の AIO スコア: 48 → 47 (structured 0点の影響を強く反映)
+
+### 🆕 `effortMap` に `llmsTxtCompliance: 2` を追加
+
+`enhanced-reporter.js#calculateEffort`:
+- llms.txt は **Markdown ファイル1つ設置するだけ** で完了するため低工数
+- `titleTag` (1), `metaDescription` (1), `otherSEOElements` (2) と同等
+- 旧 `impactScores.aio.llmsTxtCompliance = 15` と組み合わせると、
+  ROI = impact/effort = 7.5 で **quickWins 上位候補** として浮上する想定
+
+### 🧪 テスト追加
+
+`__tests__/phase-2a1-weights.test.js` を新規追加 (12項目):
+- 全カテゴリ100点で総合100
+- 各カテゴリ単独0点での総合スコア検証 (期待値表で網羅)
+- 旧 impactScores の重要度順が保持されているか
+- 重みの合計が 1.00 ±0.001
+- `llmsTxtCompliance` の effort=2 確認
+- 未知カテゴリのデフォルト effort=5 (regression)
+
+node 単体テストで **9/9 PASS** 確認済み。CI で jest 全項目を検証。
+
+### 📦 Breaking Changes
+なし。スコア配点が微調整されるため、過去診断結果と最大数点の差が出る可能性あり。
+
+### 📦 version bump
+`2.0.1` → `2.1.0` (minor: 重み付け改善は破壊的変更でないが、結果が変わるため minor bump)
+
+---
+
 ## [2.0.1] - 2026-05-24 — Phase 1.4: 品質ゲート強化 (lighthouse除去 / ESLint / npm audit)
 
 中村さん側で送られた「Phase 1.4 積み残し」を一気に解消。

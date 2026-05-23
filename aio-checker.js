@@ -578,15 +578,37 @@ class AIOChecker {
   }
 
   calculateAIOOverallScore(checks) {
-    // Phase 2-A: llms.txt 対応を15%の比重で追加。残り85%を既存カテゴリへ比例配分。
+    // Phase 2-A.1: 旧 impactScores の比率を維持しつつ llms.txt 15% を追加。
+    //
+    // 旧6カテゴリの impactScores 比率 (合計100):
+    //   structuredInformation:    25
+    //   contentComprehensiveness: 20
+    //   aiSearchOptimization:     20
+    //   credibilitySignals:       15
+    //   naturalLanguageQuality:   10
+    //   contextRelevance:         10
+    //
+    // これらを 85% に比例押し込み + llmsTxtCompliance 15% で合計100%にする:
+    //   structuredInformation:    25 * 0.85 = 21.25 → 0.2125
+    //   contentComprehensiveness: 20 * 0.85 = 17.00 → 0.17
+    //   aiSearchOptimization:     20 * 0.85 = 17.00 → 0.17
+    //   credibilitySignals:       15 * 0.85 = 12.75 → 0.1275
+    //   naturalLanguageQuality:   10 * 0.85 =  8.50 → 0.085
+    //   contextRelevance:         10 * 0.85 =  8.50 → 0.085
+    //   llmsTxtCompliance:                              0.15
+    //   ─────────────────────────────────────────────────
+    //   合計                                            1.00
+    //
+    // これにより「構造化情報が AIO で最も重要」という旧設計の意図を保ちつつ、
+    // 2025年最先端の AIO シグナルである llms.txt も適切に反映できる。
     const weights = {
       contentComprehensiveness: 0.17,
-      structuredInformation: 0.17,
-      credibilitySignals: 0.17,
-      aiSearchOptimization: 0.17,
-      naturalLanguageQuality: 0.09,
-      contextRelevance: 0.08,
-      llmsTxtCompliance: 0.15,
+      structuredInformation:    0.2125,
+      credibilitySignals:       0.1275,
+      aiSearchOptimization:     0.17,
+      naturalLanguageQuality:   0.085,
+      contextRelevance:         0.085,
+      llmsTxtCompliance:        0.15
     };
 
     let totalScore = 0;

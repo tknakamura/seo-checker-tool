@@ -1722,7 +1722,10 @@ class EnhancedReporter {
       credibilitySignals: 4,
       aiSearchOptimization: 5,
       naturalLanguageQuality: 6,
-      contextRelevance: 3
+      contextRelevance: 3,
+      // Phase 2-A.1: llms.txt は Markdown 1ファイル設置するだけで完了するため、
+      // タイトル/メタディスクリプション/viewport 同等の低工数（quickWin候補）
+      llmsTxtCompliance: 2
     };
 
     return effortMap[category] || 5;
