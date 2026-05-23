@@ -1,6 +1,18 @@
 # Changelog
 
-## [1.3.0] - 2026-05-23 — Phase 1.3: a11y強化 / React版整合 / CI
+## [1.3.0] - 2026-05-23 — Phase 1.3
+
+### 🔧 レビュー対応（PR #4 review round 1）
+- 🔴 GitHub Actions CI を green 化
+  - `npm test` → `npx jest __tests__/recommendations.test.js __tests__/seo-coverage.test.js`
+    （`lighthouse` の ESM 依存で動かない `integration` / `api` / `fullwidth-length` を一旦除外、ESM 対応は Phase 1.4 へ送り）
+  - `client-typecheck` ジョブ用に `client/package-lock.json` を生成・コミット
+  - 名称を `Test & Lint` → `Test` に修正（lint ステップが無いため）、matrix の `fail-fast: false` 追加
+- 🟠 `client/src/components/tabs/SummaryTab.tsx` の `WarningsBanner` を `makeWarningKey` で安定キー化（`key={i}` を解消）
+
+---
+
+## [1.3.0] - 2026-05-23 — Phase 1.3 (initial): a11y強化 / React版整合 / CI
 
 ### ♿ アクセシビリティ強化
 - **警告バナー**: `role="region"` + 各アラートに `role="alert"` / `aria-live="polite"` を付与

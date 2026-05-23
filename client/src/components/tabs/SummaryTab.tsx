@@ -86,12 +86,16 @@ function RecommendationItem({ rec }: { rec: ConciseRecommendation }) {
   );
 }
 
+function makeWarningKey(w: WarningEntry, fallbackIndex: number): string {
+  return [w.code, w.message?.slice(0, 30)].filter(Boolean).join('|') || `warn-${fallbackIndex}`;
+}
+
 function WarningsBanner({ warnings }: { warnings: WarningEntry[] }) {
   if (!warnings || warnings.length === 0) return null;
   return (
     <div className="warnings-banner" role="region" aria-label="診断時の警告">
       {warnings.map((w, i) => (
-        <div key={i} className="warning-item" role="alert" aria-live="polite">
+        <div key={makeWarningKey(w, i)} className="warning-item" role="alert" aria-live="polite">
           <strong aria-label="警告コード">⚠️ {w.code || 'WARNING'}</strong>
           <div>{w.message}</div>
           {w.detail && (
