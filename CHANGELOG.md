@@ -1,5 +1,64 @@
 # Changelog
 
+## [1.3.0] - 2026-05-23 — Phase 1.3
+
+### 🔧 レビュー対応（PR #4 review round 1）
+- 🔴 GitHub Actions CI を green 化
+  - `npm test` → `npx jest __tests__/recommendations.test.js __tests__/seo-coverage.test.js`
+    （`lighthouse` の ESM 依存で動かない `integration` / `api` / `fullwidth-length` を一旦除外、ESM 対応は Phase 1.4 へ送り）
+  - `client-typecheck` ジョブ用に `client/package-lock.json` を生成・コミット
+  - 名称を `Test & Lint` → `Test` に修正（lint ステップが無いため）、matrix の `fail-fast: false` 追加
+- 🟠 `client/src/components/tabs/SummaryTab.tsx` の `WarningsBanner` を `makeWarningKey` で安定キー化（`key={i}` を解消）
+
+---
+
+## [1.3.0] - 2026-05-23 — Phase 1.3 (initial): a11y強化 / React版整合 / CI
+
+### ♿ アクセシビリティ強化
+- **警告バナー**: `role="region"` + 各アラートに `role="alert"` / `aria-live="polite"` を付与
+  - スクリーンリーダーがフォールバック発生を即座に読み上げ
+- **推奨アクションのトグル**: `<div>` → `<button type="button">` 化
+  - `aria-expanded` / `aria-controls` でパネル状態をARIA属性に同期
+  - キーボード操作（Tab/Enter/Space）が標準対応
+  - `:focus-visible` で青のフォーカスリングを表示
+  - `aria-hidden="true"` で装飾アイコン（✓/▼）をスクリーンリーダーから隠す
+  - 優先度バッジに `aria-label="優先度: Critical"` を付与
+- vanilla / React 両方で同様の対応
+
+### 🎨 React 版 Claw 風スタイル追従
+- `client/src/index.css` を vanilla版 (`public/index.html`) と同じデザイントークン体系に統一
+  - 22KB の Claw inspired theme をそのまま採用
+  - 紫グラデーション、影、彩度高めの優先度色を全廃
+- `client/src/components/Header.tsx`: `<header>` 要素化、文言を vanilla版と合わせる
+- `client/src/components/tabs/SummaryTab.tsx` を Phase 1.1/1.3 仕様に追従:
+  - `<button>` ベースのアクセシブルな展開UI
+  - 装飾絵文字（📊🎯💡📖）を削除
+  - 警告バナーの React 実装（vanilla版と機能パリティ）
+  - `useId()` でユニークパネルID生成
+  - **`key={i}` → 安定キー** (`makeStableKey`) でstate漏れを防止（Phase 1 review 積み残し対応）
+
+### 🧰 型定義
+- `client/src/types.ts`: `WarningEntry` 型を新規追加、`SEOCheckResult.warnings` を型付き対応
+
+### 🤖 CI ワークフロー
+- `.github/workflows/ci.yml` を新規追加
+  - `npm test` (jest 143項目) を Node 18.x / 20.x マトリクスで実行
+  - root の `npm run typecheck` (tsc --noEmit)
+  - client の `npx tsc -b` でReact側の型を検証
+  - PR/push トリガー、同一PRで複数pushされたら古いjobをキャンセル
+  - Puppeteer Chrome 自動ダウンロードを `PUPPETEER_SKIP_DOWNLOAD=true` でスキップ
+
+### 🧹 .gitignore 整理
+- Gatsby テンプレート由来の `public` 除外設定を削除
+  - このプロジェクトは Express の静的配信に `public/` を使うため track 必須
+  - 削除と同時にコメントで再追加防止の注意書きを記載
+- 以降は `git add public/index.html` で警告が出ない
+
+### 📦 Breaking Changes
+なし。型追加・属性追加のみで、既存クライアントの動作に影響しません。
+
+---
+
 ## [1.2.0] - 2026-05-23 — Phase 1.2: Claw 風 UI リブランド
 
 ### 🎨 UI リブランド（`public/index.html`、+668 / -1098）

@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同一PRで複数pushされたら古いjobをキャンセル
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18.x, 20.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies (root)
+        # production+devを両方入れる必要があるので --include=dev
+        # Puppeteer Chrome の自動ダウンロードはCIでは不要なのでスキップ
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci --include=dev
+
+      - name: Run regression tests (jest)
+        # Phase 1.3: Phase 1/1.1で導入した回帰テストのみを実行。
+        # 既存の integration/api/fullwidth-length は lighthouse の ESM 依存で
+        # 現状 jest がパースできないため、ESM 化対応は Phase 1.4 で別PRに切り出す。
+        run: npx jest __tests__/recommendations.test.js __tests__/seo-coverage.test.js
+        env:
+          CI: 'true'
+
+      - name: TypeScript typecheck (root)
+        # Phase 1.3: tsc --noEmit。types/ ディレクトリ等を含む型の整合性を保証
+        run: npm run typecheck
+
+  client-typecheck:
+    name: Client TypeScript typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: client
+        # client にも lockfile があれば npm ci、なければ npm install
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Client TypeScript build check
+        working-directory: client
+        # vite ビルドの一部としてtscが走るのでこれが通れば型はOK
+        # ただし完全なビルドはRender側でやるのでここはtsc -b のみ
+        run: npx tsc -b
