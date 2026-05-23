@@ -15,6 +15,12 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # 本番では @sparticuz/chromium のバイナリを使うため、
+      # puppeteer の Chrome 自動ダウンロードは不要。
+      # これを設定しないと npm install で chrome-headless-shell の
+      # 取得が失敗してビルドが落ちる（PR #7 デプロイ時に発生）。
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: 'true'
     # オプション（必要に応じて Dashboard で追加）:
     # - CORS_ORIGIN: フロントのオリジン（複数はカンマ区切り）
     # - MONGODB_URI: 分析履歴用
