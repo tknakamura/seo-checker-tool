@@ -1,5 +1,115 @@
 # Changelog
 
+## [2.0.1] - 2026-05-24 — Phase 1.4: 品質ゲート強化 (lighthouse除去 / ESLint / npm audit)
+
+中村さん側で送られた「Phase 1.4 積み残し」を一気に解消。
+
+### 🔧 lighthouse の ESM 干渉を解消
+- `index.js` の `const lighthouse = require('lighthouse')` を **完全除去**
+  - lighthouse v10+ は ESM-only。CommonJS の `require` で `ERR_REQUIRE_ESM` を起こし、
+    `__tests__/integration.test.js` `api.test.js` `fullwidth-length.test.js` の
+    3本がスキップされていた根本原因
+  - 実コードでは1度も使われていない残骸だったため、依存ごと削除しても影響なし
+  - 将来 Lighthouse 連携を入れる場合は dynamic import を使うこと
+    (`const { default: lighthouse } = await import('lighthouse')`)
+- `package.json` の `dependencies` から `"lighthouse": "^12.8.1"` を削除
+  - npm install 時間の短縮、本番イメージサイズ縮小にも貢献
+
+### ✨ 既存テスト3本を再開
+- `__tests__/integration.test.js`
+- `__tests__/api.test.js`
+- `__tests__/fullwidth-length.test.js`
+- これら3本は Phase 1.3 で除外していたが本PRで復活
+- CI workflow も `npm test` で全件実行するよう変更
+
+### 🆕 回帰防止テスト
+- `__tests__/no-cjs-esm-conflict.test.js` を新規追加
+  - `index.js` が `require('lighthouse')` をコードに含まないこと
+  - `require('../index.js')` がエラーなく動作すること
+  - `SEOChecker.checkSEO(html)` が ESMエラーなしで実行できること
+  - HTMLペースト時 llmsTxtCompliance が安全にスキップされること
+
+### 🔧 ESLint を CI に追加
+- `.eslintrc.json` を新規追加
+  - `eslint:recommended` ベース、warning レベルで gradual adoption
+  - `client/` `analysis/` `public/index.html` などは除外
+  - `no-unused-vars` は `^_` プレフィックスを無視
+- CI に `lint` ジョブを追加（`npm run lint`）
+  - `package.json` の `"lint": "eslint ."` をそのまま実行
+
+### 🔧 npm audit を CI に追加
+- CI に `audit` ジョブを追加
+  - `npm audit --omit=dev --audit-level=high` で本番依存のみの high 以上を検出 → 失敗
+  - dev も含めた `low` 以上は情報用に常時出力（失敗しない）
+  - production の脆弱性は可視化＆強制、dev のは noise を減らす
+
+### 🤖 CI Workflow 構成 (.github/workflows/ci.yml)
+- ジョブ4本に整理:
+  - `test` (Node **20.x / 22.x** マトリクス): `npm test` + `npm run typecheck`
+  - `lint`: `npm run lint`
+  - `audit`: `npm audit --omit=dev --audit-level=high`
+  - `client-typecheck`: client/ の `npx tsc -b`
+
+### 🔥 PR #6 review round 1（CI green 化）
+
+初回 push で Test (Node 18.x / 20.x) と npm audit の 3 ジョブが落ちたため、
+レビュー対応として以下を追加。
+
+#### 🟠 Node 18 サポート終了
+- `cheerio@1.x` が内部で `undici` をロード → `undici` が `globalThis.File` を参照
+  → **Node 18 では `File` 未定義** で `ReferenceError: File is not defined`
+  → `index.js` の require 自体が失敗し、4 テストスーツが連鎖失敗
+- Node 18 は 2025-04 に EOL（2026 年 5 月時点でサポート切れ）のため、
+  サポート対象を **Node 20 LTS 以上** に揃える方が筋が良いと判断
+  - `engines.node`: `>=18.0.0` → `>=20.0.0`
+  - `engines.npm`: `>=8.0.0` → `>=10.0.0`
+  - CI matrix: `[18.x, 20.x]` → `[20.x, 22.x]`（Node 22 LTS も追加）
+
+#### 🔴 fullwidth-length.test.js の期待値バグ修正
+- `SEO対策` の期待値 `4.5` は実装と不整合
+  - 仕様: 半角 0.5 / 全角 1.0 → 計算結果は **3.5**（S+E+O=1.5 + 対+策=2.0）
+  - テスト側を `3.5` に修正、コメントで計算根拠を明記
+
+#### 🟠 jest worker のクリーン exit
+- `index.js` の memory monitor `setInterval(...)` に `.unref()` を追加
+  - 本番動作には影響しない（active handle がなければ event loop が終了するだけ）
+  - jest が `"A worker process has failed to exit gracefully"` 警告を出さなくなる
+
+#### 🔴 npm audit を 0 vulnerabilities に
+本番依存の脆弱性 8 high + 1 critical を **すべて解消**:
+- **未使用 dependency を削除**: `nodemailer` `googleapis` `natural` `cron`
+  `redis` `helmet` の 6 パッケージ。コード grep で require が0件であることを確認
+  - これだけで Nodemailer high×4、uuid moderate（googleapis/natural経由）が消える
+- **直接依存の bump**:
+  - `axios` `^1.6.0` → `^1.16.0`（CVE GHSA: SSRF / DoS）
+  - `express` `^4.18.2` → `^4.22.2`（path-to-regexp / qs / body-parser fix）
+  - `mongoose` `^8.0.0` → `^8.24.0`
+- **`overrides` で推移依存を強制更新**:
+  - `basic-ftp` → `^6.0.1`（critical: path traversal / CRLF injection）
+  - `undici` → `^6.21.4`（high×6: smuggling / DoS / CRLF injection）
+  - `path-to-regexp` → `^0.1.13`（high: ReDoS）
+  - `underscore` → `^1.13.7`（high: DoS）
+  - `ws` → `^8.21.0`（moderate: 未初期化メモリ開示）
+  - `ip-address` → `^10.2.0`（moderate: XSS）
+  - `js-yaml` → `^4.1.1`（moderate: prototype pollution）
+- **ローカル検証結果**:
+  - `npm audit --omit=dev --audit-level=high`: **found 0 vulnerabilities**
+  - `npm audit`（dev込み）: **found 0 vulnerabilities**
+  - `npm test`: **7 suites / 197 tests PASS**
+  - `npm run lint`: 0 errors, 43 warnings（warning は許容）
+  - `npm run typecheck`: PASS
+
+### 📦 Breaking Changes
+- **Node 18 サポート終了**: Node 20+ が必要。Render の Node ランタイムは
+  自動で 20+ が選ばれるので本番影響なし
+- **未使用 deps 削除**: `nodemailer` 等を将来使う場合は再 install が必要
+- それ以外は patch/minor bump のみで API 互換
+
+### 📦 version bump
+`2.0.0` → `2.0.1` (patch: quality gates 強化、機能追加なし)
+
+---
+
 ## [2.0.0] - 2026-05-23 — Phase 2-A: llms.txt 対応チェック
 
 ### ✨ 新機能: llms.txt 診断

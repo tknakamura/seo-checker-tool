@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x, 22.x]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,23 +30,67 @@ jobs:
           cache: npm
 
       - name: Install dependencies (root)
-        # production+devを両方入れる必要があるので --include=dev
-        # Puppeteer Chrome の自動ダウンロードはCIでは不要なのでスキップ
         env:
+          # Puppeteer Chrome の自動ダウンロードはCIでは不要なのでスキップ
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci --include=dev
 
-      - name: Run regression tests (jest)
-        # Phase 1.3: Phase 1/1.1で導入した回帰テストのみを実行。
-        # 既存の integration/api/fullwidth-length は lighthouse の ESM 依存で
-        # 現状 jest がパースできないため、ESM 化対応は Phase 1.4 で別PRに切り出す。
-        run: npx jest __tests__/recommendations.test.js __tests__/seo-coverage.test.js
+      - name: Run all tests (jest)
+        # Phase 1.4: 未使用だった lighthouse require を index.js から除去したため、
+        # 既存テスト (integration/api/fullwidth-length) も含めて全件実行できる。
+        run: npm test
         env:
           CI: 'true'
 
       - name: TypeScript typecheck (root)
-        # Phase 1.3: tsc --noEmit。types/ ディレクトリ等を含む型の整合性を保証
         run: npm run typecheck
+
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci --include=dev
+
+      - name: Run ESLint
+        # Phase 1.4: コードベースのスタイル/明らかなバグを検出
+        # --max-warnings=0 にはせず、warning は許容（gradual adoption）
+        run: npm run lint
+
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Audit production dependencies
+        # Phase 1.4: 本番依存に CVE がないかチェック
+        # high 以上で失敗。moderate / low はレポートのみ。
+        # `|| true` はせず、CI を落として可視化する。
+        # devDependencies は除外（CI/開発ツールの脆弱性はサービスへの影響が小さい）
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit (informational, all severity)
+        # こちらは情報用。dev も含めて全部出すが、失敗しない
+        if: always()
+        run: npm audit --audit-level=low || true
 
   client-typecheck:
     name: Client TypeScript typecheck
@@ -64,7 +108,6 @@ jobs:
 
       - name: Install client dependencies
         working-directory: client
-        # client にも lockfile があれば npm ci、なければ npm install
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -74,6 +117,4 @@ jobs:
 
       - name: Client TypeScript build check
         working-directory: client
-        # vite ビルドの一部としてtscが走るのでこれが通れば型はOK
-        # ただし完全なビルドはRender側でやるのでここはtsc -b のみ
         run: npx tsc -b
