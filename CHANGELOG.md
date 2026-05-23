@@ -1,5 +1,62 @@
 # Changelog
 
+## [2.3.1] - 2026-05-24 — Phase 1.5.1: 重いSPA診断の OOM 切れ対策（メモ化 + heap 観測ログ）
+
+### 🐛 発覚した問題
+中村さんが本番 (`https://seo-checker-tool.onrender.com/`) で `https://ads.mercari.com/` を Advanced（waitForJS）で診断した際、HTTP 502 が連発しインスタンスが再起動する現象が発生。
+
+### 🔍 根本原因
+- **Render starter プラン = 512 MB RAM** に対し、Puppeteer + Chromium + 重いSPA + Cheerio 解析でメモリが上限を超え OOM-kill されていた
+  - 例: 23:32, 23:33, 23:34 と 3 回連続でリクエスト直後にインスタンス再起動
+  - レスポンスの `223158 bytes` は Render エッジが返す **502 エラーページ HTML**（API レスポンスではなかった）
+- 「動的コンテンツの生成待機完了」直後の `page.content()` 〜 Cheerio 解析 〜 AIO 解析のどこで死んでいるか不明だったため、まず観測ポイントを増やす
+
+### ⚙️ メモリ最適化
+
+#### 🔧 `estimateContentLength($)` のメモ化
+- Phase 1.5 で導入された関数が見出しチェックとリンクチェックで**合計 4 回**呼ばれ、毎回 `$('body').clone()` を実行していた
+- `$` オブジェクトに `_wordCountCache` をぶら下げて 2 回目以降はキャッシュを返す
+- 1 診断あたりの clone 回数: **4 → 1**（重いSPAでメモリピーク数十MB削減見込み）
+
+#### 📊 heap 観測ログを追加
+OOM 切れ位置の特定のため、以下のポイントで `heapUsed` をログ出力:
+1. `page.content()` 取得開始時
+2. `page.content()` 取得完了時（差分Δ含む）
+3. Puppeteer cleanup 完了時
+4. Cheerio パース開始時
+5. Cheerio パース完了時
+6. AIO チェック開始時
+7. AIO チェック完了時（差分Δ含む）
+
+これにより本番ログを見れば「Puppeteer取得時 200MB → 解析後 350MB → AIO後 480MB → OOM」のようにメモリ推移が追える。
+
+### 🛡️ Puppeteer cleanup の堅牢化
+- `page.close()` / `browser.close()` を `try/catch` で包み、片方の失敗でもう片方が呼ばれない事態を防ぐ
+- 既存実装では `page.close()` がエラー時に `browser.close()` がスキップされ、Chromium プロセスが孤児化するリスクがあった
+
+### 🧪 テスト追加
+`__tests__/phase-1-5-1-memo.test.js` (6項目):
+- 同じ `$` での 2 回目以降はキャッシュ値を返す
+- 異なる `$` オブジェクトは独立にカウントされる
+- script/style/nav 除外もキャッシュ対象
+- 空ページは 0 でキャッシュ
+- null/不正値はクラッシュせず 0
+- 既存の見出しスコア計算結果に影響しない (regression)
+
+### 📦 Breaking Changes
+なし。`estimateContentLength` の戻り値は同一、外部 API も変更なし。
+
+### 📦 version bump
+`2.3.0` → `2.3.1` (patch: 内部最適化と観測強化)
+
+### 🔮 補足
+今回のメモ化だけで 512 MB 上限を完全回避できる保証はない。本番で再度 ads.mercari.com を試して heap ログから残メモリを確認し、必要なら以下のいずれかで対処:
+- Render プランを **Standard ($25/mo, 2GB RAM)** に昇格
+- UX 改善: 502/OOM 検知時に「Simple モードでお試しください」と提示する自動フォールバック
+- `page.content()` を使わず `page.evaluate()` で必要要素のみ抽出する大幅リファクタ
+
+---
+
 ## [2.3.0] - 2026-05-24 — Phase 1.5: 区分線形スコアリング & SEO 評価基準キャリブレーション
 
 中村さんから「メタディスクリプション 87 文字なのに 50 点はおかしい」というご指摘を受け、SEO 評価関数の全面的な見直しを実施。
