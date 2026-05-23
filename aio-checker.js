@@ -2,8 +2,11 @@
  * AIO（AI最適化）チェック機能
  * AI検索エンジンでの露出とコンテンツのAI最適化度を測定
  */
+const LlmsTxtChecker = require('./llms-txt-checker');
+
 class AIOChecker {
   constructor() {
+    this.llmsTxtChecker = new LlmsTxtChecker();
     this.aiSearchEngines = [
       'Google SGE',
       'Bing AI',
@@ -22,15 +25,40 @@ class AIOChecker {
    */
   async checkAIO(seoResults, url, $) {
     try {
+      // 静的チェック（既存）と llms.txt チェック（HTTPフェッチ）を並列実行
+      // url が空の場合は llms.txt チェックをスキップ（HTMLペースト診断時）
+      const llmsTxtPromise = url
+        ? this.checkLlmsTxtSafe(url)
+        : Promise.resolve(this._llmsTxtSkippedResult());
+
+      const [
+        contentComprehensiveness,
+        structuredInformation,
+        credibilitySignals,
+        aiSearchOptimization,
+        naturalLanguageQuality,
+        contextRelevance,
+        llmsTxtCompliance,
+      ] = await Promise.all([
+        Promise.resolve(this.checkContentComprehensiveness($)),
+        Promise.resolve(this.checkStructuredInformation($, seoResults)),
+        Promise.resolve(this.checkCredibilitySignals($, url)),
+        Promise.resolve(this.checkAISearchOptimization($, seoResults)),
+        Promise.resolve(this.checkNaturalLanguageQuality($)),
+        Promise.resolve(this.checkContextRelevance($, url)),
+        llmsTxtPromise,
+      ]);
+
       const aioResults = {
         timestamp: new Date().toISOString(),
         checks: {
-          contentComprehensiveness: this.checkContentComprehensiveness($),
-          structuredInformation: this.checkStructuredInformation($, seoResults),
-          credibilitySignals: this.checkCredibilitySignals($, url),
-          aiSearchOptimization: this.checkAISearchOptimization($, seoResults),
-          naturalLanguageQuality: this.checkNaturalLanguageQuality($),
-          contextRelevance: this.checkContextRelevance($, url)
+          contentComprehensiveness,
+          structuredInformation,
+          credibilitySignals,
+          aiSearchOptimization,
+          naturalLanguageQuality,
+          contextRelevance,
+          llmsTxtCompliance, // Phase 2-A 新規カテゴリ
         },
         overallScore: 0,
         recommendations: []
@@ -38,7 +66,7 @@ class AIOChecker {
 
       // 総合スコア計算
       aioResults.overallScore = this.calculateAIOOverallScore(aioResults.checks);
-      
+
       // 改善提案生成
       aioResults.recommendations = this.generateAIORecommendations(aioResults.checks);
 
@@ -47,6 +75,62 @@ class AIOChecker {
       console.error('AIOチェックエラー:', error);
       throw error;
     }
+  }
+
+  /**
+   * llms.txt チェックを安全に実行（タイムアウトや例外を握り潰す）
+   * AIOチェック全体を落とさないため、失敗時は中立的なスキップ結果を返す。
+   */
+  async checkLlmsTxtSafe(url) {
+    try {
+      const raw = await this.llmsTxtChecker.check(url);
+      // SEOCheckItem 形式に整形する（score / issues / recommendations）
+      return {
+        score: raw.score,
+        issues: raw.issues || [],
+        recommendations: raw.recommendations.map(r => r.title),
+        // 詳細情報は別フィールドで保持しておく（フロントで参照可）
+        details: {
+          found: raw.found,
+          foundFullVersion: raw.foundFullVersion,
+          llmsTxtUrl: raw.llmsTxtUrl,
+          llmsFullTxtUrl: raw.llmsFullTxtUrl,
+          robotsTxtUrl: raw.robotsTxtUrl,
+          parsed: raw.parsed,
+          robotsTxt: raw.robotsTxt,
+          httpStatus: raw.httpStatus,
+          fetchError: raw.fetchError,
+          llmsTxtSize: raw.llmsTxtSize,
+          llmsFullTxtSize: raw.llmsFullTxtSize,
+          // 推奨アクションのリッチオブジェクトはこちらで保持
+          richRecommendations: raw.recommendations,
+        }
+      };
+    } catch (err) {
+      console.warn('llms.txt チェックでエラー、スキップ:', err && err.message);
+      return this._llmsTxtErrorResult(err && err.message);
+    }
+  }
+
+  _llmsTxtSkippedResult() {
+    return {
+      score: 0,
+      issues: [],
+      recommendations: [],
+      details: {
+        skipped: true,
+        skipReason: 'URLが指定されていないためllms.txtチェックをスキップしました'
+      }
+    };
+  }
+
+  _llmsTxtErrorResult(message) {
+    return {
+      score: 0,
+      issues: [`llms.txtチェックでエラー: ${message || '不明'}`],
+      recommendations: [],
+      details: { error: true, message }
+    };
   }
 
   /**
@@ -494,18 +578,23 @@ class AIOChecker {
   }
 
   calculateAIOOverallScore(checks) {
+    // Phase 2-A: llms.txt 対応を15%の比重で追加。残り85%を既存カテゴリへ比例配分。
     const weights = {
-      contentComprehensiveness: 0.20,
-      structuredInformation: 0.20,
-      credibilitySignals: 0.20,
-      aiSearchOptimization: 0.20,
-      naturalLanguageQuality: 0.10,
-      contextRelevance: 0.10
+      contentComprehensiveness: 0.17,
+      structuredInformation: 0.17,
+      credibilitySignals: 0.17,
+      aiSearchOptimization: 0.17,
+      naturalLanguageQuality: 0.09,
+      contextRelevance: 0.08,
+      llmsTxtCompliance: 0.15,
     };
 
     let totalScore = 0;
     for (const [key, weight] of Object.entries(weights)) {
-      totalScore += checks[key].score * weight;
+      // 該当チェックが無い・skipされた場合は0扱いで影響しないようにする
+      const item = checks[key];
+      if (!item || typeof item.score !== 'number') continue;
+      totalScore += item.score * weight;
     }
 
     return Math.round(totalScore);

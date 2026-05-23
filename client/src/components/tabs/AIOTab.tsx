@@ -8,6 +8,7 @@ const AIO_CATEGORIES = [
   { key: 'aiSearchOptimization', name: 'AI検索最適化' },
   { key: 'naturalLanguageQuality', name: '自然言語品質' },
   { key: 'contextRelevance', name: 'コンテキスト関連性' },
+  { key: 'llmsTxtCompliance', name: 'llms.txt 対応' },
 ];
 
 interface AIOTabProps {

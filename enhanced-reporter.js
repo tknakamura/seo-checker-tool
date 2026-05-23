@@ -27,7 +27,8 @@ class EnhancedReporter {
         credibilitySignals: 15,
         aiSearchOptimization: 20,
         naturalLanguageQuality: 10,
-        contextRelevance: 10
+        contextRelevance: 10,
+        llmsTxtCompliance: 15
       }
     };
   }
@@ -784,6 +785,17 @@ class EnhancedReporter {
     if (issue.includes('内部リンクの関連性が低い')) return 'aio_internal_link_irrelevant';
     if (issue.includes('カテゴリやタグがありません')) return 'aio_no_taxonomy';
 
+    // ---------- Phase 2-A: llms.txt 関連 ----------
+    if (issue.includes('llms.txt が見つかりません')) return 'llmstxt_missing';
+    if (issue.includes('llms.txt にH1タイトル')) return 'llmstxt_no_title';
+    if (issue.includes('llms.txt にH1（#）が複数')) return 'llmstxt_multiple_h1';
+    if (issue.includes('llms.txt にサマリー')) return 'llmstxt_no_summary';
+    if (issue.includes('llms.txt に H2 セクション')) return 'llmstxt_no_section';
+    if (issue.includes('H2 セクションは存在しますが、リンクが1つも含まれていません')) return 'llmstxt_no_links';
+    if (issue.includes('AIクローラーが robots.txt でブロック')) return 'llmstxt_robots_block_ai';
+    if (issue.includes('URL不正のため llms.txt')) return 'llmstxt_invalid_url';
+    if (issue.includes('llms.txtチェックでエラー')) return 'llmstxt_check_error';
+
     return issue; // デフォルトは元の文字列
   }
 
@@ -805,7 +817,9 @@ class EnhancedReporter {
       credibilitySignals: '著者・出典・連絡先',
       aiSearchOptimization: 'FAQ / HowTo / 比較',
       naturalLanguageQuality: '文章スタイル',
-      contextRelevance: 'URL / 内部リンク / カテゴリ'
+      contextRelevance: 'URL / 内部リンク / カテゴリ',
+      // Phase 2-A
+      llmsTxtCompliance: 'llms.txt / robots.txt'
     };
     return elementNames[category] || category;
   }
@@ -828,7 +842,9 @@ class EnhancedReporter {
       credibilitySignals: 'body / footer',
       aiSearchOptimization: 'body（FAQ・HowTo・比較セクション）',
       naturalLanguageQuality: 'body（本文）',
-      contextRelevance: 'URL / nav / sidebar'
+      contextRelevance: 'URL / nav / sidebar',
+      // Phase 2-A
+      llmsTxtCompliance: '/llms.txt (サイトルート)'
     };
     return locationNames[category] || 'unknown';
   }
@@ -1109,6 +1125,35 @@ class EnhancedReporter {
       return 'パンくず（BreadcrumbList）やカテゴリ、タグを設置してページ間の関係性をAIに伝えてください。';
     }
 
+    // ---------- Phase 2-A: llms.txt 関連の具体fix ----------
+    if (issue.includes('llms.txt が見つかりません')) {
+      return 'サイトルートに /llms.txt を設置してください。AI/LLM（ChatGPT・Claude・Perplexity 等）がサイト構造を効率的に把握でき、引用率が大幅に向上します。';
+    }
+    if (issue.includes('llms.txt にH1タイトル')) {
+      return 'llms.txt の先頭行を「# サイト名」にしてください。仕様で H1 は必須です。';
+    }
+    if (issue.includes('llms.txt にH1（#）が複数')) {
+      return 'llms.txt の H1（#）は1つだけにしてください。サブセクションは ## (H2) を使います。';
+    }
+    if (issue.includes('llms.txt にサマリー')) {
+      return 'タイトル直後に「> サイトの概要を1〜2文で要約」を追加してください。AIがサイトの目的を正確に把握できます。';
+    }
+    if (issue.includes('llms.txt に H2 セクション')) {
+      return 'llms.txt に「## Docs」「## API」「## Examples」などの H2 セクションを追加し、各配下にコンテンツへのリンクを列挙してください。';
+    }
+    if (issue.includes('H2 セクションは存在しますが、リンクが1つも含まれていません')) {
+      return '各 H2 セクション配下に「- [リンクテキスト](URL): 説明」形式でリンクを追加してください。';
+    }
+    if (issue.includes('AIクローラーが robots.txt でブロック')) {
+      return 'robots.txt で GPTBot / ClaudeBot / PerplexityBot 等のAIクローラーを許可してください。llms.txt を設置していても、robots.txt でブロックされていれば取得されません。';
+    }
+    if (issue.includes('URL不正のため llms.txt')) {
+      return 'チェック対象URLが不正な形式です。URLを修正して再診断してください。';
+    }
+    if (issue.includes('llms.txtチェックでエラー')) {
+      return 'llms.txt 取得時にネットワークエラーが発生しました。サイトが応答可能か確認のうえ再診断してください。';
+    }
+
     // ---------- 最終フォールバック ----------
     // ここに来た時点で個別マッピング漏れ。何の問題かをそのまま表示し、カテゴリ別のヒントを付与する。
     const categoryHint = this.getCategoryHint(category);
@@ -1135,7 +1180,8 @@ class EnhancedReporter {
       credibilitySignals: '信頼性シグナル（著者・出典・連絡先）を強化してください',
       aiSearchOptimization: 'AI検索向けのコンテンツ構造（FAQ/HowTo/比較）を強化してください',
       naturalLanguageQuality: '文章の読みやすさ（文長・専門用語・接続詞）を見直してください',
-      contextRelevance: 'URL・内部リンク・カテゴリの文脈関連性を見直してください'
+      contextRelevance: 'URL・内部リンク・カテゴリの文脈関連性を見直してください',
+      llmsTxtCompliance: 'llms.txt を /llms.txt に設置し、AI/LLMがサイト構造を理解できるようにしてください'
     };
     return hints[category] || null;
   }
@@ -1363,6 +1409,46 @@ class EnhancedReporter {
         '.btn + .btn { margin-left: 8px; }'
       ].join('\n');
     }
+    // ---------- Phase 2-A: llms.txt 関連サンプル ----------
+    if (issue.includes('llms.txt が見つかりません') || issue.includes('llms.txt にH1') || issue.includes('llms.txt に H2') || issue.includes('llms.txt にサマリー')) {
+      return [
+        '# サイト名',
+        '',
+        '> このサイトは〇〇に関する情報を提供します。本文は1〜2文で要約してください。',
+        '',
+        '## Docs',
+        '',
+        '- [はじめに](/docs/getting-started): プロジェクトの概要と導入手順',
+        '- [API リファレンス](/docs/api): すべてのAPIエンドポイント仕様',
+        '',
+        '## Examples',
+        '',
+        '- [サンプル集](/examples): ユースケース別の実装例',
+        '',
+        '## Optional',
+        '',
+        '- [リリースノート](/changelog): 過去のリリース履歴（参考情報）'
+      ].join('\n');
+    }
+    if (issue.includes('AIクローラーが robots.txt でブロック')) {
+      return [
+        '# robots.txt',
+        'User-agent: GPTBot',
+        'Allow: /',
+        '',
+        'User-agent: ClaudeBot',
+        'Allow: /',
+        '',
+        'User-agent: PerplexityBot',
+        'Allow: /',
+        '',
+        'User-agent: Google-Extended',
+        'Allow: /',
+        '',
+        'User-agent: OAI-SearchBot',
+        'Allow: /'
+      ].join('\n');
+    }
     return null;
   }
 
@@ -1372,6 +1458,19 @@ class EnhancedReporter {
    * 注: 具体的なスキーマ名は一般的な「構造化データ」より先に判定する
    */
   getDocLink(issue, category) {
+    // Phase 2-A: llms.txt 関連を最優先判定（issue文中の「タイトル」「H2」「H1」等が
+    // 後段のSEO系docLinkに先食いされないよう、ここで先に確定する）
+    if (issue.includes('llms.txt')) {
+      return 'https://llmstxt.org/';
+    }
+    if (issue.includes('AIクローラーが robots.txt')) {
+      return 'https://platform.openai.com/docs/gptbot';
+    }
+    // llmsTxtCompliance カテゴリの issue は全て llmstxt.org にフォールバック
+    if (category === 'llmsTxtCompliance') {
+      return 'https://llmstxt.org/';
+    }
+
     // AIO高優先（SEOスキーマ系のincludes判定に先食いされないよう最初に確定）
     // 'AI検索に重要なスキーマが不足しています: FAQPage, HowTo, Article' は
     // 'Article' を含むため後段の Article 専用ドキュメントへ飛ばされてしまう。
@@ -1493,6 +1592,7 @@ class EnhancedReporter {
     if (issue.includes('スキーマ')) {
       return 'https://schema.org/';
     }
+    // Phase 2-A: llms.txt 関連は冒頭で判定済み
     return null;
   }
 
