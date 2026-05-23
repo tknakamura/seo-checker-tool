@@ -2073,7 +2073,7 @@ setInterval(() => {
       logger.info(`ガベージコレクション実行後: ${afterMB}MB`);
     }
   }
-}, 30000); // 30秒ごとにチェック
+}, 30000).unref(); // 30秒ごとにチェック（.unref() でテストプロセスを終わらせない）
 
 // サーバー起動（Render 等では 0.0.0.0 でバインド）
 async function start() {

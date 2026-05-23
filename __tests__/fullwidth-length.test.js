@@ -31,7 +31,8 @@ describe('calculateFullWidthLength', () => {
   });
 
   test('全角・半角混在', () => {
+    // 'SEO対策' = 半角3(0.5×3=1.5) + 全角2(1.0×2=2.0) = 3.5全角文字
     const result = seoChecker.calculateFullWidthLength('SEO対策');
-    expect(Math.abs(result - 4.5) < 0.1).toBe(true);
+    expect(Math.abs(result - 3.5) < 0.1).toBe(true);
   });
 });
