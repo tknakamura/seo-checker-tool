@@ -231,9 +231,13 @@ class SEOChecker {
       await this.waitForDynamicContent(page);
 
       // HTMLコンテンツを取得
+      // Phase 1.5.1: page.content() は重いSPAだと数十MB単位の文字列を一気に確保する。
+      // 失敗時にどこで死んだか分かるよう、前後でメモリ使用量を記録する。
+      const heapBefore = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      logger.info(`page.content() 取得開始 (heap=${heapBefore}MB)`);
       const htmlContent = await page.content();
-
-      logger.info(`PuppeteerでHTML取得完了: ${htmlContent.length}文字`);
+      const heapAfter = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      logger.info(`PuppeteerでHTML取得完了: ${htmlContent.length}文字 (heap=${heapAfter}MB, Δ=${heapAfter - heapBefore}MB)`);
       return htmlContent;
       
     } catch (error) {
@@ -241,15 +245,18 @@ class SEOChecker {
       throw error;
     } finally {
       if (page) {
-        await page.close();
+        try { await page.close(); } catch (_) { /* ignore */ }
       }
       if (browser) {
-        await browser.close();
+        try { await browser.close(); } catch (_) { /* ignore */ }
       }
       // ガベージコレクションを強制実行
       if (global.gc) {
         global.gc();
       }
+      // Phase 1.5.1: 終了時メモリも記録（OOM 切れの境界調査用）
+      const heapEnd = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      logger.info(`Puppeteer cleanup 完了 (heap=${heapEnd}MB)`);
     }
   }
 
@@ -488,14 +495,15 @@ class SEOChecker {
         pageContent = pageContent.substring(0, 1000000);
       }
       
-      logger.info(`pageContentの長さ: ${pageContent.length}文字`);
-      
+      // Phase 1.5.1: heap 観測（重いSPAでの OOM 切れ場所特定用）
+      const heapAtParseStart = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      logger.info(`pageContentの長さ: ${pageContent.length}文字 (heap=${heapAtParseStart}MB)`);
+
       // cheerioでHTMLを解析
       const $ = cheerio.load(pageContent);
-      
-      // デバッグログ
-      logger.info(`cheerio解析後のHTML長: ${$.html().length}`);
-      logger.info(`title要素の存在確認: ${$('title').length > 0}`);
+
+      const heapAfterParse = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      logger.info(`cheerio解析完了: HTML長=${$.html().length}, title存在=${$('title').length > 0} (heap=${heapAfterParse}MB)`);
       
       const titleTagResult = this.checkTitleTag($);
       const metaDescriptionResult = this.checkMetaDescription($);
@@ -530,8 +538,12 @@ class SEOChecker {
       };
 
       // AIOチェックの実行
+      const heapBeforeAIO = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      logger.info(`AIOチェック開始 (heap=${heapBeforeAIO}MB)`);
       const aioResults = await this.aioChecker.checkAIO(results, url || '', $);
       results.aio = aioResults;
+      const heapAfterAIO = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+      logger.info(`AIOチェック完了 (heap=${heapAfterAIO}MB, Δ=${heapAfterAIO - heapBeforeAIO}MB)`);
 
       // 総合スコア計算（SEO + AIO）
       results.overallScore = this.calculateOverallScore(results.checks);
@@ -869,19 +881,30 @@ class SEOChecker {
    * - 英単語は1語=1
    * - 日本語は約2文字=1語相当
    * - script/style/nav/footer/header の中身は除外
+   *
+   * Phase 1.5.1: 同じ $ オブジェクトに対して見出しチェック + リンクチェックで
+   * 計4回呼ばれる（heading 内2回、link 内2回）。重いSPAでは $('body').clone()
+   * の繰り返しがメモリスパイクの一因になるため、$ にメモ化する。
    */
   estimateContentLength($) {
+    if (!$ || typeof $ !== 'function') return 0;
+    if (typeof $._wordCountCache === 'number') return $._wordCountCache;
     try {
       // 主要本文要素を優先的に取得（無ければ body）
       const $clone = $('body').clone();
       $clone.find('script, style, nav, footer, header, aside').remove();
       const text = $clone.text().replace(/\s+/g, ' ').trim();
-      if (!text) return 0;
+      if (!text) {
+        $._wordCountCache = 0;
+        return 0;
+      }
       // 英数字の "語" を数える
       const enWords = (text.match(/[a-zA-Z0-9]+(?:[''][a-zA-Z]+)?/g) || []).length;
       // 日本語文字（ひらがな・カタカナ・漢字）の数 / 2 を語数相当に
       const jpChars = (text.match(/[\u3040-\u309F\u30A0-\u30FF\u3400-\u4DBF\u4E00-\u9FFF]/g) || []).length;
-      return enWords + Math.round(jpChars / 2);
+      const result = enWords + Math.round(jpChars / 2);
+      $._wordCountCache = result;
+      return result;
     } catch (_) {
       return 0;
     }
