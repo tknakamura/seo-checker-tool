@@ -1,6 +1,6 @@
 {
   "name": "seo-aio-doctor",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "SEO AIO Doctor - WebページのSEOとAI最適化（AIO）を一括診断する日本語対応ツール",
   "main": "index.js",
   "scripts": {
@@ -38,7 +38,6 @@
     "googleapis": "^128.0.0",
     "helmet": "^7.1.0",
     "iconv-lite": "^0.7.0",
-    "lighthouse": "^12.8.1",
     "mongoose": "^8.0.0",
     "natural": "^8.1.0",
     "nodemailer": "^6.9.7",

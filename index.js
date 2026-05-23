@@ -10,7 +10,9 @@ if (!process.env.PUPPETEER_CACHE_DIR) {
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const lighthouse = require('lighthouse');
+// Phase 1.4: lighthouse は v10+ で ESM-only になり require() で失敗してテストを阻害していた。
+// 実コードからは未使用だったため除去（モバイル指標の Lighthouse 連携を入れる場合は
+// dynamic import: const { default: lighthouse } = await import('lighthouse'); を使うこと）
 const puppeteer = require('puppeteer');
 const winston = require('winston');
 const iconv = require('iconv-lite');

@@ -1,5 +1,63 @@
 # Changelog
 
+## [2.0.1] - 2026-05-24 — Phase 1.4: 品質ゲート強化 (lighthouse除去 / ESLint / npm audit)
+
+中村さん側で送られた「Phase 1.4 積み残し」を一気に解消。
+
+### 🔧 lighthouse の ESM 干渉を解消
+- `index.js` の `const lighthouse = require('lighthouse')` を **完全除去**
+  - lighthouse v10+ は ESM-only。CommonJS の `require` で `ERR_REQUIRE_ESM` を起こし、
+    `__tests__/integration.test.js` `api.test.js` `fullwidth-length.test.js` の
+    3本がスキップされていた根本原因
+  - 実コードでは1度も使われていない残骸だったため、依存ごと削除しても影響なし
+  - 将来 Lighthouse 連携を入れる場合は dynamic import を使うこと
+    (`const { default: lighthouse } = await import('lighthouse')`)
+- `package.json` の `dependencies` から `"lighthouse": "^12.8.1"` を削除
+  - npm install 時間の短縮、本番イメージサイズ縮小にも貢献
+
+### ✨ 既存テスト3本を再開
+- `__tests__/integration.test.js`
+- `__tests__/api.test.js`
+- `__tests__/fullwidth-length.test.js`
+- これら3本は Phase 1.3 で除外していたが本PRで復活
+- CI workflow も `npm test` で全件実行するよう変更
+
+### 🆕 回帰防止テスト
+- `__tests__/no-cjs-esm-conflict.test.js` を新規追加
+  - `index.js` が `require('lighthouse')` をコードに含まないこと
+  - `require('../index.js')` がエラーなく動作すること
+  - `SEOChecker.checkSEO(html)` が ESMエラーなしで実行できること
+  - HTMLペースト時 llmsTxtCompliance が安全にスキップされること
+
+### 🔧 ESLint を CI に追加
+- `.eslintrc.json` を新規追加
+  - `eslint:recommended` ベース、warning レベルで gradual adoption
+  - `client/` `analysis/` `public/index.html` などは除外
+  - `no-unused-vars` は `^_` プレフィックスを無視
+- CI に `lint` ジョブを追加（`npm run lint`）
+  - `package.json` の `"lint": "eslint ."` をそのまま実行
+
+### 🔧 npm audit を CI に追加
+- CI に `audit` ジョブを追加
+  - `npm audit --omit=dev --audit-level=high` で本番依存のみの high 以上を検出 → 失敗
+  - dev も含めた `low` 以上は情報用に常時出力（失敗しない）
+  - production の脆弱性は可視化＆強制、dev のは noise を減らす
+
+### 🤖 CI Workflow 構成 (.github/workflows/ci.yml)
+- ジョブ4本に整理:
+  - `test` (Node 18.x / 20.x マトリクス): `npm test` + `npm run typecheck`
+  - `lint`: `npm run lint`
+  - `audit`: `npm audit --omit=dev --audit-level=high`
+  - `client-typecheck`: client/ の `npx tsc -b`
+
+### 📦 Breaking Changes
+なし。`lighthouse` パッケージへの外部依存があれば影響するが、コード上未使用のためゼロ影響。
+
+### 📦 version bump
+`2.0.0` → `2.0.1` (patch: quality gates 強化、機能追加なし)
+
+---
+
 ## [2.0.0] - 2026-05-23 — Phase 2-A: llms.txt 対応チェック
 
 ### ✨ 新機能: llms.txt 診断
