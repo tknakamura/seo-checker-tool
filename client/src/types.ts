@@ -9,6 +9,14 @@ export interface SEOCheckResult {
   conciseRecommendations?: ConciseRecommendation[];
   detailedAnalysis?: DetailedAnalysis;
   detailedReport?: DetailedReport;
+  /** Phase 1.1: Advanced→Simple フォールバック等の警告メッセージ */
+  warnings?: WarningEntry[];
+}
+
+export interface WarningEntry {
+  code?: string;
+  message?: string;
+  detail?: string;
 }
 
 export interface SEOCheckItem {

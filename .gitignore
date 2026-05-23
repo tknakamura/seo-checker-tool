@@ -77,7 +77,9 @@ dist
 
 # Gatsby files
 .cache/
-public
+# NOTE: Gatsby uses `public/` as a build output dir. This project uses
+# `public/` as the static asset dir served by Express, so it MUST be tracked.
+# (See public/index.html). Do not re-add `public` here.
 
 # Storybook build outputs
 .out

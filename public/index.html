@@ -354,9 +354,21 @@
             align-items: center;
             gap: 10px;
             padding: 12px 14px;
+            width: 100%;
+            text-align: left;
+            font: inherit;
+            color: inherit;
+            background: transparent;
+            border: none;
         }
         .recommendation-header[data-toggle] { cursor: pointer; }
         .recommendation-header[data-toggle]:hover { background: var(--surface); }
+        /* a11y: フォーカス時の表示（キーボード操作用） */
+        .recommendation-header:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+            background: var(--surface);
+        }
         .checkmark {
             display: inline-flex;
             align-items: center;
@@ -1070,9 +1082,9 @@
                 // 警告バナー（Advanced→Simple フォールバック等）
                 let warningsHtml = '';
                 if (Array.isArray(results.warnings) && results.warnings.length > 0) {
-                    warningsHtml = '<div class="warnings-banner">' +
+                    warningsHtml = '<div class="warnings-banner" role="region" aria-label="診断時の警告">' +
                         results.warnings.map(w =>
-                            `<div class="warning-item"><strong>⚠️ ${this.escapeHtml(w.code || 'WARNING')}</strong><div>${this.escapeHtml(w.message || '')}</div>${w.detail ? `<details><summary>詳細</summary><code>${this.escapeHtml(w.detail)}</code></details>` : ''}</div>`
+                            `<div class="warning-item" role="alert" aria-live="polite"><strong aria-label="警告コード">⚠️ ${this.escapeHtml(w.code || 'WARNING')}</strong><div>${this.escapeHtml(w.message || '')}</div>${w.detail ? `<details><summary>詳細</summary><code>${this.escapeHtml(w.detail)}</code></details>` : ''}</div>`
                         ).join('') +
                         '</div>';
                 }
@@ -1127,14 +1139,19 @@
                         const extra = hasDetails
                             ? `<div class="recommendation-extra" id="${detailsId}" style="display:none;">${issueLine}${codeBlock}${docLink}</div>`
                             : '';
+                        // Phase 1.3: a11y — 開閉トグルがある行は <button>, ない行は <div>
+                        const headerOpenTag = hasDetails
+                            ? `<button type="button" class="recommendation-header" data-toggle="${detailsId}" aria-expanded="false" aria-controls="${detailsId}">`
+                            : `<div class="recommendation-header">`;
+                        const headerCloseTag = hasDetails ? `</button>` : `</div>`;
                         html += `
                             <div class="recommendation-item ${priorityClass}">
-                                <div class="recommendation-header" ${hasDetails ? `data-toggle="${detailsId}"` : ''}>
-                                    <span class="checkmark">✓</span>
+                                ${headerOpenTag}
+                                    <span class="checkmark" aria-hidden="true">✓</span>
                                     <span class="recommendation-text">${this.escapeHtml(rec.fix)}</span>
-                                    <span class="priority-badge ${priorityClass}">${this.getPriorityTitle(rec.priority)}</span>
+                                    <span class="priority-badge ${priorityClass}" aria-label="優先度: ${this.getPriorityTitle(rec.priority)}">${this.getPriorityTitle(rec.priority)}</span>
                                     ${toggle}
-                                </div>
+                                ${headerCloseTag}
                                 <div class="recommendation-details">
                                     <span class="element-info">${this.escapeHtml(rec.element)}</span>
                                     <span class="location-info">${this.escapeHtml(rec.location)}</span>
@@ -1876,6 +1893,9 @@ ${implementationCode}
                         const isOpen = panel.style.display !== 'none';
                         panel.style.display = isOpen ? 'none' : 'block';
                         if (icon) icon.textContent = isOpen ? '▼' : '▲';
+                        // Phase 1.3: a11y — aria-expanded を実際の状態に追従
+                        // ボタン化していない場合（fallback）でも setAttribute は安全
+                        el.setAttribute('aria-expanded', String(!isOpen));
                     });
                 });
                 // 展開エリア内のクリックは折りたたみ伝播を止める（コピー可能に）
