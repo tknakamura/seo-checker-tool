@@ -1235,7 +1235,8 @@
                     { key: 'credibilitySignals', name: '信頼性シグナル' },
                     { key: 'aiSearchOptimization', name: 'AI検索最適化' },
                     { key: 'naturalLanguageQuality', name: '自然言語品質' },
-                    { key: 'contextRelevance', name: 'コンテキスト関連性' }
+                    { key: 'contextRelevance', name: 'コンテキスト関連性' },
+                    { key: 'llmsTxtCompliance', name: 'llms.txt 対応' }
                 ];
 
                 let html = `
@@ -1826,7 +1827,8 @@ ${implementationCode}
                     credibilitySignals: '信頼性シグナル',
                     aiSearchOptimization: 'AI検索最適化',
                     naturalLanguageQuality: '自然言語品質',
-                    contextRelevance: 'コンテキスト関連性'
+                    contextRelevance: 'コンテキスト関連性',
+                    llmsTxtCompliance: 'llms.txt 対応'
                 };
                 return titles[category] || category;
             }

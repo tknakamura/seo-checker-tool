@@ -47,6 +47,7 @@ export function getCategoryTitle(category: string): string {
     aiSearchOptimization: 'AI検索最適化',
     naturalLanguageQuality: '自然言語品質',
     contextRelevance: 'コンテキスト関連性',
+    llmsTxtCompliance: 'llms.txt 対応',
   };
   return titles[category] || category;
 }

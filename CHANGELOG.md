@@ -1,5 +1,78 @@
 # Changelog
 
+## [2.0.0] - 2026-05-23 — Phase 2-A: llms.txt 対応チェック
+
+### ✨ 新機能: llms.txt 診断
+
+[llmstxt.org](https://llmstxt.org/) 標準（Answer.AI / Jeremy Howard 提案）に準拠した
+AI/LLM 向けサイト情報ファイル `llms.txt` の対応状況を診断する機能を追加しました。
+ChatGPT・Claude・Perplexity 等の生成AI検索で引用される確率を高める、2025年のAIO最先端シグナルです。
+
+### 🆕 `llms-txt-checker.js` (新規モジュール)
+- `https://example.com/llms.txt` の HTTP フェッチと存在チェック
+- `https://example.com/llms-full.txt`（フルテキスト版）の有無チェック
+- llms.txt の Markdown 構造を解析:
+  - **H1 タイトル** の存在・単一性
+  - **サマリー**（blockquote）の存在
+  - **H2 セクション** の存在と各セクションのリンク数
+  - リンクが Markdown 形式 `[text](url)` か
+- `robots.txt` の AIクローラー許可状況を解析:
+  - GPTBot / OAI-SearchBot / ChatGPT-User / ClaudeBot / anthropic-ai / PerplexityBot /
+    Google-Extended / CCBot / cohere-ai / Bytespider 等10種類を判定
+  - `Disallow: /` で全パス拒否のみを `disallowed` とし、限定パス拒否は `allowed` と
+    厳密に判定（過剰警告を回避）
+- スコア配点 (0-100):
+  - llms.txt 存在: 50点
+  - H1 タイトル: 10点
+  - サマリー: 10点
+  - H2 セクション: 15点
+  - llms-full.txt: 5点
+  - AIクローラー全許可: 10点
+
+### 🆕 AIO カテゴリ追加: `llmsTxtCompliance`
+- `aio-checker.js` の6カテゴリに **7番目のカテゴリ** として統合
+- AIO 総合スコアの **15% の比重** を占める（既存6カテゴリの合計 85% に再配分）
+- HTTP フェッチが必要なため async 処理に変更し、既存6カテゴリと並列実行
+- URL未指定（HTMLペースト診断）時は安全にスキップ
+- フェッチ失敗時は AIO チェック全体を落とさず警告を残す
+
+### 🆕 `enhanced-reporter.js` に llms.txt 推奨アクション追加
+- 9種類の issue キーマッピング:
+  - `llmstxt_missing` / `llmstxt_no_title` / `llmstxt_multiple_h1` /
+    `llmstxt_no_summary` / `llmstxt_no_section` / `llmstxt_no_links` /
+    `llmstxt_robots_block_ai` / `llmstxt_invalid_url` / `llmstxt_check_error`
+- すべてに具体的な **fix メッセージ**、**コード例**、**docLink** を実装
+- llms.txt フルテンプレ（17行）と robots.txt 推奨設定（15行）のサンプル
+- **先食い問題の予防**: issue文に「タイトル」「H2」を含むため、Phase 1.1 と同様
+  `llms.txt` を最優先判定で確定（regression テスト含む）
+
+### 🎨 UI 統合
+- `public/index.html`: AIO詳細タブの `aioCategories` に「llms.txt 対応」を追加
+- `client/src/components/tabs/AIOTab.tsx`: 同上（React版）
+- `client/src/utils/helpers.ts`: `getCategoryTitle` に llmsTxtCompliance を追加
+- `public/index.html` の `getCategoryTitle` も同期
+
+### 🧪 テスト
+- `__tests__/llms-txt.test.js` 新規追加（25+項目）
+- node 単体テストで **35/35 PASS** 確認済み
+
+### ✅ 実機検証
+
+| サイト | found | スコア | 備考 |
+|---|---|---|---|
+| `https://llmstxt.org/` | ✅ | 95/100 | ほぼ満点 |
+| `https://docs.anthropic.com/` | ✅ | 85/100 | サマリー欠落のみ |
+| `https://anthropic.com/` | ❌ | 10/100 | llms.txt 無し |
+| `https://ads.mercari.com/` | ❌ | 10/100 | llms.txt 無し |
+
+### 📦 Breaking Changes
+なし。新カテゴリ追加で AIO スコアの重みが再配分されるため、過去スコアと若干差が出ます。
+
+### 📦 version bump
+`1.3.0` → `2.0.0` (root + client)。Phase 2 シリーズ初の機能追加として major bump。
+
+---
+
 ## [1.3.0] - 2026-05-23 — Phase 1.3
 
 ### 🔧 レビュー対応（PR #4 review round 1）
