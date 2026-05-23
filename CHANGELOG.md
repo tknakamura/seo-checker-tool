@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.1.1] - 2026-05-24 — chore: Render の puppeteer Chrome ダウンロードをスキップ (IaC化)
+
+PR #7 マージ時の Render デプロイで `npm install` が `puppeteer/install.mjs` の
+chrome-headless-shell 取得に失敗し `build_failed` になった件のフォローアップ。
+
+### 🔧 `render.yaml` に `PUPPETEER_SKIP_DOWNLOAD=true` を IaC として記録
+- 本番では `@sparticuz/chromium` のバイナリを使うため、puppeteer の Chrome 自動
+  ダウンロードは不要
+- 初回復旧時は Render ダッシュボード（API 経由）で直接 env var を追加したため、
+  IaC (`render.yaml`) と実体に乖離があった状態
+- 今 PR で `render.yaml` にも同 env var を追加し、将来 Service 再作成時にも
+  自動でセットされる構成にする
+
+### 📦 Breaking Changes
+なし。本番動作はすでに同じ env var で稼働しており、追加の変更は IaC のみ。
+
+### 📦 version bump
+`2.1.0` → `2.1.1` (patch: 設定の IaC 化のみ、コード変更なし)
+
+---
+
 ## [2.1.0] - 2026-05-24 — Phase 2-A.1: AIO 重み付け調整 / effortMap 追加
 
 PR #5 (Phase 2-A) レビュー時に中村さんから Nice-to-have として送られた2点を反映。
