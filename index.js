@@ -110,19 +110,20 @@ class SEOChecker {
    * 設定ファイルの読み込み（seo-config.json があれば使用、なければデフォルト）
    */
   loadConfig() {
+    // Phase 1.5: 業界実務 + Google検索セントラル基準にキャリブレーション
     const defaults = {
-      titleMaxLength: 30,
+      titleMaxLength: 32,            // Google検索結果の切り捨て基準
       titleMinLength: 15,
-      descriptionMaxLength: 80,
-      descriptionMinLength: 60,
+      descriptionMaxLength: 120,     // PC表示で見える上限
+      descriptionMinLength: 70,      // SP表示で見える下限
       h1MaxCount: 1,
-      h2MinCount: 2,
-      h3MinCount: 3,
+      h2MinCount: 1,                 // 短いページの基準。コンテンツ長で動的調整
+      h3MinCount: 0,                 // 短いページでは不要
       imageAltRequired: true,
-      internalLinksMin: 10,
+      internalLinksMin: 3,           // 短いページの基準。コンテンツ長で動的調整
       structuredDataRequired: true,
-      jsWaitTime: 3000,
-      jsTimeout: 30000
+      jsWaitTime: 2500,
+      jsTimeout: 20000
     };
     const configPath = path.join(__dirname, 'seo-config.json');
     try {
@@ -791,9 +792,24 @@ class SEOChecker {
     const h1Count = h1.length;
     const h2Count = h2.length;
     const h3Count = h3.length;
-    
+
     const issues = [];
     const recommendations = [];
+
+    // Phase 1.5: コンテンツ長に応じた動的閾値
+    // 短いページに H2/H3 を多数要求するのは過剰要求になるため、語数で調整する
+    const earlyWordCount = this.estimateContentLength($);
+    let h2Needed, h3Needed;
+    if (earlyWordCount >= 2000) {
+      h2Needed = 3;
+      h3Needed = 5;
+    } else if (earlyWordCount >= 500) {
+      h2Needed = 2;
+      h3Needed = 2;
+    } else {
+      h2Needed = Math.max(1, this.config.h2MinCount || 1);
+      h3Needed = 0;
+    }
 
     // H1のチェック
     if (h1Count === 0) {
@@ -804,16 +820,16 @@ class SEOChecker {
       recommendations.push(`H1タグを${this.config.h1MaxCount}個以下にしてください`);
     }
 
-    // H2のチェック
-    if (h2Count < this.config.h2MinCount) {
+    // H2のチェック（コンテンツ長による動的閾値）
+    if (h2Count < h2Needed) {
       issues.push(`H2タグが少なすぎます（${h2Count}個）`);
-      recommendations.push(`H2タグを${this.config.h2MinCount}個以上追加してください`);
+      recommendations.push(`H2タグを${h2Needed}個以上追加してください`);
     }
 
-    // H3のチェック
-    if (h3Count < this.config.h3MinCount) {
+    // H3のチェック（コンテンツ長による動的閾値、不要なら警告しない）
+    if (h3Needed > 0 && h3Count < h3Needed) {
       issues.push(`H3タグが少なすぎます（${h3Count}個）`);
-      recommendations.push(`H3タグを${this.config.h3MinCount}個以上追加してください`);
+      recommendations.push(`H3タグを${h3Needed}個以上追加してください`);
     }
 
     // 見出しの階層チェック
@@ -830,6 +846,9 @@ class SEOChecker {
       recommendations.push(...headingContent.recommendations);
     }
 
+    // Phase 1.5: コンテンツ長を計測し、見出し評価の動的閾値に使う
+    const wordCount = this.estimateContentLength($);
+
     return {
       h1Count: h1Count,
       h2Count: h2Count,
@@ -837,10 +856,35 @@ class SEOChecker {
       h1Texts: h1.map((i, el) => $(el).text().trim()).get(),
       h2Texts: h2.map((i, el) => $(el).text().trim()).get(),
       h3Texts: h3.map((i, el) => $(el).text().trim()).get(),
+      contentWordCount: wordCount,
       issues: issues,
       recommendations: recommendations,
-      score: this.calculateHeadingScore(h1Count, h2Count, h3Count, headingHierarchy, headingContent)
+      score: this.calculateHeadingScore(h1Count, h2Count, h3Count, headingHierarchy, headingContent, wordCount)
     };
+  }
+
+  /**
+   * コンテンツ長を概算（Phase 1.5）
+   * 日本語+英語混在を考慮し、ざっくり「語数相当」に正規化する。
+   * - 英単語は1語=1
+   * - 日本語は約2文字=1語相当
+   * - script/style/nav/footer/header の中身は除外
+   */
+  estimateContentLength($) {
+    try {
+      // 主要本文要素を優先的に取得（無ければ body）
+      const $clone = $('body').clone();
+      $clone.find('script, style, nav, footer, header, aside').remove();
+      const text = $clone.text().replace(/\s+/g, ' ').trim();
+      if (!text) return 0;
+      // 英数字の "語" を数える
+      const enWords = (text.match(/[a-zA-Z0-9]+(?:[''][a-zA-Z]+)?/g) || []).length;
+      // 日本語文字（ひらがな・カタカナ・漢字）の数 / 2 を語数相当に
+      const jpChars = (text.match(/[\u3040-\u309F\u30A0-\u30FF\u3400-\u4DBF\u4E00-\u9FFF]/g) || []).length;
+      return enWords + Math.round(jpChars / 2);
+    } catch (_) {
+      return 0;
+    }
   }
 
   /**
@@ -1002,11 +1046,18 @@ class SEOChecker {
       issues.push('リンクが存在しません');
       recommendations.push('ページに適切なリンクを追加してください');
     } else {
-      if (internalLinks.length < this.config.internalLinksMin) {
+      // Phase 1.5: コンテンツ長に応じた動的閾値
+      const wordCountForLinks = this.estimateContentLength($);
+      let internalNeeded;
+      if (wordCountForLinks >= 2000) internalNeeded = 12;
+      else if (wordCountForLinks >= 500) internalNeeded = 7;
+      else internalNeeded = 3;
+
+      if (internalLinks.length < internalNeeded) {
         issues.push(`内部リンクが少なすぎます（${internalLinks.length}個）`);
-        recommendations.push(`内部リンクを${this.config.internalLinksMin}個以上追加してください`);
+        recommendations.push(`内部リンクを${internalNeeded}個以上追加してください`);
       }
-      
+
       if (externalLinks.length === 0) {
         issues.push('外部リンクが存在しません');
         recommendations.push('信頼できる外部サイトへのリンクを追加してください');
@@ -1027,7 +1078,7 @@ class SEOChecker {
       brokenLinks: brokenLinks,
       issues: issues,
       recommendations: recommendations,
-      score: this.calculateLinkScore(totalLinks, internalLinks.length, externalLinks.length)
+      score: this.calculateLinkScore(totalLinks, internalLinks.length, externalLinks.length, this.estimateContentLength($))
     };
   }
 
@@ -1477,46 +1528,197 @@ class SEOChecker {
 
   /**
    * スコア計算メソッド群
+   *
+   * Phase 1.5: 全関数を区分線形（piecewise linear）で評価するよう刷新。
+   * 旧実装は「範囲内なら100、範囲外なら50」の3段階だったため、
+   * 「ちょっと長い」「やや短い」を「明らかに長すぎ」と同じ50点扱いにする問題があった。
+   * 新実装では業界実務 + Google検索セントラルの基準を反映し、滑らかにスコアが変化する。
+   */
+
+  /**
+   * 区分線形スコアリングの汎用ヘルパー (Phase 1.5)
+   * 与えられた値が控えめ→理想→過剰の範囲をどう移動するかをスコア（0-100）に変換する。
+   *
+   * @param {number} value - 評価対象の値（文字数、要素数など）
+   * @param {Array<{x: number, score: number}>} points - 区分点の配列（x昇順）
+   *   例: [
+   *     { x: 0,   score: 0 },
+   *     { x: 50,  score: 60 },   // 50で60点
+   *     { x: 80,  score: 100 },  // 80で100点
+   *     { x: 120, score: 100 },  // 120まで100点維持
+   *     { x: 160, score: 80 },   // 160で80点まで下がる
+   *     { x: 200, score: 50 },   // 200以上は50点
+   *   ]
+   * @returns {number} 整数化されたスコア (0-100)
+   */
+  piecewiseLinearScore(value, points) {
+    if (!Array.isArray(points) || points.length < 2) return 0;
+    if (typeof value !== 'number' || isNaN(value)) return 0;
+    // x昇順を前提
+    if (value <= points[0].x) return Math.round(points[0].score);
+    if (value >= points[points.length - 1].x) return Math.round(points[points.length - 1].score);
+    // 該当区間を見つけて線形補間
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      if (value >= a.x && value <= b.x) {
+        const t = (b.x === a.x) ? 0 : (value - a.x) / (b.x - a.x);
+        return Math.round(a.score + (b.score - a.score) * t);
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * タイトルスコア計算 (Phase 1.5)
+   * 業界実務: Google検索結果は全角約32文字で切り捨て、20-32文字が理想。
+   *           15文字未満は短すぎ、50超は明らかに長すぎ。
    */
   calculateTitleScore(title, length) {
     if (!title) return 0;
-    // 全角基準での文字数チェック
-    if (length < this.config.titleMinLength || length > this.config.titleMaxLength) return 50;
-    return 100;
+    return this.piecewiseLinearScore(length, [
+      { x: 0,  score: 0 },
+      { x: 5,  score: 30 },   // 極端に短い
+      { x: 15, score: 70 },   // 旧 minLength。許容ライン
+      { x: 20, score: 90 },   // やや短いが許容
+      { x: 25, score: 100 },  // 理想
+      { x: 32, score: 100 },  // 理想 (Google切り捨て直前)
+      { x: 40, score: 85 },   // やや長い
+      { x: 50, score: 65 },   // 長すぎ
+      { x: 80, score: 50 },   // 明らかに長すぎ
+    ]);
   }
 
+  /**
+   * メタディスクリプションスコア計算 (Phase 1.5)
+   * 業界実務: PC表示は約120文字、SP表示は約70文字。
+   *           80-120が両方をカバーする理想。
+   *           50未満は短すぎ、200超は確実に切り捨てられる。
+   */
   calculateDescriptionScore(description, length) {
     if (!description) return 0;
-    // 全角基準での文字数チェック
-    if (length < this.config.descriptionMinLength || length > this.config.descriptionMaxLength) return 50;
-    return 100;
+    return this.piecewiseLinearScore(length, [
+      { x: 0,   score: 0 },
+      { x: 20,  score: 30 },   // 極端に短い
+      { x: 50,  score: 60 },   // SP表示でかろうじて
+      { x: 70,  score: 85 },   // SP表示でしっかり
+      { x: 80,  score: 100 },  // 理想開始
+      { x: 120, score: 100 },  // 理想終了 (PC表示上限)
+      { x: 140, score: 92 },   // やや長い（PC表示でほぼ全部見える）
+      { x: 160, score: 78 },   // 長い（PCでも切れ始める）
+      { x: 200, score: 60 },   // 長すぎ
+      { x: 300, score: 50 },   // 明らかに長すぎ
+    ]);
   }
 
-  calculateHeadingScore(h1Count, h2Count, h3Count, hierarchy, content) {
+  /**
+   * 見出しスコア計算 (Phase 1.5)
+   *
+   * コンテンツ長に応じて H2/H3 の必要数を動的に決定する:
+   *   - 短いページ (< 500語): H2 ≥ 1, H3 不要
+   *   - 中ページ (500-2000語): H2 ≥ 2, H3 ≥ 2
+   *   - 長いページ (> 2000語): H2 ≥ 3, H3 ≥ 5
+   *
+   * @param {number} h1Count - H1 タグの数
+   * @param {number} h2Count - H2 タグの数
+   * @param {number} h3Count - H3 タグの数
+   * @param {Object} hierarchy - 階層チェック結果
+   * @param {Object} content - 見出し内容チェック結果
+   * @param {number} [wordCount=0] - コンテンツの語数（estimateContentLength の結果）
+   */
+  calculateHeadingScore(h1Count, h2Count, h3Count, hierarchy, content, wordCount = 0) {
     let score = 0;
-    
-    if (h1Count === 1) score += 30;
-    if (h2Count >= this.config.h2MinCount) score += 25;
-    if (h3Count >= this.config.h3MinCount) score += 20;
+
+    // H1: 正確に1つで満点、0個または複数で減点
+    if (h1Count === 1) {
+      score += 35;
+    } else if (h1Count === 0) {
+      score += 0;  // 重大
+    } else {
+      score += 15;  // 複数あるとSEO上問題
+    }
+
+    // H2: コンテンツ長に応じた閾値
+    let h2Needed = 1;
+    let h3Needed = 0;
+    if (wordCount >= 2000) {
+      h2Needed = 3;
+      h3Needed = 5;
+    } else if (wordCount >= 500) {
+      h2Needed = 2;
+      h3Needed = 2;
+    } else {
+      // 短いページは設定の最小値（デフォルト 1）
+      h2Needed = Math.max(1, this.config.h2MinCount || 1);
+      h3Needed = 0;
+    }
+
+    // H2 加点（25点満点を区分線形で）
+    if (h2Needed > 0) {
+      const h2Ratio = Math.min(1, h2Count / h2Needed);
+      score += Math.round(25 * h2Ratio);
+    } else {
+      score += 25;  // H2不要なら満点
+    }
+
+    // H3 加点（15点満点）
+    if (h3Needed > 0) {
+      const h3Ratio = Math.min(1, h3Count / h3Needed);
+      score += Math.round(15 * h3Ratio);
+    } else {
+      score += 15;  // H3不要なら満点
+    }
+
+    // 階層問題なし: 15点
     if (hierarchy.issues.length === 0) score += 15;
+
+    // 内容問題なし: 10点
     if (content.issues.length === 0) score += 10;
-    
-    return Math.min(score, 100);
+
+    return Math.min(Math.max(score, 0), 100);
   }
 
+  /**
+   * 画像 alt スコア計算 (Phase 1.5)
+   * - 画像が無い場合は 50 (中立。コンテンツによっては画像不要なため)
+   * - alt 付与率が高いほど高スコア（線形）
+   * 注: alt が空文字 (alt="") のものは別途 issue として検出される。
+   * このスコアは「alt属性自体が付与されている画像の比率」を反映する。
+   */
   calculateImageAltScore(totalImages, imagesWithAlt) {
     if (totalImages === 0) return 50;
-    return Math.round((imagesWithAlt / totalImages) * 100);
+    const ratio = imagesWithAlt / totalImages;
+    return Math.round(ratio * 100);
   }
 
-  calculateLinkScore(totalLinks, internalLinks, externalLinks) {
+  /**
+   * リンクスコア計算 (Phase 1.5)
+   * コンテンツ長に応じて必要な内部リンク数を動的に調整。
+   * 短いページに過剰な内部リンクを要求しない。
+   */
+  calculateLinkScore(totalLinks, internalLinks, externalLinks, wordCount = 0) {
     if (totalLinks === 0) return 0;
-    
+
     let score = 0;
-    if (internalLinks >= this.config.internalLinksMin) score += 50;
-    if (externalLinks > 0) score += 30;
-    if (totalLinks >= 10) score += 20;
-    
+
+    // コンテンツ長に応じた内部リンク必要数
+    let internalNeeded;
+    if (wordCount >= 2000) internalNeeded = 12;
+    else if (wordCount >= 500) internalNeeded = 7;
+    else internalNeeded = 3;
+
+    // 内部リンク（最大40点、線形）
+    const internalRatio = Math.min(1, internalLinks / internalNeeded);
+    score += Math.round(40 * internalRatio);
+
+    // 外部リンク（信頼性向上、最大30点）
+    if (externalLinks >= 1) score += 20;
+    if (externalLinks >= 3) score += 10;  // ボーナス
+
+    // 総リンク数（最大30点）
+    if (totalLinks >= 5)  score += 10;
+    if (totalLinks >= 10) score += 10;
+    if (totalLinks >= 20) score += 10;
+
     return Math.min(score, 100);
   }
 

@@ -1,9 +1,32 @@
 /**
  * 詳細レポート生成機能
  * 改善提案の優先度、具体的な実装方法、期待される効果を含む包括的なレポートを生成
+ *
+ * Phase 1.5: seo-config.json の閾値を読み込んで判定基準を統一する
  */
+const fs = require('fs');
+const path = require('path');
+
+function loadEnhancedReporterConfig() {
+  const defaults = {
+    titleMaxLength: 32,
+    titleMinLength: 15,
+    descriptionMaxLength: 120,
+    descriptionMinLength: 70,
+  };
+  try {
+    const configPath = path.join(__dirname, 'seo-config.json');
+    if (fs.existsSync(configPath)) {
+      const data = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      return { ...defaults, ...data };
+    }
+  } catch (_) { /* ignore, use defaults */ }
+  return defaults;
+}
+
 class EnhancedReporter {
   constructor() {
+    this.config = loadEnhancedReporterConfig();
     this.priorityWeights = {
       critical: 100,    // 即座に対応が必要
       high: 80,         // 1週間以内に対応
@@ -853,17 +876,18 @@ class EnhancedReporter {
    * 簡潔な修正方法を取得
    */
   getConciseFix(issue, category) {
+    // Phase 1.5: config 経由
     if (issue.includes('タイトルが短すぎます')) {
-      return 'タイトルを15全角文字以上にしてください';
+      return `タイトルを${this.config.titleMinLength}全角文字以上にしてください（理想は20-${this.config.titleMaxLength}全角文字）`;
     }
     if (issue.includes('タイトルが長すぎます')) {
-      return 'タイトルを30全角文字以下にしてください';
+      return `タイトルを${this.config.titleMaxLength}全角文字以下にしてください（Google検索結果では約${this.config.titleMaxLength}文字で切り捨てられます）`;
     }
     if (issue.includes('メタディスクリプションが短すぎます')) {
-      return 'メタディスクリプションを60全角文字以上にしてください';
+      return `メタディスクリプションを${this.config.descriptionMinLength}全角文字以上にしてください（理想は${this.config.descriptionMinLength}-${this.config.descriptionMaxLength}全角文字、SP表示で70文字、PC表示で120文字まで見えます）`;
     }
     if (issue.includes('メタディスクリプションが長すぎます')) {
-      return 'メタディスクリプションを80全角文字以下にしてください';
+      return `メタディスクリプションを${this.config.descriptionMaxLength}全角文字以下にしてください（PC表示は約120文字で切り捨てられます。重要な情報は前半70文字に入れることを推奨）`;
     }
     if (issue.includes('alt属性がありません')) {
       return 'すべての画像にalt属性を追加してください';

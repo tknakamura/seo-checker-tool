@@ -1,13 +1,23 @@
 {
-  "titleMaxLength": 30,
+  "_comment_thresholds": "Phase 1.5 で更新。業界実務 + Google検索セントラル基準。SEO評価の閾値はここで上書き可能。",
+
   "titleMinLength": 15,
-  "descriptionMaxLength": 80,
-  "descriptionMinLength": 60,
+  "titleMaxLength": 32,
+  "_comment_title": "Google検索結果は全角約32文字で切り捨て。20-32が理想。",
+
+  "descriptionMinLength": 70,
+  "descriptionMaxLength": 120,
+  "_comment_description": "SP表示で約70文字、PC表示で約120文字が見える。80-120が両方をカバーする理想範囲。",
+
   "h1MaxCount": 1,
-  "h2MinCount": 2,
-  "h3MinCount": 3,
+  "h2MinCount": 1,
+  "h3MinCount": 0,
+  "_comment_heading": "短いページは H2 1個以上、H3 不要。コンテンツ長 500語以上で 2/2、2000語以上で 3/5 に動的調整される（コード側ロジック）。",
+
   "imageAltRequired": true,
-  "internalLinksMin": 10,
+  "internalLinksMin": 3,
+  "_comment_links": "短いページは内部リンク 3個以上で十分。コンテンツ長で動的調整（500語以上で7、2000語以上で12）。",
+
   "structuredDataRequired": true,
   "jsWaitTime": 2500,
   "jsTimeout": 20000
