@@ -1185,8 +1185,20 @@ class SEOChecker {
       rdfa: rdfa
     };
 
-    // 新機能：ページタイプ分析（Phase 2-C: LLM 補正対応）
-    const pageTypeAnalysis = await this.pageTypeAnalyzer.analyzePageAsync($, url);
+    // Phase 2-D: 既存スキーマの @type を抽出して LLM に渡す
+    // LLM はこれを見て「既に実装済みのものは推奨しない」判断ができる
+    const existingSchemaTypes = (jsonLd || [])
+      .map(s => {
+        const t = s && s.data && s.data['@type'];
+        if (Array.isArray(t)) return t[0];
+        return t;
+      })
+      .filter(Boolean);
+
+    // 新機能：ページタイプ分析（Phase 2-C: LLM 補正対応、Phase 2-D: existingSchemas を渡す）
+    const pageTypeAnalysis = await this.pageTypeAnalyzer.analyzePageAsync($, url, {
+      existingSchemas: existingSchemaTypes,
+    });
     
     // 新機能：適切な構造化データの推奨
     const structuredDataRecommendations = this.structuredDataRecommender.generateRecommendations(

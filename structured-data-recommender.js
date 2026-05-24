@@ -5,11 +5,24 @@
 class StructuredDataRecommender {
   constructor() {
     // ページタイプ別推奨スキーマ設定
+    // Phase 2-D: 新タイプ (WebPage / Service / AboutPage / ContactPage / SoftwareApplication
+    //             / VideoObject / CollectionPage / NewsArticle / BlogPosting / Person /
+    //             Organization) を追加。LLM が判定する全タイプを網羅。
     this.recommendations = {
       Article: {
         primary: ['Article', 'NewsArticle', 'BlogPosting'],
         secondary: ['Organization', 'Person', 'BreadcrumbList'],
         optional: ['Comment', 'Rating', 'Review']
+      },
+      NewsArticle: {
+        primary: ['NewsArticle'],
+        secondary: ['Organization', 'Person', 'BreadcrumbList'],
+        optional: ['ImageObject', 'Comment']
+      },
+      BlogPosting: {
+        primary: ['BlogPosting'],
+        secondary: ['Person', 'Organization', 'BreadcrumbList'],
+        optional: ['ImageObject', 'Comment']
       },
       Product: {
         primary: ['Product'],
@@ -20,6 +33,54 @@ class StructuredDataRecommender {
         primary: ['LocalBusiness'],
         secondary: ['Organization', 'PostalAddress', 'ContactPoint'],
         optional: ['OpeningHoursSpecification', 'GeoCoordinates', 'Review']
+      },
+      // 新規: BtoB サービス LP / SaaS / 広告掲載案内など
+      Service: {
+        primary: ['Service'],
+        secondary: ['Organization', 'Offer', 'AggregateRating'],
+        optional: ['BreadcrumbList', 'ContactPoint', 'VideoObject']
+      },
+      // 新規: 汎用 Web ページ（カテゴリページ、案内ページなど）
+      WebPage: {
+        primary: ['WebPage'],
+        secondary: ['Organization', 'BreadcrumbList'],
+        optional: ['Person', 'ImageObject', 'VideoObject']
+      },
+      // 新規: 会社案内・自己紹介ページ
+      AboutPage: {
+        primary: ['AboutPage'],
+        secondary: ['Organization', 'Person'],
+        optional: ['BreadcrumbList', 'ContactPoint', 'ImageObject']
+      },
+      // 新規: 問い合わせページ
+      ContactPage: {
+        primary: ['ContactPage'],
+        secondary: ['Organization', 'ContactPoint', 'PostalAddress'],
+        optional: ['BreadcrumbList', 'OpeningHoursSpecification']
+      },
+      // 新規: 商品カテゴリ・コレクションページ
+      CollectionPage: {
+        primary: ['CollectionPage'],
+        secondary: ['BreadcrumbList', 'ItemList'],
+        optional: ['Organization', 'Product']
+      },
+      // 新規: SaaS / アプリ
+      SoftwareApplication: {
+        primary: ['SoftwareApplication'],
+        secondary: ['Organization', 'AggregateRating', 'Offer'],
+        optional: ['Review', 'ImageObject', 'VideoObject']
+      },
+      // 新規: 組織情報ページ
+      Organization: {
+        primary: ['Organization'],
+        secondary: ['ContactPoint', 'PostalAddress'],
+        optional: ['BreadcrumbList', 'Person', 'LogoImageObject']
+      },
+      // 新規: 人物プロフィールページ
+      Person: {
+        primary: ['Person'],
+        secondary: ['Organization'],
+        optional: ['BreadcrumbList', 'ImageObject']
       },
       Recipe: {
         primary: ['Recipe'],
@@ -32,6 +93,12 @@ class StructuredDataRecommender {
         optional: ['Person', 'PostalAddress', 'VirtualLocation']
       },
       FAQ: {
+        primary: ['FAQPage'],
+        secondary: ['Question', 'Answer'],
+        optional: ['Organization', 'BreadcrumbList']
+      },
+      // 新規: FAQPage 直接対応
+      FAQPage: {
         primary: ['FAQPage'],
         secondary: ['Question', 'Answer'],
         optional: ['Organization', 'BreadcrumbList']
@@ -55,6 +122,12 @@ class StructuredDataRecommender {
         primary: ['Course', 'EducationEvent'],
         secondary: ['Organization', 'Person', 'Place'],
         optional: ['AggregateRating', 'Review', 'Offer']
+      },
+      // 新規: 動画コンテンツ主体
+      VideoObject: {
+        primary: ['VideoObject'],
+        secondary: ['Organization', 'Person'],
+        optional: ['BreadcrumbList', 'Comment']
       }
     };
 
@@ -93,7 +166,7 @@ class StructuredDataRecommender {
 
   /**
    * 構造化データの推奨事項を生成
-   * @param {Object} pageAnalysis - ページ分析結果
+   * @param {Object} pageAnalysis - ページ分析結果 (Phase 2-D: recommendedSchemas を含む場合あり)
    * @param {Object} existingSchemas - 既存のスキーマ情報
    * @param {Object} pageData - ページデータ
    * @returns {Object} 推奨事項
@@ -102,16 +175,28 @@ class StructuredDataRecommender {
     try {
       const primaryType = pageAnalysis.primaryType || 'Article';
       const confidence = pageAnalysis.confidence || 0;
-      
-      // 基本推奨事項を取得
-      const baseRecommendations = this.getBaseRecommendations(primaryType);
-      
-      // 既存スキーマとの比較
-      const missingSchemas = this.findMissingSchemas(baseRecommendations, existingSchemas);
-      
-      // 優先度付きリストを作成
-      const prioritizedList = this.prioritizeRecommendations(missingSchemas, pageData);
-      
+
+      // Phase 2-D: LLM が推奨スキーマを返していればそれを優先採用
+      const llmRecommended = pageAnalysis.recommendedSchemas;
+      const hasLlmSchemas = llmRecommended && (
+        (llmRecommended.required && llmRecommended.required.length > 0) ||
+        (llmRecommended.recommended && llmRecommended.recommended.length > 0) ||
+        (llmRecommended.optional && llmRecommended.optional.length > 0)
+      );
+
+      let prioritizedList;
+      let source = 'rule-based';
+      if (hasLlmSchemas) {
+        // LLM 推奨を採用、既存スキーマで重複除外
+        prioritizedList = this._buildPrioritizedFromLlm(llmRecommended, existingSchemas);
+        source = 'llm';
+      } else {
+        // 従来通り: ルールベース推奨
+        const baseRecommendations = this.getBaseRecommendations(primaryType);
+        const missingSchemas = this.findMissingSchemas(baseRecommendations, existingSchemas);
+        prioritizedList = this.prioritizeRecommendations(missingSchemas, pageData);
+      }
+
       // 具体的な実装提案を生成
       const implementationSuggestions = this.generateImplementationSuggestions(
         prioritizedList, pageData, primaryType
@@ -125,6 +210,8 @@ class StructuredDataRecommender {
       return {
         pageType: primaryType,
         confidence: confidence,
+        // Phase 2-D: 推奨ソース ('llm' | 'rule-based')
+        source: source,
         recommendations: {
           missing: prioritizedList.missing,
           improvements: prioritizedList.improvements,
@@ -180,6 +267,56 @@ class StructuredDataRecommender {
    * @param {Object} pageData - ページデータ
    * @returns {Object} 優先度付きリスト
    */
+  /**
+   * Phase 2-D: LLM の recommendedSchemas を既存の {missing, improvements, optional} 形式に変換
+   *
+   * @param {Object} llmRecommended - { required: [{schema, reason}], recommended: [...], optional: [...] }
+   * @param {Object} existingSchemas - 既存実装スキーマ情報（重複除外用）
+   * @returns {Object} { missing, improvements, optional }
+   * @private
+   */
+  _buildPrioritizedFromLlm(llmRecommended, existingSchemas) {
+    // 既存スキーマ集合
+    const existing = new Set(
+      (existingSchemas && Array.isArray(existingSchemas.jsonLd) ? existingSchemas.jsonLd : [])
+        .map(s => {
+          const t = s && s.data && s.data['@type'];
+          if (Array.isArray(t)) return t[0];
+          return t;
+        })
+        .filter(Boolean)
+    );
+
+    const buildEntry = (item, priority, impact) => ({
+      schema: item.schema,
+      priority,
+      reason: item.reason || `${item.schema} を実装することを推奨します`,
+      impact,
+      difficulty: this.getSchemaDifficulty(item.schema),
+      seoValue: this.getSEOValue(item.schema),
+      source: 'llm',
+    });
+
+    const filterUnique = (arr) => {
+      const seen = new Set();
+      const result = [];
+      for (const item of (arr || [])) {
+        if (!item || !item.schema) continue;
+        if (existing.has(item.schema)) continue;
+        if (seen.has(item.schema)) continue;
+        seen.add(item.schema);
+        result.push(item);
+      }
+      return result;
+    };
+
+    return {
+      missing: filterUnique(llmRecommended.required).map(item => buildEntry(item, 'critical', 'high')),
+      improvements: filterUnique(llmRecommended.recommended).map(item => buildEntry(item, 'high', 'medium')),
+      optional: filterUnique(llmRecommended.optional).map(item => buildEntry(item, 'low', 'low')),
+    };
+  }
+
   prioritizeRecommendations(missingSchemas, pageData) {
     const result = {
       missing: [],

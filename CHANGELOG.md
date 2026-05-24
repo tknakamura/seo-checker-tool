@@ -1,5 +1,96 @@
 # Changelog
 
+## [2.8.0] - 2026-05-24 — Phase 2-D: LLM が「推奨スキーマ」も判定 + ルールベース新タイプ拡張
+
+中村さんからの実運用フィードバック「**必要なスキーマ (3件) が実際に適正な判断になっているか怪しい**」への対応。Phase 2-C で LLM がページタイプを正しく判定するようになったが、その下流の **構造化データ推奨** が旧10タイプ前提のままで、LLM の新タイプ判定に追従していなかった問題を解消する。
+
+### 🎯 解決した課題
+
+Phase 2-C 後のシナリオ:
+1. LLM「`ads.mercari.com` は `WebPage` です」と判定 ✅
+2. recommender「`WebPage` のマッピングが無いのでデフォルト `Article` を返します」 ❌
+3. ユーザーに「必要なスキーマ: Article, NewsArticle, BlogPosting」と表示される
+4. → **判定は正しいのに推奨が的外れ**
+
+### ✨ 対応 1: LLM プロンプトに「推奨スキーマ」も含める
+
+`llm-page-type-corrector.js` のシステムプロンプトを拡張:
+- 1回の LLM コールで「主タイプ判定 (A)」と「推奨スキーマ (B)」を同時に取得
+- 出力 JSON に `recommendedSchemas: { required, recommended, optional }` を追加
+- 各スキーマには `{ schema, reason }` (なぜこのページに必要か日本語1文)
+- コスト変わらず、レイテンシ変わらず (出力トークン微増のみ)
+
+具体例の組み込み:
+```
+- BtoB サービス LP (例: ads.mercari.com) なら:
+  + 必須: WebPage / Service
+  + 推奨: Organization, BreadcrumbList, ContactPoint
+  + 参考: VideoObject (動画があれば), FAQPage (FAQがあれば)
+```
+
+### ✨ 対応 2: 既存スキーマを LLM 入力に含める
+
+LLM が「これは既に実装済み」を理解できるようにする:
+- `analyzePageAsync($, url, { existingSchemas: ['Organization', 'WebSite'] })`
+- LLM プロンプトに「すでに実装されている schema.org タイプ: ... これらは required/recommended から除外する判断材料に」と明示
+- 重複推奨を構造的に防ぐ
+
+### ✨ 対応 3: recommender が LLM 推奨を優先採用
+
+`structured-data-recommender.js#generateRecommendations`:
+- `pageAnalysis.recommendedSchemas` が存在すれば LLM 推奨を採用
+- 存在しない / 全部空 → ルールベース推奨にフォールバック
+- 戻り値に `source: 'llm' | 'rule-based'` を追加してトレーサビリティ確保
+- 既存スキーマと重複する LLM 推奨は除外
+- 同じスキーマが複数推奨されても 1件にユニーク化
+
+### ✨ 対応 4: ルールベース recommender に新タイプを追加
+
+LLM が返す可能性のある全タイプを `this.recommendations` に追加:
+- **WebPage** → primary: WebPage, secondary: Organization, BreadcrumbList
+- **Service** → primary: Service, secondary: Organization, Offer, AggregateRating
+- **AboutPage** → primary: AboutPage, secondary: Organization, Person
+- **ContactPage** → primary: ContactPage, secondary: Organization, ContactPoint, PostalAddress
+- **CollectionPage** → primary: CollectionPage, secondary: BreadcrumbList, ItemList
+- **SoftwareApplication** → primary: SoftwareApplication, secondary: Organization, AggregateRating, Offer
+- **Organization** → primary: Organization, secondary: ContactPoint, PostalAddress
+- **Person** → primary: Person, secondary: Organization
+- **NewsArticle** / **BlogPosting** (Article の個別エントリ)
+- **VideoObject** → primary: VideoObject, secondary: Organization, Person
+- **FAQPage** (FAQ の正式名)
+
+これにより LLM が無効な環境でもページタイプに応じた適切な推奨が出る。
+
+### 🧪 テスト
+
+`__tests__/phase-2d-llm-schemas.test.js` 新規 (25項目):
+- LLM レスポンスパーサの recommendedSchemas 解釈 (4ケース)
+- PageTypeAnalyzer 経由での recommendedSchemas 伝搬 (2ケース)
+- existingSchemas オプションの LLM 入力への伝搬
+- StructuredDataRecommender の LLM 優先採用 (5ケース)
+- LLM 推奨と既存スキーマの重複除外
+- LLM 推奨内のスキーマ重複ユニーク化
+- ルールベース新タイプ対応 (12タイプの test.each)
+- 後方互換性 (LLM 無効でも動作、既存挙動と同じ)
+
+全テスト **378/378 PASS** (regression なし)
+
+### 💰 コスト
+
+Phase 2-C と同じ LLM コール数。出力トークンが微増 (~200 → ~400 tokens) するが、
+1診断あたり約 **$0.0006 (0.09円)** にとどまる。月1,000診断で 90円。
+
+### 📦 Breaking Changes
+なし。
+- `pageTypeAnalysis.recommendedSchemas` は新規 optional フィールド
+- `structuredDataRecommendations.source` も新規追加フィールド
+- 既存の `recommendations.missing/improvements/optional` 構造は同じ
+
+### 📦 version bump
+`2.7.0` → `2.8.0` (minor: 新機能、後方互換)
+
+---
+
 ## [2.7.0] - 2026-05-24 — Phase 2-C: LLM ページタイプ補正 (OpenAI gpt-4o-mini)
 
 中村さんからの実運用フィードバック: `ads.mercari.com` が `LocalBusiness` と誤判定される件を解消。

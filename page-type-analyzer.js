@@ -103,9 +103,11 @@ class PageTypeAnalyzer {
    * ページタイプを分析（async版、LLM補正を含む）
    * @param {Object} $ - Cheerioオブジェクト
    * @param {string} url - ページURL
-   * @returns {Promise<Object>} 分析結果（LLM補正があれば反映済み）
+   * @param {Object} [options]
+   * @param {Array<string>} [options.existingSchemas] - 既存実装スキーマ名のリスト (Phase 2-D)
+   * @returns {Promise<Object>} 分析結果（LLM補正があれば反映済み、recommendedSchemas を含む）
    */
-  async analyzePageAsync($, url) {
+  async analyzePageAsync($, url, options = {}) {
     const ruleBasedResult = this._analyzeRuleBased($, url);
     if (!this.llmCorrector || !this.llmCorrector.isEnabled()) {
       // LLM 無効 → ルールベース結果をそのまま返す（既存挙動と完全互換）
@@ -124,6 +126,8 @@ class PageTypeAnalyzer {
           primaryType: ruleBasedResult.primaryType,
           confidence: ruleBasedResult.confidence,
         },
+        // Phase 2-D: 既存スキーマを LLM に渡して推奨重複を避ける
+        existingSchemas: Array.isArray(options.existingSchemas) ? options.existingSchemas : [],
       });
 
       if (!correction || correction.error) {
@@ -150,6 +154,8 @@ class PageTypeAnalyzer {
           reasoning: correction.reasoning,
           matchedSignals: correction.matchedSignals,
         },
+        // Phase 2-D: LLM が推奨した実装すべきスキーマ
+        recommendedSchemas: correction.recommendedSchemas || null,
         llmCorrection: {
           applied: true,
           source: correction.source,
