@@ -17,7 +17,7 @@
 
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const MODEL = 'gpt-4o-mini';
-const TIMEOUT_MS = 8000;
+const TIMEOUT_MS = 15000;
 const MAX_BODY_CHARS = 1000;
 const MAX_TITLE_CHARS = 200;
 const MAX_META_CHARS = 400;
@@ -133,9 +133,18 @@ class LlmPageTypeCorrector {
       response = await this._callOpenAI(sanitized);
     } catch (err) {
       // タイムアウト / ネットワーク / 401 等。サイレントフォールバック。
+      // AbortError は .name='AbortError' / .code=20 (DOMException) で来るので正規化
+      let errorCode;
+      if (err && (err.name === 'AbortError' || err.code === 20 || err.code === 'ABORT_ERR')) {
+        errorCode = 'LLM_TIMEOUT';
+      } else if (err && typeof err.code === 'string') {
+        errorCode = err.code;
+      } else {
+        errorCode = 'LLM_CALL_FAILED';
+      }
       return {
         error: true,
-        errorCode: err && err.code ? err.code : 'LLM_CALL_FAILED',
+        errorCode,
         errorMessage: err && err.message ? err.message : 'unknown',
         latencyMs: Date.now() - startedAt,
       };

@@ -1,5 +1,86 @@
 # Changelog
 
+## [2.14.0] - 2026-05-24 — Phase 2-H: ページタイプ判定の精度向上 & LLM タイムアウト延長
+
+中村さんから報告された誤判定への対応:
+> `https://ads.mercari.com/column/136` が「商品ページ」となりました。これは記事ページだと思います。
+
+### 🔴 解決した課題
+
+このページは「メルカリ広告サービスについて解説する記事」だが、「商品ページ」と誤判定:
+- 本文に '商品', '価格', '購入', 'カート' が頻出 (広告サービスを商品として説明)
+- ルールベース判定で Product 21 vs Article 16 と僅差
+- URL の `/column/` パターン (Article シグナル) が弱い重み (2.0) で見過ごされ
+- LLM 補正が **8秒タイムアウト**で失敗 → ルールベースの誤判定が表示
+
+### ✨ 修正 5 点
+
+#### 1. URL 重みを 2.0 → 5.0 に強化
+- URL は人間が意図して設計した強いシグナル (構造化された情報)
+- `/column/123` は確実に記事ページ、`/product/iphone` は確実に商品ページ
+- タイトル重み (3.0) を超える評価で、本文キーワード誤検知を抑制
+
+#### 2. URL パターンマッチタイプにボーナス +10
+- URL パターンがマッチしたタイプに +10 のボーナス (本文キーワード10個分相当)
+- マッチしなかったタイプは本文キーワードスコアを **50% 減衰**
+- これにより `/column/` を含む URL の Product スコアが半減、Article が+10で逆転
+
+#### 3. Article URL パターン拡張
+- 旧: `/blog/, /news/, /article/, /post/, /column/`
+- 新: `/blog/, /news/, /article/, /articles/, /post/, /posts/, /column/, /columns/, /case/, /case-study/, /insights/, /story/, /stories/`
+- 複数形 (`/articles/`, `/columns/`) や `/case-study/` も網羅
+
+#### 4. LLM タイムアウトを 8s → 15s に延長
+- ページタイプ判定は致命的に重要なので、ネットワーク遅延に耐性を持つ
+- Content Rewriter (Phase 2-E) の 12s よりさらに長く設定
+- タイムアウトでもルールベースが改善されているのでフォールバック品質も向上
+
+#### 5. AbortError のエラーコード正規化 (バグ修正)
+- 旧: `errorCode: 20` (DOMException の数値コードがそのまま入る)
+- 新: `errorCode: 'LLM_TIMEOUT'` (人間が読める文字列)
+- `err.name === 'AbortError'` または `err.code === 20` の場合に正規化
+
+### 🆕 `_getUrlMatchedTypes` ヘルパー
+- URL パターンがマッチしたページタイプを返すユーティリティ
+- 1つの URL が複数タイプにマッチすることもある (例: `/shop/` は Product と LocalBusiness 両方)
+
+### 🧪 テスト
+
+`__tests__/phase-2h-page-type-fix.test.js` 新規 (**16 項目**):
+- `/column/` を含む URL は Article 判定 (本文に商品キーワード多数でも)
+- `/columns/` (複数形) も Article 判定
+- `/case-study/` も Article 判定
+- `/product/` を含む URL なら Product 判定
+- URL マッチしない場合は従来通り本文ベース
+- `weights.url === 5.0`
+- `_getUrlMatchedTypes` ヘルパーの正常系
+- AbortError → `LLM_TIMEOUT` 正規化
+- 数値 20 → `LLM_TIMEOUT` 正規化
+- HTTP 401 等は文字列をそのまま
+- 後方互換性 (既存の `analyzer.analyzePage` が動く)
+
+**全テスト 439/439 PASS** (Phase 2-G 423 + Phase 2-H 16 = 439)
+
+### ✅ 動作確認
+
+ローカルで `https://ads.mercari.com/column/136` 診断:
+- ✅ **primary: Article** (修正前は Product)
+- ✅ confidence: **43%** (修正前は 23%)
+- ✅ allScores: Article 29 vs Product 10.5 (圧倒的差)
+- ✅ LLM 補正なしでも正しく判定 (ローカル LLM 無効環境)
+
+### 📦 Breaking Changes
+
+なし:
+- 後方互換: 既存の `analyzePage`/`analyzePageAsync` は引き続き動く
+- 既存テスト 423 件すべて引き続き PASS
+
+### 📦 version bump
+
+`2.13.0` → `2.14.0` (minor: スコアリングロジック調整 + バグ修正)
+
+---
+
 ## [2.13.0] - 2026-05-24 — Phase 2-G: 該当箇所単位の個別 AI 書き換え提案
 
 中村さん要望「**AI 書き換え時に該当箇所を1件ずつ渡して個別最適化**」への対応。
