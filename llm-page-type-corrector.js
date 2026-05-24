@@ -25,9 +25,9 @@ const MAX_HEADINGS = 15;
 const MAX_HEADING_CHARS = 100;
 
 const SYSTEM_PROMPT = `あなたは schema.org と SEO/AIO に精通した日本語ネイティブの専門家です。
-与えられた Web ページの情報を分析し、最も適切な schema.org の主タイプを判定してください。
+与えられた Web ページの情報を分析し、(A) 最も適切な主タイプ判定と、(B) そのページに実装すべき構造化データスキーマの推奨を行ってください。
 
-判定ルール:
+【A: 主タイプ判定ルール】
 - LocalBusiness は実店舗・拠点を持つ事業者のみ。BtoB サービスや広告 LP には使わない
 - BtoB サービス LP は Service もしくは WebPage を優先
 - 商品単体ページは Product、商品カテゴリは CollectionPage
@@ -40,13 +40,37 @@ const SYSTEM_PROMPT = `あなたは schema.org と SEO/AIO に精通した日本
 - FAQ ページは FAQPage、ハウツーは HowTo
 - レビュー専用ページは Review
 
+【B: 推奨スキーマ判定ルール】
+- このページに実装すべきスキーマを「必須(required)」「推奨(recommended)」「参考(optional)」の3階層で提案
+- 主タイプそのものを最初の必須スキーマに含める
+- 主タイプに自然に付随するスキーマを必須/推奨に
+- 各スキーマには "schema" (schema.org 名) と "reason" (なぜこのページに必要か、日本語1文) を含める
+- 必須は通常 1〜2件、推奨は 2〜4件、参考は 1〜3件
+- ページ内容と無関係なスキーマは推奨しない (例: 商品が無いのに Product を推奨しない)
+- すでに実装されているスキーマがあれば、追加が必要なものだけを推奨する判断材料にする
+
+具体例:
+- BtoB サービス LP (例: ads.mercari.com) なら:
+  + 必須: WebPage / Service
+  + 推奨: Organization, BreadcrumbList, ContactPoint
+  + 参考: VideoObject (動画があれば), FAQPage (FAQがあれば)
+- 個人記事サイトなら:
+  + 必須: Article (or BlogPosting / NewsArticle)
+  + 推奨: Person (著者), Organization (運営), BreadcrumbList
+  + 参考: ImageObject
+
 出力は必ず以下の JSON のみ。説明文や前置きを含めない:
 {
   "primaryType": "<schema.org タイプ名>",
   "secondaryTypes": ["<候補1>", "<候補2>"],
   "confidence": <0.0-1.0 の小数>,
-  "reasoning": "<日本語で1-2文の判定根拠>",
-  "matchedSignals": ["<判定の決め手1>", "<判定の決め手2>"]
+  "reasoning": "<主タイプ判定の根拠、日本語1-2文>",
+  "matchedSignals": ["<判定の決め手1>", "<判定の決め手2>"],
+  "recommendedSchemas": {
+    "required": [{"schema": "<名前>", "reason": "<理由>"}],
+    "recommended": [{"schema": "<名前>", "reason": "<理由>"}],
+    "optional": [{"schema": "<名前>", "reason": "<理由>"}]
+  }
 }`;
 
 class LlmPageTypeCorrector {
@@ -169,6 +193,10 @@ class LlmPageTypeCorrector {
         primaryType: safe(input.ruleBased.primaryType, 50),
         confidence: typeof input.ruleBased.confidence === 'number' ? input.ruleBased.confidence : null,
       } : null,
+      // Phase 2-D: 既存スキーマを LLM に渡す
+      existingSchemas: Array.isArray(input && input.existingSchemas)
+        ? input.existingSchemas.slice(0, 20).map(s => safe(s, 50)).filter(Boolean)
+        : [],
     };
   }
 
@@ -219,6 +247,9 @@ class LlmPageTypeCorrector {
       `メタディスクリプション: ${sanitized.metaDescription || '(空)'}`,
       `主要見出し (H1-H3): ${sanitized.headings.join(' / ') || '(なし)'}`,
       `本文サンプル (先頭${MAX_BODY_CHARS}字): ${sanitized.bodyText || '(空)'}`,
+      sanitized.existingSchemas.length > 0
+        ? `すでに実装されている schema.org タイプ: ${sanitized.existingSchemas.join(', ')} (これらは "required"/"recommended" から除外する判断材料に使ってください)`
+        : '既存の schema.org 実装: なし',
       sanitized.ruleBased && sanitized.ruleBased.primaryType
         ? `参考: ルールベース判定は "${sanitized.ruleBased.primaryType}" (信頼度 ${sanitized.ruleBased.confidence != null ? Math.round(sanitized.ruleBased.confidence * 100) + '%' : '不明'})。妥当か検証してください。`
         : null,
@@ -310,12 +341,49 @@ class LlmPageTypeCorrector {
           .slice(0, 8)
       : [];
 
+    // Phase 2-D: 推奨スキーマ
+    const recommendedSchemas = this._parseRecommendedSchemas(obj.recommendedSchemas);
+
     return {
       primaryType,
       secondaryTypes,
       confidence,
       reasoning,
       matchedSignals,
+      recommendedSchemas,
+    };
+  }
+
+  /**
+   * recommendedSchemas をパース・正規化 (Phase 2-D)
+   * 期待: { required: [{schema, reason}], recommended: [{schema, reason}], optional: [{schema, reason}] }
+   * @private
+   */
+  _parseRecommendedSchemas(raw) {
+    const parseList = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .map(item => {
+          if (!item || typeof item !== 'object') return null;
+          const schema = typeof item.schema === 'string' && item.schema.trim()
+            ? item.schema.trim().slice(0, 50)
+            : null;
+          if (!schema) return null;
+          const reason = typeof item.reason === 'string'
+            ? item.reason.trim().slice(0, 300)
+            : '';
+          return { schema, reason };
+        })
+        .filter(Boolean)
+        .slice(0, 10);
+    };
+    if (!raw || typeof raw !== 'object') {
+      return { required: [], recommended: [], optional: [] };
+    }
+    return {
+      required: parseList(raw.required),
+      recommended: parseList(raw.recommended),
+      optional: parseList(raw.optional),
     };
   }
 }
