@@ -1,6 +1,6 @@
 {
   "name": "seo-aio-doctor",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "description": "SEO AIO Doctor - WebページのSEOとAI最適化（AIO）を一括診断する日本語対応ツール",
   "main": "index.js",
   "scripts": {
