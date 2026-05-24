@@ -83,7 +83,8 @@ describe('Phase 1.8: 内部ロジック (detailedAnalysis / detailedReport の�
   const src = fs.readFileSync(INDEX_JS_PATH, 'utf-8');
 
   test('results.detailedAnalysis の生成が残っている', () => {
-    expect(src).toMatch(/results\.detailedAnalysis\s*=\s*this\.detailedAnalyzer\.analyzeDetails/);
+    // Phase 2-C: await が前置されたため正規表現を緩和
+    expect(src).toMatch(/results\.detailedAnalysis\s*=\s*(?:await\s+)?this\.detailedAnalyzer\.analyzeDetails/);
   });
 
   test('results.detailedReport の生成が残っている', () => {
