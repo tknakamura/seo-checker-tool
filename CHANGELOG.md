@@ -1,5 +1,125 @@
 # Changelog
 
+## [2.13.0] - 2026-05-24 — Phase 2-G: 該当箇所単位の個別 AI 書き換え提案
+
+中村さん要望「**AI 書き換え時に該当箇所を1件ずつ渡して個別最適化**」への対応。
+Phase 2-E (カテゴリ単位の一般論的提案) と Phase 2-E.2/2-F (該当箇所表示) を融合し、
+**「この特定の URL/画像専用」の個別最適化された 3 案** を生成可能にした。
+
+### 🎯 解決した課題
+
+旧 (Phase 2-E):
+- 「11個のリンクテキストが空」→ AI は「動詞+名詞で a11y 配慮」の一般論的な3案
+- どの URL に対しても同じ提案
+- 具体性が低い
+
+新 (Phase 2-G):
+- 各 URL/画像に「✨ この項目を AI に書き換えてもらう」ボタン
+- AI には URL/src・position・ページ文脈を渡す
+- 「`/?keiro=com_logo`」→ 「メルカリのロゴ - トップページへ」など URL から推測した具体提案
+- 「`636annsp.jpg`」→ ファイル名から推測した画像内容の alt 提案
+
+### ✨ 実装内容
+
+#### バックエンド: `llm-content-rewriter.js` 拡張
+
+`rewrite(input)` で `specificLocation` フィールドを受け付ける:
+```js
+{
+  target: 'linkText',
+  currentValue: '',
+  pageContext: {...},
+  specificLocation: {     // 🆕
+    type: 'link',
+    href: '/?keiro=com_logo',
+    position: 1,
+    currentText: '',
+  }
+}
+```
+
+- `_sanitize`: specificLocation のサニタイズ (href/src 500字制限、currentText 200字、position 数値以外は null)
+- `_cacheKey`: specificLocation の type/href/src/position をキャッシュキーに含めて個別キャッシュ
+- `_callOpenAI`: specificLocation がある場合プロンプトに **「書き換え対象の特定要素」セクション** を追加
+  - `type === 'link'` の場合: 「リンク先 URL: ..., 位置: N番目」+ 「URL から推測される行き先・用途を踏まえ...」
+  - `type === 'image'` の場合: 「画像 URL: ..., 位置: N番目」+ 「画像 URL のファイル名・パスから推測される内容を踏まえ...」
+
+#### API: `POST /api/llm/suggest` で specificLocation 受信
+
+既存エンドポイントに `specificLocation` パラメータを追加。指定なしの場合は従来 (Phase 2-E) と同じ動作。
+
+#### UI
+
+該当箇所 (link/image) の各行に **「✨ この項目を AI に書き換えてもらう」** 小さい紫ボタンを設置:
+```
+該当箇所 (11件)
+┌─────────────────────────────────────────┐
+│ /?keiro=com_logo                  [リンク 1番目]│
+│ [✨ この項目を AI に書き換えてもらう]              │
+│ ↓ クリック後                                  │
+│   この項目専用の AI 提案 (3件):                 │
+│   ┌─ 提案 1 [コピー]                          │
+│   │ メルカリのロゴ - トップページへ            │
+│   │ 理由: URL の keiro=com_logo からロゴ判定  │
+│   ├─ 提案 2 [コピー]                          │
+│   │ メルカリ - トップに戻る                   │
+│   │ 理由: 主機能を明示                       │
+│   └─ 提案 3 [コピー]                          │
+│     メルカリ広告 公式サイト                   │
+│     理由: ブランド + 用途明示                 │
+└─────────────────────────────────────────┘
+```
+
+- 対象: `link` / `image` タイプの該当箇所のみ (タイトル/メタ/H1 は元から1件のため Phase 2-E で十分)
+- 既存の上部 CTA「カテゴリ単位の汎用提案」と共存
+- コピー機能・再試行ボタン・エラー表示は Phase 2-E と同等
+
+### 🛡️ 安全装置
+
+- **specificLocation のサニタイズ**: サイズ制限 + ロールキーワード中和 (Phase 2-E と同じプロンプトインジェクション対策)
+- **キャッシュ分離**: specificLocation の有無、別 href/src/position はそれぞれ別キャッシュ
+- **後方互換性**: specificLocation 省略時は Phase 2-E と完全互換
+
+### 🧪 テスト
+
+`__tests__/phase-2g-individual-llm.test.js` 新規 (**15 項目**):
+- specificLocation を渡せること (linkText/altText 両方)
+- プロンプトに「リンク先 URL」「位置」「URL から推測」「ファイル名」が反映
+- specificLocation 省略時は汎用プロンプト
+- キャッシュ分離 (有無別、別 href、別 position)
+- 同じ href + position は cache ヒット
+- サニタイズ (長さ・ロールキーワード・position 型)
+- 後方互換性 (Phase 2-E の呼び出し方は引き続き動く)
+
+**全テスト 423/423 PASS** (Phase 2-E 29 + Phase 2-G 15 = 既存408 + 15)
+
+### ✅ 動作確認
+
+ローカル `carenet.com` 診断:
+- ✅ **50 個** の個別 AI ボタン (リンク 22個 + 画像 + 各 specificIssue ごと)
+- ✅ 各ボタンに URL + position + type が正しく埋め込まれる
+- ✅ 上部 CTA (カテゴリ単位) と個別ボタン (該当箇所単位) が共存
+- ✅ ローカル LLM 無効時に正しく 503 エラー
+
+### 💰 コスト
+
+- 1 個別提案 ~700 input + 300 output tokens ≒ **$0.0004 (0.06円)** (Phase 2-E より若干増)
+- ユーザーは興味ある項目だけクリックするのでオンデマンド維持
+- 月 100 診断 + 平均 10 個別クリック ≒ 約 60 円
+- 既存ハードリミット $20/月で十分余裕
+
+### 📦 Breaking Changes
+
+なし:
+- specificLocation 省略時は Phase 2-E と完全互換
+- 既存テスト 408 件すべて引き続き PASS
+
+### 📦 version bump
+
+`2.12.0` → `2.13.0` (minor)
+
+---
+
 ## [2.12.0] - 2026-05-24 — Phase 2-F: 構造化データの該当箇所表示
 
 Phase 2-E.2 で導入した「該当箇所」表示の対象に**構造化データ関連の issue**を追加。

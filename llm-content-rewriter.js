@@ -214,6 +214,17 @@ class LlmContentRewriter {
         .trim();
     };
     const ctx = input.pageContext || {};
+    // Phase 2-G: 該当箇所の個別情報
+    const loc = input.specificLocation && typeof input.specificLocation === 'object' ? input.specificLocation : null;
+    const specificLocation = loc
+      ? {
+          type: safe(loc.type, 20),
+          href: safe(loc.href, 500),
+          src: safe(loc.src, 500),
+          position: typeof loc.position === 'number' ? loc.position : null,
+          currentText: safe(loc.currentText, 200),
+        }
+      : null;
     return {
       currentValue: safe(input.currentValue, MAX_CURRENT_CHARS),
       url: safe(ctx.url, 500),
@@ -223,12 +234,17 @@ class LlmContentRewriter {
         ? ctx.headings.slice(0, MAX_HEADINGS).map(h => safe(h, MAX_HEADING_CHARS)).filter(Boolean)
         : [],
       bodyText: safe(ctx.bodyText, MAX_BODY_CHARS),
+      specificLocation,
     };
   }
 
   /** @private */
   _cacheKey(target, sanitized) {
-    const text = `${target}|${sanitized.url}|${sanitized.currentValue}|${(sanitized.bodyText || '').slice(0, 100)}`;
+    // Phase 2-G: specificLocation も cacheKey に含めて、別 URL/src ごとにキャッシュ分離
+    const locKey = sanitized.specificLocation
+      ? `:${sanitized.specificLocation.type}:${sanitized.specificLocation.href || sanitized.specificLocation.src || ''}:${sanitized.specificLocation.position || ''}`
+      : '';
+    const text = `${target}|${sanitized.url}|${sanitized.currentValue}|${(sanitized.bodyText || '').slice(0, 100)}${locKey}`;
     let h = 0;
     for (let i = 0; i < text.length; i++) {
       h = ((h << 5) - h + text.charCodeAt(i)) | 0;
@@ -267,15 +283,39 @@ class LlmContentRewriter {
       throw e;
     }
 
-    const userPrompt = [
+    // Phase 2-G: specificLocation があればプロンプトに個別最適化セクションを追加
+    const promptParts = [
       `URL: ${sanitized.url || '(未指定)'}`,
       `現在の値: ${sanitized.currentValue || '(空)'}`,
+    ];
+    if (sanitized.specificLocation) {
+      const loc = sanitized.specificLocation;
+      promptParts.push('--- 書き換え対象の特定要素 (この具体的な要素に最適化された案を出してください) ---');
+      if (loc.type === 'link') {
+        promptParts.push(`リンク先 URL: ${loc.href || '(不明)'}`);
+        promptParts.push(`現在のリンクテキスト: ${loc.currentText || '(空)'}`);
+        if (loc.position) promptParts.push(`ページ内の位置: ${loc.position} 番目のリンク`);
+        promptParts.push('→ このリンクの URL から推測される行き先・用途を踏まえ、ユーザーが何をクリックしようとしているかが分かる具体的なテキストを提案してください');
+      } else if (loc.type === 'image') {
+        promptParts.push(`画像 URL: ${loc.src || '(不明)'}`);
+        promptParts.push(`現在の alt: ${loc.currentText || '(空)'}`);
+        if (loc.position) promptParts.push(`ページ内の位置: ${loc.position} 番目の画像`);
+        promptParts.push('→ 画像 URL のファイル名・パスから推測される内容を踏まえ、画像の内容を具体的に説明する alt テキストを提案してください');
+      } else {
+        // 汎用 fallback
+        if (loc.href) promptParts.push(`関連 URL: ${loc.href}`);
+        if (loc.src) promptParts.push(`関連リソース: ${loc.src}`);
+        if (loc.currentText) promptParts.push(`現状値: ${loc.currentText}`);
+      }
+    }
+    promptParts.push(
       '--- ページ全体の文脈 ---',
       `タイトル: ${sanitized.title || '(空)'}`,
       `メタディスクリプション: ${sanitized.metaDescription || '(空)'}`,
       `主要見出し: ${sanitized.headings.join(' / ') || '(なし)'}`,
       `本文サンプル: ${sanitized.bodyText || '(空)'}`,
-    ].join('\n');
+    );
+    const userPrompt = promptParts.join('\n');
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
