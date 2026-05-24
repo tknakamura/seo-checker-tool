@@ -491,24 +491,52 @@
         }
 
         /* Phase 2-E: LLM 書き換え提案ボタン & 結果表示 */
+        /* Phase 2-E.1: 視認性を上げるため CTA ブロックとして強調 */
         .rec-llm-suggest {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px dashed var(--border);
+            margin-bottom: 14px;
+            padding: 16px;
+            background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+            border: 1px solid #c7d2fe;
+            border-left: 4px solid #6d28d9;
+            border-radius: var(--radius-sm);
         }
         .llm-suggest-btn {
             background: linear-gradient(135deg, #6d28d9, #4338ca);
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 12px 18px;
             border-radius: var(--radius-sm);
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 0.92rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: opacity .15s ease;
+            transition: opacity .15s ease, transform .1s ease;
+            box-shadow: 0 2px 6px rgba(109, 40, 217, 0.2);
         }
-        .llm-suggest-btn:hover { opacity: 0.9; }
-        .llm-suggest-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .llm-suggest-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+        .llm-suggest-btn:active { transform: translateY(0); }
+        .llm-suggest-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .llm-suggest-hint {
+            margin: 8px 0 0;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Phase 2-E.1: 閉じた状態でも 'AI 提案可' バッジで存在を予告 */
+        .llm-available-badge {
+            font-size: 0.7rem;
+            color: white;
+            background: linear-gradient(135deg, #6d28d9, #4338ca);
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        /* AI 提案可能行は左端に紫の縦線を追加 */
+        .recommendation-item.has-llm-suggest {
+            border-left: 3px solid #6d28d9;
+        }
         .llm-suggest-result {
             margin-top: 10px;
         }
@@ -1786,17 +1814,24 @@
                             ? `<div class="rec-issue"><strong>検出された問題:</strong> ${this.escapeHtml(rec.issue)}</div>`
                             : '';
                         // Phase 2-E: AI 書き換えボタン (該当 category のみ)
+                        // Phase 2-E.1: 視認性を上げるため CTA ブロックとして大きく目立つ位置に配置
                         const llmButton = llmTarget
                             ? `<div class="rec-llm-suggest" data-llm-target="${llmTarget.target}" data-llm-label="${this.escapeHtml(llmTarget.label)}" data-llm-current="${this.escapeHtml(this._extractCurrentValue(rec, results))}">
-                                <button type="button" class="llm-suggest-btn">✨ AI に書き換え提案を依頼</button>
+                                <button type="button" class="llm-suggest-btn">✨ AI に「${this.escapeHtml(llmTarget.label)}」の書き換え案を提案させる</button>
+                                <p class="llm-suggest-hint">現状を踏まえて 3 つの改善案を OpenAI gpt-4o-mini が生成します（数秒）</p>
                                 <div class="llm-suggest-result" hidden></div>
                             </div>`
+                            : '';
+                        // Phase 2-E.1: 閉じた状態でも 'AI 提案可能' バッジを表示してボタンの存在を予告
+                        const llmAvailableBadge = llmTarget
+                            ? `<span class="llm-available-badge" title="AI で書き換え案を提案できます">✨ AI 提案可</span>`
                             : '';
                         const toggle = hasDetails
                             ? `<span class="toggle-icon" data-target="${detailsId}">▼</span>`
                             : '';
+                        // Phase 2-E.1: AI ボタンを最上部に配置 (修正例コードよりも前)、目立たせる
                         const extra = hasDetails
-                            ? `<div class="recommendation-extra" id="${detailsId}" style="display:none;">${issueLine}${codeBlock}${docLink}${llmButton}</div>`
+                            ? `<div class="recommendation-extra" id="${detailsId}" style="display:none;">${llmButton}${issueLine}${codeBlock}${docLink}</div>`
                             : '';
                         // Phase 1.3: a11y — 開閉トグルがある行は <button>, ない行は <div>
                         const headerOpenTag = hasDetails
@@ -1804,10 +1839,11 @@
                             : `<div class="recommendation-header">`;
                         const headerCloseTag = hasDetails ? `</button>` : `</div>`;
                         html += `
-                            <div class="recommendation-item ${priorityClass}">
+                            <div class="recommendation-item ${priorityClass}${llmTarget ? ' has-llm-suggest' : ''}">
                                 ${headerOpenTag}
                                     <span class="checkmark" aria-hidden="true">✓</span>
                                     <span class="recommendation-text">${this.escapeHtml(rec.fix)}</span>
+                                    ${llmAvailableBadge}
                                     <span class="priority-badge ${priorityClass}" aria-label="優先度: ${this.getPriorityTitle(rec.priority)}">${this.getPriorityTitle(rec.priority)}</span>
                                     ${toggle}
                                 ${headerCloseTag}
