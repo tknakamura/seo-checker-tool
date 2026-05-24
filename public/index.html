@@ -617,6 +617,87 @@
             line-height: 1.5;
         }
 
+        /* Phase 2-E.2: 該当箇所セクション */
+        .rec-locations {
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .rec-locations h4 {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+            margin: 0 0 8px;
+        }
+        .rec-locations .loc-list,
+        .rec-locations .loc-list-hidden {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .rec-locations .loc-list li,
+        .rec-locations .loc-list-hidden li {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 5px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px dashed var(--border);
+        }
+        .rec-locations .loc-list li:last-child,
+        .rec-locations .loc-list-hidden li:last-child { border-bottom: none; }
+        .rec-locations .loc-list-hidden { margin-top: 4px; }
+        .rec-locations .loc-url {
+            color: var(--accent);
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+            text-decoration: none;
+            flex: 1;
+        }
+        .rec-locations a.loc-url:hover { text-decoration: underline; }
+        .rec-locations code.loc-url {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--text);
+        }
+        .rec-locations .loc-label {
+            color: var(--text);
+            flex: 1;
+            word-break: break-word;
+        }
+        .rec-locations .loc-hint {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            flex-shrink: 0;
+            padding: 1px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+        }
+        .loc-toggle-more {
+            margin-top: 8px;
+            padding: 4px 10px;
+            font-size: 0.78rem;
+            background: var(--bg);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .loc-toggle-more:hover {
+            background: var(--surface-2);
+            color: var(--text);
+        }
+
         .hint {
             font-size: 0.82rem;
             color: var(--text-muted);
@@ -1829,9 +1910,43 @@
                         const toggle = hasDetails
                             ? `<span class="toggle-icon" data-target="${detailsId}">▼</span>`
                             : '';
-                        // Phase 2-E.1: AI ボタンを最上部に配置 (修正例コードよりも前)、目立たせる
+                        // Phase 2-E.2: 該当箇所セクション (該当する src/href/heading等を一覧表示)
+                        const locations = this._extractLocations(rec, results);
+                        let locationsBlock = '';
+                        if (locations.length > 0) {
+                            const SHOW_LIMIT = 5;
+                            const visibleItems = locations.slice(0, SHOW_LIMIT);
+                            const hiddenItems = locations.slice(SHOW_LIMIT);
+                            const renderItem = (loc) => {
+                                const hintHtml = loc.hint ? `<span class="loc-hint">${this.escapeHtml(loc.hint)}</span>` : '';
+                                // URL は新タブで開けるリンクに、それ以外はテキスト
+                                let labelHtml;
+                                if (loc.type === 'image' || loc.type === 'link') {
+                                    // 絶対URLの場合のみ a タグ化（相対URLは origin を補完できないのでテキスト）
+                                    const isAbsolute = /^https?:\/\//i.test(loc.label);
+                                    labelHtml = isAbsolute
+                                        ? `<a href="${this.escapeHtml(loc.label)}" target="_blank" rel="noopener noreferrer" class="loc-url" title="${this.escapeHtml(loc.label)}">${this.escapeHtml(loc.label)}</a>`
+                                        : `<code class="loc-url">${this.escapeHtml(loc.label)}</code>`;
+                                } else {
+                                    labelHtml = `<span class="loc-label">${this.escapeHtml(loc.label)}</span>`;
+                                }
+                                return `<li>${labelHtml}${hintHtml}</li>`;
+                            };
+                            const visibleHtml = visibleItems.map(renderItem).join('');
+                            const hiddenHtml = hiddenItems.map(renderItem).join('');
+                            const moreToggle = hiddenItems.length > 0
+                                ? `<button type="button" class="loc-toggle-more" data-loc-target="locs-${idx}">他 ${hiddenItems.length} 件を表示</button>
+                                   <ul class="loc-list-hidden" id="locs-${idx}" hidden>${hiddenHtml}</ul>`
+                                : '';
+                            locationsBlock = `<div class="rec-locations">
+                                <h4>該当箇所 (${locations.length}件)</h4>
+                                <ul class="loc-list">${visibleHtml}</ul>
+                                ${moreToggle}
+                            </div>`;
+                        }
+                        // Phase 2-E.1: AI ボタンを最上部に配置、Phase 2-E.2: 該当箇所を AI ボタン直後に
                         const extra = hasDetails
-                            ? `<div class="recommendation-extra" id="${detailsId}" style="display:none;">${llmButton}${issueLine}${codeBlock}${docLink}</div>`
+                            ? `<div class="recommendation-extra" id="${detailsId}" style="display:none;">${llmButton}${issueLine}${locationsBlock}${codeBlock}${docLink}</div>`
                             : '';
                         // Phase 1.3: a11y — 開閉トグルがある行は <button>, ない行は <div>
                         const headerOpenTag = hasDetails
@@ -1868,6 +1983,31 @@
                 this.attachRecommendationToggles();
                 // Phase 2-E: AI 書き換え提案ボタンのイベントバインド
                 this.attachLlmSuggestHandlers();
+                // Phase 2-E.2: 該当箇所「他N件を表示」トグル
+                this.attachLocationToggles();
+            }
+
+            // Phase 2-E.2: 該当箇所の '他N件を表示' トグル
+            attachLocationToggles() {
+                document.querySelectorAll('.loc-toggle-more').forEach(btn => {
+                    if (btn.dataset.bound === '1') return;
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const targetId = btn.dataset.locTarget;
+                        const ul = document.getElementById(targetId);
+                        if (!ul) return;
+                        const isHidden = ul.hasAttribute('hidden');
+                        if (isHidden) {
+                            ul.removeAttribute('hidden');
+                            btn.textContent = '閉じる';
+                        } else {
+                            ul.setAttribute('hidden', '');
+                            const count = ul.querySelectorAll('li').length;
+                            btn.textContent = '他 ' + count + ' 件を表示';
+                        }
+                    });
+                });
             }
 
             // Phase 2-E: 推奨アクションの category から「現在の値」を抽出する
@@ -1883,6 +2023,145 @@
                 // リンクテキスト / alt属性 は recommend 中の count 件あるので個別値は取れない
                 // detailedAnalysis から取得できれば良いが、現状は空でOK (LLM が文脈から推測する)
                 return '';
+            }
+
+            // Phase 2-E.2: 推奨アクションの該当箇所を detailedAnalysis から抽出する
+            // 戻り値: [{ label: string, hint?: string, key: string }, ...]
+            _extractLocations(rec, results) {
+                if (!rec || !results) return [];
+                const da = results.detailedAnalysis;
+                if (!da) return [];
+                const cat = rec.category;
+                const issue = rec.issue || rec.fix || '';
+
+                // 画像 alt 関連
+                if (cat === 'imageAltAttributes' && da.imageAltAttributes && da.imageAltAttributes.specificIssues) {
+                    // issue 文言から該当する specificIssue を選ぶ
+                    let targetType = null;
+                    if (/alt属性がありません|alt属性なし|alt 属性がない/i.test(issue)) targetType = 'missing_alt';
+                    else if (/alt属性が空|空のalt/i.test(issue)) targetType = 'empty_alt';
+                    else if (/alt属性が長すぎ|alt_length/i.test(issue)) targetType = 'alt_length';
+                    else if (/不要な単語|alt_quality/i.test(issue)) targetType = 'alt_quality';
+                    else if (/画像が存在しません/i.test(issue)) return []; // 該当画像なし
+
+                    const matches = da.imageAltAttributes.specificIssues.filter(s =>
+                        !targetType || s.type === targetType
+                    );
+                    const locations = [];
+                    for (const m of matches) {
+                        // images が単数 (src,position,current 直書き) と複数 (images[]) の2パターン
+                        if (Array.isArray(m.images)) {
+                            for (const img of m.images) {
+                                locations.push({
+                                    key: 'img:' + (img.src || '') + ':' + (img.position || ''),
+                                    label: this._truncate(img.src || '(URL不明)', 80),
+                                    hint: img.position ? '画像 ' + img.position + '番目' : null,
+                                    type: 'image',
+                                });
+                            }
+                        } else if (m.src) {
+                            locations.push({
+                                key: 'img:' + m.src + ':' + (m.position || ''),
+                                label: this._truncate(m.src, 80),
+                                hint: m.position ? '画像 ' + m.position + '番目' : null,
+                                type: 'image',
+                                currentAlt: m.current,
+                            });
+                        }
+                    }
+                    return this._dedupeLocations(locations);
+                }
+
+                // リンクテキスト関連
+                if (cat === 'internalLinkStructure' && da.internalLinkStructure && da.internalLinkStructure.specificIssues) {
+                    let targetType = null;
+                    if (/リンクテキストが空|empty_text/i.test(issue)) targetType = 'empty_text';
+                    else if (/汎用|generic_text/i.test(issue)) targetType = 'generic_text';
+                    else if (/内部リンクが少な/i.test(issue)) return []; // 件数問題
+                    else if (/外部リンクが存在しません/i.test(issue)) return [];
+
+                    const matches = da.internalLinkStructure.specificIssues.filter(s =>
+                        !targetType || s.type === targetType
+                    );
+                    const locations = [];
+                    for (const m of matches) {
+                        if (Array.isArray(m.links)) {
+                            for (const lnk of m.links) {
+                                locations.push({
+                                    key: 'link:' + (lnk.href || '') + ':' + (lnk.position || ''),
+                                    label: this._truncate(lnk.href || '(URL不明)', 80),
+                                    hint: lnk.position ? 'リンク ' + lnk.position + '番目' : null,
+                                    type: 'link',
+                                    currentText: lnk.text,
+                                });
+                            }
+                        }
+                    }
+                    return this._dedupeLocations(locations);
+                }
+
+                // 見出し関連
+                if (cat === 'headingStructure' && da.headingStructure && da.headingStructure.specificIssues) {
+                    const locations = [];
+                    for (const s of da.headingStructure.specificIssues) {
+                        // 空見出し, 重複見出し等で headingText / heading が含まれることがある
+                        const txt = s.current || s.heading || s.headingText;
+                        if (txt) {
+                            locations.push({
+                                key: 'heading:' + txt + ':' + (s.position || ''),
+                                label: this._truncate(txt, 80),
+                                hint: s.element ? s.element.toUpperCase() : null,
+                                type: 'heading',
+                            });
+                        }
+                    }
+                    return this._dedupeLocations(locations);
+                }
+
+                // タイトル / メタディスクリプション (現在値を1件として表示)
+                if (cat === 'titleTag' && da.titleTag && da.titleTag.specificIssues) {
+                    const s = da.titleTag.specificIssues.find(x => x.current);
+                    if (s && s.current) {
+                        return [{
+                            key: 'title:' + s.current,
+                            label: this._truncate(s.current, 100),
+                            hint: '現在のタイトル' + (s.length ? ' (' + s.length + '全角文字)' : ''),
+                            type: 'title',
+                        }];
+                    }
+                }
+                if (cat === 'metaDescription' && da.metaDescription && da.metaDescription.specificIssues) {
+                    const s = da.metaDescription.specificIssues.find(x => x.current);
+                    if (s && s.current) {
+                        return [{
+                            key: 'meta:' + s.current,
+                            label: this._truncate(s.current, 120),
+                            hint: '現在のメタディスクリプション' + (s.length ? ' (' + s.length + '全角文字)' : ''),
+                            type: 'meta',
+                        }];
+                    }
+                }
+
+                return [];
+            }
+
+            // Phase 2-E.2: 重複除去 (key で一意化)
+            _dedupeLocations(locations) {
+                const seen = new Set();
+                const out = [];
+                for (const loc of locations) {
+                    if (seen.has(loc.key)) continue;
+                    seen.add(loc.key);
+                    out.push(loc);
+                }
+                return out;
+            }
+
+            // Phase 2-E.2: 文字列短縮
+            _truncate(s, max) {
+                if (!s) return '';
+                if (s.length <= max) return s;
+                return s.slice(0, max - 1) + '…';
             }
 
             // Phase 2-E: AI 書き換え提案ボタンのイベントバインド
