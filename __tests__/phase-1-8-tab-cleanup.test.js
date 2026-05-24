@@ -52,11 +52,12 @@ describe('Phase 1.8: 削除されたタブ UI が public/index.html から消え
     expect(html).not.toMatch(/this\.generateReport\(\);/);
   });
 
-  test('4タブが残っている: サマリー / SEO詳細 / AIO詳細 / 構造化データ', () => {
+  test('3タブが残っている: サマリー / 詳細データ / 構造化データ (Phase 2-I で SEO詳細・AIO詳細を統合)', () => {
     expect(html).toMatch(/data-tab="summary"/);
     expect(html).toMatch(/data-tab="details"/);
-    expect(html).toMatch(/data-tab="aio"/);
     expect(html).toMatch(/data-tab="structured-data"/);
+    // Phase 2-I: AIO 専用タブは詳細データに統合され削除
+    expect(html).not.toMatch(/data-tab="aio"/);
   });
 });
 
