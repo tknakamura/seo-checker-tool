@@ -1,5 +1,61 @@
 # Changelog
 
+## [2.9.0] - 2026-05-24 — feat: favicon 一式を追加 (聴診器モチーフ + Claw 青)
+
+中村さんのご要望「faviconが無いのは寂しいですね」への対応。
+
+### 🎨 デザイン
+- **モチーフ**: 聴診器 (stethoscope) — "Doctor" のネーミングに合わせる
+- **配色**: 角丸正方形の Claw 青背景 (`#2563eb`) + 白の聴診器 + 青のチェックマーク
+- **意味付け**: 「診断 OK」のメタファー (チェックマークが聴診器のチェストピース内に配置)
+- 小サイズ (16x16) でも認識性が高いシンプルな線画
+
+### 🆕 生成したアセット (`public/` 直下)
+| ファイル | サイズ | 用途 |
+|---|---|---|
+| `favicon.svg` | スケーラブル | モダンブラウザの優先指定 |
+| `favicon.ico` | 16+32+48 マルチサイズ | レガシーブラウザ |
+| `favicon-16x16.png` | 16x16 | 標準小 |
+| `favicon-32x32.png` | 32x32 | 標準 |
+| `favicon-48x48.png` | 48x48 | ICO 用 |
+| `apple-touch-icon.png` | 180x180 | iOS ホーム画面 |
+| `android-chrome-192x192.png` | 192x192 | Android |
+| `android-chrome-512x512.png` | 512x512 | 大サイズ・PWA |
+| `site.webmanifest` | PWA manifest | PWA 対応 (theme: #2563eb) |
+
+### 🆕 生成スクリプト
+- `scripts/generate-favicons.js` 新規追加
+- `public/favicon.svg` をマスターとして、puppeteer で各サイズの PNG を生成
+- ICO は 16/32/48 のマルチサイズで手書きバイナリ生成 (外部依存追加なし)
+- 将来デザイン変更時は `npm install puppeteer` 後にスクリプト実行で全サイズ再生成可能
+
+### 🔧 `public/index.html` の `<head>` に追加
+```html
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#2563eb">
+```
+
+### ✅ 動作確認
+ローカル起動 + ブラウザで全アセット 200 OK 確認:
+- `/favicon.ico` → 200
+- `/favicon.svg` → 200
+- `/apple-touch-icon.png` → 200
+- `/site.webmanifest` → 200 (theme_color: #2563eb)
+- SVG を直接表示してデザインを目視確認
+
+### 📦 Breaking Changes
+なし。追加のみ。
+
+### 📦 version bump
+`2.8.1` → `2.9.0` (minor: 新機能、影響範囲なし)
+
+---
+
 ## [2.8.1] - 2026-05-24 — fix(phase-2d.1): typo 修正 `LogoImageObject` → `ImageObject`
 
 PR #17 (Phase 2-D) レビューで cursor から指摘された typo を即修正。

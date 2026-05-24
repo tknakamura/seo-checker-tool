@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SEO AIO Doctor">
+  <!-- 背景: Claw 青の角丸正方形 -->
+  <rect width="64" height="64" rx="12" fill="#2563eb"/>
+
+  <!-- 聴診器のチューブ (Y字、耳パッド付き) -->
+  <!-- 左の耳パッド -->
+  <circle cx="20" cy="14" r="3" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+  <!-- 右の耳パッド -->
+  <circle cx="44" cy="14" r="3" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+  <!-- Y字のチューブ -->
+  <path d="M 20 17 Q 20 26, 32 30 Q 44 26, 44 17"
+        fill="none" stroke="#ffffff" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- ヘッドへの接続管 -->
+  <path d="M 32 30 L 32 36"
+        fill="none" stroke="#ffffff" stroke-width="2.5"
+        stroke-linecap="round"/>
+
+  <!-- 聴診器のヘッド (チェストピース) -->
+  <circle cx="32" cy="46" r="11" fill="#ffffff" stroke="#ffffff" stroke-width="2"/>
+
+  <!-- ヘッドの中にチェックマーク (診断OK = SEO/AIO チェック) -->
+  <path d="M 27 46 L 31 50 L 38 42"
+        fill="none" stroke="#2563eb" stroke-width="3"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
