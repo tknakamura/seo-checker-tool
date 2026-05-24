@@ -1,5 +1,98 @@
 # Changelog
 
+## [2.4.0] - 2026-05-24 — Phase 1.6: AIO スコア関数の区分線形化
+
+Phase 1.5 で SEO 側を区分線形化したのに続き、AIO 側 6カテゴリのスコア関数も同様に対応。
+SEO + AIO 両方が滑らかなスコアになり、診断結果がより実態に即した評価になります。
+
+### 🎯 解決した課題
+
+#### 旧仕様の問題
+- 各カテゴリの加点が **閾値ベースの「あるかないか」** だった
+- 例: `calculateCredibilityScore` は5項目それぞれ「>0 で +20点」だけ
+  - author 1個も 100個も同じ 20点
+  - 引用 1個も 50個も同じ 20点
+- 例: `calculateAISearchScore` は「`questionPatterns > 0` で +25点」「`numericData >= 3` で +25点」
+  - 1個と100個の違いが反映されない
+  - 数値データが2個と3個で 0点 vs 25点という不連続なジャンプ
+- 例: `calculateNaturalLanguageScore` は閾値超えの瞬間に -20 ペナルティ
+  - 文長 49字 と 51字 で 100点 vs 80点の急変
+- 例: `calculateComprehensivenessScore` は `wordCount >= 300 && wordCount <= 3000` で +30
+  - 299語と 300語で 0 vs 30点
+  - 3000語と 3001語で 30 vs 0点
+
+### ✨ 実装
+
+#### 🆕 `piecewiseLinearScore` ヘルパーを `aio-checker.js` にも追加
+- SEOChecker と同じ仕様の汎用ヘルパー
+- 重複を許容（独立クラスのため）
+
+#### 🔄 `calculateComprehensivenessScore` (区分線形)
+- wordCount: 35点満点 (旧30)
+  - 100語=8, 300語=22, 500語=30, 800-2000語=35 (理想), 3000語=28, 5000語=20
+- paragraphCount: 25点満点 (旧20)
+  - 1=5, 2=12, 3=20, 5以上=25
+- listCount: 15点満点 (旧20)
+  - 1=10, 3以上=15
+- ratio (見出し当たり語数): 25点満点 (旧30)
+  - 50=10, 100=18, 200-400=25 (理想), 600=20, 1000=15
+
+#### 🔄 `calculateStructuredInfoScore` (区分線形)
+- jsonLd: 0=0, 1=28, 2=35, 3+=40
+- faqElements: 0=0, 1=18, 3=26, 5+=30
+- definitionLists: 0=0, 1=18, 3=26, 5+=30
+
+#### 🔄 `calculateCredibilityScore` (区分線形)
+- author/date/contact: 0=0, 1+=20 (ある/ないが本質、そのまま)
+- citations: 1=10, 3=16, 5+=20 (多いほど信頼性高)
+- highAuthorityLinks: 1=10, 3=16, 5+=20
+
+#### 🔄 `calculateAISearchScore` (区分線形)
+- questionPatterns: 1=15, 3=22, 5+=25
+- hasComparison: false=0, true=25 (boolean)
+- stepPatterns: 1=15, 3=22, 5+=25
+- numericDataCount: 1=10, 3=20, 5+=25
+
+#### 🔄 `calculateNaturalLanguageScore` (区分線形ペナルティ)
+- 文長ペナルティ: 30字以下=0, 50字=-15, 80字以上=-25
+- 専門用語ペナルティ: 5個以下=0, 10個=-10, 20個以上=-25
+- 受動態ペナルティ: 2個以下=0, 5個=-10, 10個以上=-25
+- 接続詞ペナルティ: 5個以上=0, 3個=-10, 0個=-25
+
+#### 🔄 `calculateContextRelevanceScore` (区分線形)
+- urlRelevance: 0=0, 0.2=15, 0.5=30, 0.7+=40
+- relevantInternalLinks: 1=15, 3=25, 5+=30
+- categories: 1=20, 3+=30
+
+### 🧪 テスト
+- `__tests__/phase-1-6-aio-calibration.test.js` 新規 (39項目)
+  - piecewiseLinearScore ヘルパー検証
+  - 6カテゴリ全部の区分線形化検証
+  - 「0/50/100の3段階から脱却している」検証
+  - 既存挙動 regression テスト (checkAIO 7カテゴリ返却、スコア型/範囲)
+- 全テスト **313/313 PASS** (regression なし)
+
+### ✅ 実機検証
+
+| サイト | AIO カテゴリ | 旧 | 新 |
+|---|---|---|---|
+| carenet.com | contentComprehensiveness | 60点付近 | **92** |
+| carenet.com | credibilitySignals | 20-40点 | **13** (細かく評価) |
+| carenet.com | naturalLanguageQuality | 100-20点 | **25** |
+| llmstxt.org | contentComprehensiveness | 100点 | **94** |
+| llmstxt.org | credibilitySignals | 40-60点 | **40** |
+
+カテゴリスコアが 0/25/50/75/100 などの離散値から **0/13/20/25/40/69/92/94/95** のような実態を反映した連続値に。
+
+### 📦 Breaking Changes
+なし。ただし**過去診断スコアと数点〜数十点の差が出る可能性**あり。
+Phase 1.5 同様、これは「より正確な評価」になった結果。
+
+### 📦 version bump
+`2.3.2` → `2.4.0` (minor: スコアリングロジック大幅改善)
+
+---
+
 ## [2.3.2] - 2026-05-24 — chore: Render プランを Standard (2GB) に IaC 化
 
 ### 🔧 Render プラン昇格: starter → standard
