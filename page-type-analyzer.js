@@ -18,7 +18,8 @@ class PageTypeAnalyzer {
     this.patterns = {
       Article: {
         keywords: ['記事', 'ブログ', 'ニュース', '投稿', 'コラム', 'レポート', '解説'],
-        urlPatterns: ['/blog/', '/news/', '/article/', '/post/', '/column/'],
+        // Phase 2-H: 複数形 (/articles/, /columns/, /posts/) や /case/, /case-study/ も網羅
+        urlPatterns: ['/blog/', '/news/', '/article/', '/articles/', '/post/', '/posts/', '/column/', '/columns/', '/case/', '/case-study/', '/insights/', '/story/', '/stories/'],
         titlePatterns: ['～について', '～とは', '～を解説', '～のまとめ'],
         contentPatterns: ['公開日', '更新日', '執筆者', '著者', 'シェア', 'いいね']
       },
@@ -79,11 +80,12 @@ class PageTypeAnalyzer {
     };
 
     // 重み付け設定
+    // Phase 2-H: URL パターンは強いシグナルなので大幅に重視 (例 /column/ → 記事ページ確定的)
     this.weights = {
       title: 3.0,
       meta: 2.5,
       headings: 2.0,
-      url: 2.0,
+      url: 5.0,         // 2.0 → 5.0: URL は構造化された強いシグナル
       content: 1.0
     };
   }
@@ -187,6 +189,24 @@ class PageTypeAnalyzer {
     try {
       const pageData = this.extractPageData($, url);
       const typeScores = this.calculateTypeScores(pageData);
+
+      // Phase 2-H: URL パターンが特定タイプにマッチしている場合、そのタイプを優先する
+      // 例: /column/, /blog/ → Article に強いシグナル (URL は人間が意図して設計したシグナル)
+      //     /product/, /item/ → Product に強いシグナル
+      // 他タイプの誤検知 (本文キーワード一致だけで Product 等になる) を防ぐ
+      const urlMatchedTypes = this._getUrlMatchedTypes(pageData.url);
+      if (urlMatchedTypes.length > 0) {
+        // URL マッチタイプにはボーナス +10、それ以外は 50% 減衰
+        // ボーナスは weights.url (5.0) × 2 = 10 で、本文キーワード10個分に相当
+        Object.keys(typeScores).forEach(type => {
+          if (urlMatchedTypes.includes(type)) {
+            typeScores[type] = (typeScores[type] || 0) + 10;
+          } else {
+            typeScores[type] = (typeScores[type] || 0) * 0.5;
+          }
+        });
+      }
+
       const detectedTypes = this.getTopTypes(typeScores);
 
       // Phase 1.7: confidence を 0-1 に正規化（旧実装は生スコアで * 100 すると 800% 等になっていた）
@@ -282,6 +302,28 @@ class PageTypeAnalyzer {
     this.applySpecialElementBonus(scores, pageData.specialElements);
 
     return scores;
+  }
+
+  /**
+   * Phase 2-H: URL パターンがマッチしたページタイプを返す
+   * @param {string} url - ページURL
+   * @returns {string[]} マッチしたタイプ名の配列 (例: ['Article'])
+   * @private
+   */
+  _getUrlMatchedTypes(url) {
+    if (!url) return [];
+    const matched = [];
+    Object.entries(this.patterns).forEach(([type, pattern]) => {
+      if (Array.isArray(pattern.urlPatterns)) {
+        for (const p of pattern.urlPatterns) {
+          if (url.toLowerCase().includes(p.toLowerCase())) {
+            matched.push(type);
+            break;
+          }
+        }
+      }
+    });
+    return matched;
   }
 
   /**
