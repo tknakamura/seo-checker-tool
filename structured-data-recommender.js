@@ -74,7 +74,7 @@ class StructuredDataRecommender {
       Organization: {
         primary: ['Organization'],
         secondary: ['ContactPoint', 'PostalAddress'],
-        optional: ['BreadcrumbList', 'Person', 'LogoImageObject']
+        optional: ['BreadcrumbList', 'Person', 'ImageObject']
       },
       // 新規: 人物プロフィールページ
       Person: {

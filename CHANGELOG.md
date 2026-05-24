@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.8.1] - 2026-05-24 — fix(phase-2d.1): typo 修正 `LogoImageObject` → `ImageObject`
+
+PR #17 (Phase 2-D) レビューで cursor から指摘された typo を即修正。
+
+### 🔧 修正内容
+`structured-data-recommender.js` L77:
+- 旧: `Organization.optional = ['BreadcrumbList', 'Person', 'LogoImageObject']`
+- 新: `Organization.optional = ['BreadcrumbList', 'Person', 'ImageObject']`
+- 理由: `LogoImageObject` は schema.org に**存在しない**。正しくは `ImageObject` (ロゴはこの型で表現する)
+
+### 🧪 regression 防止テスト追加
+`__tests__/phase-2d-llm-schemas.test.js` に検証ケースを1つ追加:
+- `recommendations` 全エントリに `LogoImageObject` / `BreadcrumbListItem` / `NewsArticleObject` などの既知 typo パターンが含まれていないこと
+
+### 📦 影響
+LLM が `Organization` を主タイプとして判定したケースで、UI に「LogoImageObject」という存在しないスキーマが推奨されていた。実害は **schema.org の Validator で警告が出る程度** だが品質問題。
+
+### 📦 version bump
+`2.8.0` → `2.8.1` (patch: typo fix)
+
+---
+
 ## [2.8.0] - 2026-05-24 — Phase 2-D: LLM が「推奨スキーマ」も判定 + ルールベース新タイプ拡張
 
 中村さんからの実運用フィードバック「**必要なスキーマ (3件) が実際に適正な判断になっているか怪しい**」への対応。Phase 2-C で LLM がページタイプを正しく判定するようになったが、その下流の **構造化データ推奨** が旧10タイプ前提のままで、LLM の新タイプ判定に追従していなかった問題を解消する。

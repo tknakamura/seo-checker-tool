@@ -307,6 +307,25 @@ describe('Phase 2-D: StructuredDataRecommender — ルールベース拡張 (新
     // ただし FAQPage は Question/Answer も含むためゆるく検証
     expect(allSchemas).toEqual(expect.arrayContaining([type]));
   });
+
+  // Phase 2-D.1: typo regression 防止
+  // 旧: Organization.optional に 'LogoImageObject' (schema.org に存在しない) があった
+  test('schema.org に存在しない typo スキーマが含まれていない (regression防止)', () => {
+    const recommender2 = new StructuredDataRecommender();
+    // 既知の typo パターン: 'LogoImageObject', 'BreadcrumbListItem', 'NewsArticleObject' 等
+    const KNOWN_TYPOS = ['LogoImageObject', 'BreadcrumbListItem', 'NewsArticleObject'];
+    for (const type of Object.keys(recommender2.recommendations)) {
+      const r = recommender2.recommendations[type];
+      const allListed = [
+        ...(r.primary || []),
+        ...(r.secondary || []),
+        ...(r.optional || []),
+      ];
+      for (const typo of KNOWN_TYPOS) {
+        expect(allListed).not.toContain(typo);
+      }
+    }
+  });
 });
 
 describe('Phase 2-D: 後方互換性', () => {
