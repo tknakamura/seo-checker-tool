@@ -1,5 +1,149 @@
 # Changelog
 
+## [2.15.0] - 2026-05-25 — Phase 2-I: タブ構成再編 (サマリーは抜粋 / 詳細データは全件)
+
+中村さんからの指摘:
+> サマリータブの内容は完璧だと思います。構造化データもOKです。
+> ただし、SEO詳細・AIO詳細が、サマリータブの内容を反映していない部分も出ているようです。
+> どうするのが良いでしょうか？もしかして、SEO詳細・AIO詳細は不要？
+>
+> 案Cは、サマリーが、まさにサマリーらしくなるのでは？
+
+→ **案 C-1 + D-1 + タブ案 X** で確定:
+- サマリーは Critical + High のみ抜粋 (本当の意味の「サマリー」に)
+- 詳細データは SEO + AIO 統合の全件ビュー
+- 構造化データは現状維持 (実装ガイドとして既に完成)
+
+### 🎯 解決した課題
+
+旧 (v2.14.0):
+- サマリーに 30 件の推奨が全部並ぶ → 情報過多気味
+- SEO詳細・AIO詳細タブが Phase 1 初期のまま陳腐化
+- 「同じ情報の劣化版が並んでいる」状態 (中村さんの指摘)
+
+新 (v2.15.0):
+- サマリーは Critical + High のみ (大事なものだけ)
+- 詳細データタブで「全件 + 全該当箇所」を確認可能
+- 役割分担が明確: **サマリー = 要点 / 詳細 = 全データ**
+
+### ✨ 実装内容
+
+#### 1. タブ構成: 4タブ → 3タブ
+
+| 旧 | 新 |
+|---|---|
+| サマリー | サマリー (Critical/High のみ) |
+| SEO詳細 | **詳細データ** (SEO + AIO 統合、全件) |
+| AIO詳細 | (上に統合、削除) |
+| 構造化データ | 構造化データ (現状維持) |
+
+#### 2. サマリータブ
+- `topRecs = conciseRecommendations.filter(r => r.priority === 'critical' || r.priority === 'high')`
+- 見出し: 「今すぐ対応すべき推奨アクション (N件)」
+- Medium/Low が残っている場合: 「他に Medium/Low 優先度の項目が N 件あります → 詳細データタブで確認できます」リンク
+- Critical/High なし & Medium/Low あり: 「✨ Critical / High 優先度の問題はありません」
+- 全件良好: 「🎉 すべての項目が良好です」
+
+#### 3. 詳細データタブ (新規 `displayDetailedData`)
+- **上部オーバービュー**: 優先度別カウントチップ (Critical / High / Medium / Low / 合計)
+- **SEO 詳細セクション**: titleTag / metaDescription / headingStructure / imageAltAttributes / internalLinkStructure / otherSEOElements
+- **AIO 詳細セクション**: contentComprehensiveness / structuredInformation / credibilitySignals / aiSearchOptimization / naturalLanguageQuality / contextRelevance / llmsTxtCompliance
+- 各カテゴリで:
+  - スコア表示
+  - 現在の値 (タイトル/メタなど)
+  - **「推奨アクション N 件を表示 ▼」**トグル → 全優先度の推奨 (issue/codeExample/docLink 含む)
+  - **「該当箇所一覧 (N件)」**: 全件のURL/src一覧 (画像 alt なら全画像、リンクなら全リンク)
+- 推奨アクションは優先度順 (Critical → Low) でソート
+
+#### 4. ヘルパー新設
+- `_renderDetailsCategory(catKey, catName, check, recs, results)`: 1 カテゴリ分の HTML 生成
+- `_collectAllLocations(catKey, check, results)`: カテゴリ内の全該当箇所を集約
+
+### 🎨 CSS 追加
+- `.details-overview`: 上部オーバービュー
+- `.prio-chip.critical/high/medium/low/total`: 優先度別チップ
+- `.details-section-title`: SEO/AIO セクション見出し (青下線)
+- `.details-category`: カテゴリブロック
+- `.details-rec-toggle`: 推奨アクション展開ボタン
+- `.details-rec-item.critical/high/medium/low`: 推奨アクション項目 (左色帯)
+- `.details-locations` / `.details-loc-list`: 該当箇所一覧 (max-height: 300px スクロール対応)
+- `.summary-rest-hint`: サマリーの「他N件は詳細データタブで」ヒント
+- `.summary-all-good`: 良好時の達成感表示
+
+### 🧪 テスト
+
+#### 既存テスト更新
+- `__tests__/phase-1-8-tab-cleanup.test.js`: 「4タブが残っている」→「3タブが残っている (Phase 2-I で SEO詳細・AIO詳細を統合)」
+
+#### 新規テスト
+`__tests__/phase-2i-tab-restructure.test.js` (**17 項目**):
+- 3タブ構成 (サマリー / 詳細データ / 構造化データ)
+- 旧 SEO詳細 / AIO詳細 ラベル削除
+- `<div id="aio">` コンテナ削除
+- `displayDetails` / `displayAIO` 旧メソッド削除
+- `displayDetailedData` 新メソッド定義
+- サマリーフィルタ (`priority === 'critical' || priority === 'high'`)
+- 「今すぐ対応すべき推奨アクション」見出し
+- 「詳細データタブ」リンク
+- 良好時メッセージ
+- `_renderDetailsCategory` / `_collectAllLocations` ヘルパー
+- priority chip CSS 定義
+
+**全テスト 456/456 PASS** (439 + 17 = 456, regression なし)
+
+### ✅ 動作確認
+
+ローカル `carenet.com` 診断:
+- ✅ 3タブ構成: サマリー / 詳細データ / 構造化データ
+- ✅ サマリーに 23件 (Critical+High のみ、元 30件中)
+- ✅ 「他に Medium/Low の項目が 5 件 → 詳細データタブ」リンク表示
+- ✅ 詳細データタブ: Critical 20 / High 3 / Medium 5 / Low 0 / 合計 28
+- ✅ SEO 詳細 (6 カテゴリ) + AIO 詳細 (7 カテゴリ) 全表示
+- ✅ 該当箇所一覧 (内部リンク 22件全件、画像 alt 2件)
+- ✅ 推奨アクション展開トグル動作 OK
+
+### 📦 Breaking Changes
+
+UI 変更:
+- 旧「SEO詳細」「AIO詳細」タブをクリックしていたブックマーク → 「詳細データ」タブに統合
+- 比較モード時の「比較モードでは表示しません」案内は `aioContent` から `detailsContent` のみに変更
+
+データ層は無変更、API レスポンス互換性あり。
+
+### 📦 version bump
+
+`2.14.0` → `2.15.0` (minor: UI 大幅再編)
+
+### 🆕 Phase 2-I.1: SEO/AIO セクション冒頭にスコア表示 (同 PR 内追加)
+
+中村さん追加指摘:
+> SEO詳細の冒頭に、AIO詳細と同様の、スコアのセクションを設けるべきでは？
+
+旧 `displayAIO` には AIO 総合スコア表示があったが、新 `displayDetailedData` への統合時に削除されていた。SEO と AIO で**対称的に**スコアセクションを表示:
+
+- SEO 詳細セクション冒頭: 「**75** / SEO総合スコア」 (results.overallScore)
+- AIO 詳細セクション冒頭: 「**33** / AIO総合スコア」 (results.aio.overallScore)
+- 統一フォーマット: 左端色付き縦線 + 大きい数字 + 控えめなラベル
+- スコア別カラー: good/medium/high/critical
+
+ヘルパー `renderSectionScore(label, score)` で重複なく実装。
+
+#### CSS 追加
+- `.details-section-score`: 共通スタイル
+- `.details-section-score.good/medium/high/critical`: 左縦線色
+- `.details-section-score-num`: 大きい数字 (2.4rem, 色クラス連動)
+- `.details-section-score-label`: 控えめラベル
+
+#### テスト追加 (5 項目)
+- SEO総合スコア / AIO総合スコア ラベルが表示
+- `renderSectionScore` ヘルパーが両セクションで使われる
+- `.details-section-score*` CSS 定義
+- スコアごとの色クラス (good/medium/high/critical)
+
+**全テスト 461/461 PASS** (456 + 5)
+
+---
+
 ## [2.14.0] - 2026-05-24 — Phase 2-H: ページタイプ判定の精度向上 & LLM タイムアウト延長
 
 中村さんから報告された誤判定への対応:

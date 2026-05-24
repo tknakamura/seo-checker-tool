@@ -858,6 +858,285 @@
             line-height: 1.5;
         }
 
+        /* Phase 2-I: サマリーの「他N件は詳細データタブで」ヒント */
+        .summary-rest-hint {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin: 0 0 12px;
+            padding: 8px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .summary-rest-hint a, .summary-all-good a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .summary-rest-hint a:hover, .summary-all-good a:hover {
+            text-decoration: underline;
+        }
+        .summary-all-good {
+            text-align: center;
+            padding: 32px 20px;
+            background: var(--good-bg);
+            border: 1px solid #a7f3d0;
+            border-radius: var(--radius);
+        }
+        .summary-all-good-icon {
+            font-size: 2.5rem;
+            margin: 0 0 8px;
+        }
+        .summary-all-good-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--good);
+            margin: 0 0 6px;
+        }
+        .summary-all-good-sub {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Phase 2-I: 詳細データタブ */
+        .details-overview {
+            margin-bottom: 24px;
+            padding: 16px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .details-overview h2 {
+            margin: 0 0 6px;
+            font-size: 1.15rem;
+        }
+        .details-overview-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin: 0 0 12px;
+        }
+        .details-priority-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .prio-chip {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+        .prio-chip.critical { background: var(--critical-bg); color: var(--critical); border-color: #fecaca; }
+        .prio-chip.high { background: var(--high-bg); color: var(--high); border-color: #fde68a; }
+        .prio-chip.medium { background: var(--medium-bg); color: var(--medium); border-color: #bfdbfe; }
+        .prio-chip.low { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
+        .prio-chip.total { background: var(--bg); color: var(--text); border-color: var(--border-strong); }
+
+        .details-section {
+            margin-bottom: 32px;
+        }
+        .details-section-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid var(--accent);
+        }
+        /* Phase 2-I.1: SEO/AIO セクション冒頭のスコア表示 (両セクション統一) */
+        .details-section-score {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+            margin-bottom: 18px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: var(--radius);
+        }
+        .details-section-score.good { border-left-color: var(--good); }
+        .details-section-score.medium { border-left-color: var(--medium); }
+        .details-section-score.high { border-left-color: var(--high); }
+        .details-section-score.critical { border-left-color: var(--critical); }
+        .details-section-score-num {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+        }
+        .details-section-score.good .details-section-score-num { color: var(--good); }
+        .details-section-score.medium .details-section-score-num { color: var(--medium); }
+        .details-section-score.high .details-section-score-num { color: var(--high); }
+        .details-section-score.critical .details-section-score-num { color: var(--critical); }
+        .details-section-score-label {
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        .details-category {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .details-category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .details-category-header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+        .details-category-score {
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .details-current {
+            margin: 8px 0;
+            font-size: 0.9rem;
+            color: var(--text);
+            padding: 8px 12px;
+            background: var(--surface);
+            border-radius: var(--radius-sm);
+            word-break: break-word;
+        }
+        .details-rec-toggle {
+            display: inline-block;
+            margin: 8px 0;
+            padding: 5px 12px;
+            font-size: 0.85rem;
+            background: var(--bg);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text);
+            font-weight: 500;
+        }
+        .details-rec-toggle:hover {
+            background: var(--surface-2);
+        }
+        .details-rec-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0;
+        }
+        .details-rec-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid transparent;
+            border-radius: var(--radius-sm);
+        }
+        .details-rec-item.critical { border-left-color: var(--critical); }
+        .details-rec-item.high { border-left-color: var(--high); }
+        .details-rec-item.medium { border-left-color: var(--medium); }
+        .details-rec-item.low { border-left-color: var(--text-muted); }
+        .details-rec-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .details-rec-text {
+            font-size: 0.92rem;
+            font-weight: 500;
+        }
+        .details-rec-issue {
+            font-size: 0.83rem;
+            color: var(--text-muted);
+            margin: 4px 0 8px;
+        }
+        .details-rec-code {
+            background: #f8f8f8;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre;
+            color: #1f2937;
+            margin: 6px 0;
+        }
+        .details-rec-doc {
+            display: inline-block;
+            color: var(--accent);
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+            margin-top: 4px;
+        }
+        .details-rec-doc:hover { text-decoration: underline; }
+
+        .details-locations {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .details-locations h4 {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+            margin: 0 0 8px;
+        }
+        .details-loc-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .details-loc-list li {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 5px 0;
+            font-size: 0.84rem;
+            border-bottom: 1px dashed var(--border);
+        }
+        .details-loc-list li:last-child { border-bottom: none; }
+        .details-loc-url {
+            color: var(--accent);
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+            text-decoration: none;
+            flex: 1;
+        }
+        .details-loc-url:hover { text-decoration: underline; }
+        .details-loc-code {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.8rem;
+            flex: 1;
+        }
+        .details-loc-hint {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            padding: 1px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
         .hint {
             font-size: 0.82rem;
             color: var(--text-muted);
@@ -1622,10 +1901,10 @@
         </div>
 
         <div class="results-container" id="resultsContainer">
+            <!-- Phase 2-I: 3タブ構成 (旧 SEO詳細・AIO詳細を「詳細データ」に統合) -->
             <div class="tabs">
                 <button class="tab active" data-tab="summary">サマリー</button>
-                <button class="tab" data-tab="details">SEO詳細</button>
-                <button class="tab" data-tab="aio">AIO詳細</button>
+                <button class="tab" data-tab="details">詳細データ</button>
                 <button class="tab" data-tab="structured-data">構造化データ</button>
             </div>
 
@@ -1635,10 +1914,6 @@
 
             <div class="tab-content" id="details">
                 <div id="detailsContent"></div>
-            </div>
-
-            <div class="tab-content" id="aio">
-                <div id="aioContent"></div>
             </div>
 
             <div class="tab-content" id="structured-data">
@@ -1906,7 +2181,8 @@
 
                 // 他のタブはシンプルに「比較モードでは表示しません」と注意書き
                 // Phase 1.8: specificContent / detailedContent / reportContent は削除済み
-                ['detailsContent', 'aioContent', 'structuredDataContent'].forEach(id => {
+                // Phase 2-I: aioContent は削除 (詳細データタブに統合)
+                ['detailsContent', 'structuredDataContent'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) {
                         el.innerHTML = '<p class="hint" style="padding:1rem;">比較モードでは「サマリー」タブのみ表示されます。詳細を見たい場合は、比較対象URLを空にして単独で診断してください。</p>';
@@ -1944,16 +2220,12 @@
                 // サマリー表示
                 this.displaySummary(results);
                 
-                // 詳細表示
-                this.displayDetails(results);
-                
-                // AIO詳細表示
-                this.displayAIO(results);
+                // Phase 2-I: 旧 SEO詳細 + AIO詳細を統合した「詳細データ」タブ
+                this.displayDetailedData(results);
                 
                 // 構造化データ詳細表示
                 this.displayStructuredData(results);
                 
-                // Phase 1.8: '具体的な箇所' / '詳細レポート' / 'Markdownレポート' タブは削除済み
                 this.showResults();
             }
 
@@ -1997,11 +2269,23 @@
                     </div>
                 `;
                 
-                // 簡潔な推奨アクションの表示
+                // Phase 2-I: サマリーは Critical + High のみ抜粋
+                // Medium/Low は「詳細データ」タブで全件確認可能
                 if (results.conciseRecommendations && results.conciseRecommendations.length > 0) {
+                    const topRecs = results.conciseRecommendations.filter(r =>
+                        r.priority === 'critical' || r.priority === 'high'
+                    );
+                    const restCount = results.conciseRecommendations.length - topRecs.length;
+                    const headingText = topRecs.length > 0
+                        ? `今すぐ対応すべき推奨アクション (${topRecs.length}件)`
+                        : '推奨アクション';
+                    const restHint = restCount > 0
+                        ? `<p class="summary-rest-hint">他に Medium/Low 優先度の項目が ${restCount} 件あります → <a href="#" class="goto-details-tab">詳細データタブ</a>で確認できます</p>`
+                        : '';
                     html += `
                         <div class="summary-section">
-                            <h2>推奨アクション (${results.conciseRecommendations.length}件)</h2>
+                            <h2>${headingText}</h2>
+                            ${restHint}
                             <div class="recommendations-list">
                     `;
                     
@@ -2036,7 +2320,8 @@
                         ].slice(0, 15),
                     };
 
-                    results.conciseRecommendations.forEach((rec, idx) => {
+                    // Phase 2-I: Critical+High のみ表示 (Medium/Low は詳細データタブで)
+                    topRecs.forEach((rec, idx) => {
                         const priorityClass = this.getPriorityClass(rec.priority);
                         const llmTarget = llmTargetFor(rec);
                         // Phase 2-E: AI 書き換えボタンも展開可能なら hasDetails=true
@@ -2171,6 +2456,21 @@
                         `;
                     });
                     
+                    // Phase 2-I: Critical/High なし = 良好なページの場合、達成感を表示
+                    if (topRecs.length === 0) {
+                        const okMessage = restCount > 0
+                            ? `<div class="summary-all-good">
+                                <p class="summary-all-good-icon">✨</p>
+                                <p class="summary-all-good-title">Critical / High 優先度の問題はありません</p>
+                                <p class="summary-all-good-sub">Medium/Low 優先度の改善候補が ${restCount} 件あります → <a href="#" class="goto-details-tab">詳細データタブ</a>で確認できます</p>
+                            </div>`
+                            : `<div class="summary-all-good">
+                                <p class="summary-all-good-icon">🎉</p>
+                                <p class="summary-all-good-title">すべての項目が良好です</p>
+                                <p class="summary-all-good-sub">SEO / AIO ともに目立った改善点はありません。</p>
+                            </div>`;
+                        html += okMessage;
+                    }
                     html += `
                             </div>
                         </div>
@@ -2185,6 +2485,15 @@
                 this.attachLocationToggles();
                 // Phase 2-G: 該当箇所ごとの個別 AI 書き換えボタン
                 this.attachIndividualLlmHandlers();
+                // Phase 2-I: 「詳細データタブへ」リンク
+                document.querySelectorAll('.goto-details-tab').forEach(a => {
+                    if (a.dataset.bound === '1') return;
+                    a.dataset.bound = '1';
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.switchTab('details');
+                    });
+                });
             }
 
             // Phase 2-G: 該当箇所ごとの個別 AI 書き換えボタンのイベントバインド
@@ -2726,110 +3035,252 @@
                 });
             }
 
-            displayDetails(results) {
+            // Phase 2-I: 旧 displayDetails + displayAIO を統合
+            // 「詳細データ」タブ = 全データ閲覧ビュー
+            //   - SEO カテゴリ + AIO カテゴリ を 1 ページに統合
+            //   - 全推奨アクション (Critical/High/Medium/Low) を表示
+            //   - 全該当箇所一覧 (画像 alt 全リスト、リンク全リスト等)
+            displayDetailedData(results) {
                 const detailsContent = document.getElementById('detailsContent');
-                const categories = [
+
+                const seoCategories = [
                     { key: 'titleTag', name: 'タイトルタグ' },
                     { key: 'metaDescription', name: 'メタディスクリプション' },
-                    { key: 'headingStructure', name: '見出し構造（H1〜H3）' },
-                    { key: 'imageAltAttributes', name: '画像のalt属性' },
+                    { key: 'headingStructure', name: '見出し構造 (H1〜H6)' },
+                    { key: 'imageAltAttributes', name: '画像の alt 属性' },
                     { key: 'internalLinkStructure', name: '内部リンク構造' },
-                    { key: 'structuredData', name: '構造化データ' },
-                    { key: 'otherSEOElements', name: 'その他SEO要素' }
+                    { key: 'otherSEOElements', name: 'その他 SEO 要素' },
                 ];
-
-                let html = '';
-                
-                categories.forEach(category => {
-                    const check = results.checks[category.key];
-                    const scoreClass = this.getScoreClass(check.score);
-                    
-                    html += `
-                        <div class="category">
-                            <h3>${category.name}</h3>
-                            <div class="category-score ${scoreClass}">スコア: ${check.score}/100</div>
-                            
-                            ${check.current !== undefined ? `<p><strong>現在の値:</strong> ${check.current}</p>` : ''}
-                            
-                            ${check.issues && check.issues.length > 0 ? `
-                                <div class="issues-list">
-                                    <h4>改善点 (${check.issues.length}件)</h4>
-                                    <ul>
-                                        ${check.issues.map(issue => `<li>${issue}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                            
-                            ${check.recommendations && check.recommendations.length > 0 ? `
-                                <div class="recommendations-list">
-                                    <h4>推奨アクション (${check.recommendations.length}件)</h4>
-                                    <ul>
-                                        ${check.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                detailsContent.innerHTML = html;
-            }
-
-            displayAIO(results) {
-                if (!results.aio) {
-                    document.getElementById('aioContent').innerHTML = '<p>AIOチェック結果がありません</p>';
-                    return;
-                }
-
-                const aioContent = document.getElementById('aioContent');
                 const aioCategories = [
                     { key: 'contentComprehensiveness', name: 'コンテンツ包括性' },
                     { key: 'structuredInformation', name: '構造化情報' },
                     { key: 'credibilitySignals', name: '信頼性シグナル' },
-                    { key: 'aiSearchOptimization', name: 'AI検索最適化' },
+                    { key: 'aiSearchOptimization', name: 'AI 検索最適化' },
                     { key: 'naturalLanguageQuality', name: '自然言語品質' },
                     { key: 'contextRelevance', name: 'コンテキスト関連性' },
-                    { key: 'llmsTxtCompliance', name: 'llms.txt 対応' }
+                    { key: 'llmsTxtCompliance', name: 'llms.txt 対応' },
                 ];
 
-                let html = `
-                    <div class="score-display" style="margin-bottom: 2rem;">
-                        <div class="score-number">${results.aio.overallScore}</div>
-                        <div class="score-label">AIO総合スコア</div>
+                // 全推奨アクション (Critical + High + Medium + Low すべて)
+                const allRecs = results.conciseRecommendations || [];
+                const recsByCategory = {};
+                allRecs.forEach(rec => {
+                    if (!recsByCategory[rec.category]) recsByCategory[rec.category] = [];
+                    recsByCategory[rec.category].push(rec);
+                });
+
+                let html = '';
+
+                // 上部: スコア+件数のオーバービュー
+                const totalRecs = allRecs.length;
+                const criticalCount = allRecs.filter(r => r.priority === 'critical').length;
+                const highCount = allRecs.filter(r => r.priority === 'high').length;
+                const mediumCount = allRecs.filter(r => r.priority === 'medium').length;
+                const lowCount = allRecs.filter(r => r.priority === 'low').length;
+
+                html += `
+                    <div class="details-overview">
+                        <h2>詳細データビュー</h2>
+                        <p class="details-overview-desc">SEO・AIO 全カテゴリの詳細データと、全件の推奨アクション (優先度問わず) を確認できます。</p>
+                        <div class="details-priority-summary">
+                            <span class="prio-chip critical">Critical: ${criticalCount}</span>
+                            <span class="prio-chip high">High: ${highCount}</span>
+                            <span class="prio-chip medium">Medium: ${mediumCount}</span>
+                            <span class="prio-chip low">Low: ${lowCount}</span>
+                            <span class="prio-chip total">合計: ${totalRecs}</span>
+                        </div>
                     </div>
                 `;
-                
-                aioCategories.forEach(category => {
-                    const check = results.aio.checks[category.key];
-                    const scoreClass = this.getScoreClass(check.score);
-                    
-                    html += `
-                        <div class="category">
-                            <h3>${category.name}</h3>
-                            <div class="category-score ${scoreClass}">スコア: ${check.score}/100</div>
-                            
-                            ${check.issues && check.issues.length > 0 ? `
-                                <div class="issues-list">
-                                    <h4>改善点 (${check.issues.length}件)</h4>
-                                    <ul>
-                                        ${check.issues.map(issue => `<li>${issue}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                            
-                            ${check.recommendations && check.recommendations.length > 0 ? `
-                                <div class="recommendations-list">
-                                    <h4>推奨アクション (${check.recommendations.length}件)</h4>
-                                    <ul>
-                                        ${check.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
+
+                // Phase 2-I.1: セクション冒頭のスコア表示 (SEO/AIO 統一)
+                const renderSectionScore = (label, score) => {
+                    const scoreClass = this.getScoreClass(score || 0);
+                    return `
+                        <div class="details-section-score ${scoreClass}">
+                            <div class="details-section-score-num">${score || 0}</div>
+                            <div class="details-section-score-label">${label}</div>
                         </div>
                     `;
+                };
+
+                // SEO セクション (overallScore はルートに格納)
+                const seoScore = typeof results.overallScore === 'number' ? results.overallScore : 0;
+                html += '<section class="details-section">';
+                html += '<h2 class="details-section-title">SEO 詳細</h2>';
+                html += renderSectionScore('SEO総合スコア', seoScore);
+                seoCategories.forEach(cat => {
+                    html += this._renderDetailsCategory(cat.key, cat.name, results.checks[cat.key], recsByCategory[cat.key] || [], results);
                 });
-                
-                aioContent.innerHTML = html;
+                html += '</section>';
+
+                // AIO セクション (aio.overallScore に格納)
+                if (results.aio) {
+                    const aioScore = typeof results.aio.overallScore === 'number' ? results.aio.overallScore : 0;
+                    html += '<section class="details-section">';
+                    html += '<h2 class="details-section-title">AIO 詳細</h2>';
+                    html += renderSectionScore('AIO総合スコア', aioScore);
+                    aioCategories.forEach(cat => {
+                        html += this._renderDetailsCategory(cat.key, cat.name, results.aio.checks[cat.key], recsByCategory[cat.key] || [], results);
+                    });
+                    html += '</section>';
+                }
+
+                detailsContent.innerHTML = html;
+
+                // Phase 2-I: 詳細タブ内でも該当箇所トグルを動作させる
+                this.attachLocationToggles();
+                // 詳細タブの推奨アクション展開トグル
+                detailsContent.querySelectorAll('.details-rec-toggle').forEach(btn => {
+                    if (btn.dataset.bound === '1') return;
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = btn.dataset.target;
+                        const box = document.getElementById(id);
+                        if (!box) return;
+                        const isHidden = box.hasAttribute('hidden');
+                        if (isHidden) {
+                            box.removeAttribute('hidden');
+                            btn.textContent = '閉じる ▲';
+                        } else {
+                            box.setAttribute('hidden', '');
+                            const c = btn.dataset.count || '';
+                            btn.textContent = c ? `推奨アクション ${c} 件を表示 ▼` : '展開 ▼';
+                        }
+                    });
+                });
+            }
+
+            // Phase 2-I: 1 カテゴリ分の詳細表示を組み立て
+            _renderDetailsCategory(catKey, catName, check, recs, results) {
+                if (!check) return '';
+                const scoreClass = this.getScoreClass(check.score || 0);
+                const currentHtml = check.current !== undefined
+                    ? `<p class="details-current"><strong>現在の値:</strong> ${this.escapeHtml(String(check.current).slice(0, 300))}</p>`
+                    : '';
+
+                // 推奨アクション (全件、優先度の昇順=Critical→Low)
+                const sortedRecs = recs.slice().sort((a, b) => {
+                    const order = { critical: 0, high: 1, medium: 2, low: 3 };
+                    return (order[a.priority] || 9) - (order[b.priority] || 9);
+                });
+                let recsHtml = '';
+                if (sortedRecs.length > 0) {
+                    const toggleId = `details-recs-${catKey}`;
+                    recsHtml = `
+                        <button type="button" class="details-rec-toggle" data-target="${toggleId}" data-count="${sortedRecs.length}">推奨アクション ${sortedRecs.length} 件を表示 ▼</button>
+                        <div id="${toggleId}" hidden>
+                            <ul class="details-rec-list">
+                                ${sortedRecs.map(rec => `
+                                    <li class="details-rec-item ${this.getPriorityClass(rec.priority)}">
+                                        <div class="details-rec-header">
+                                            <span class="priority-badge ${this.getPriorityClass(rec.priority)}">${this.getPriorityTitle(rec.priority)}</span>
+                                            <span class="details-rec-text">${this.escapeHtml(rec.fix)}</span>
+                                        </div>
+                                        ${rec.issue ? `<p class="details-rec-issue">${this.escapeHtml(rec.issue)}</p>` : ''}
+                                        ${rec.codeExample ? `<pre class="details-rec-code"><code>${this.escapeHtml(rec.codeExample)}</code></pre>` : ''}
+                                        ${rec.docLink ? `<a href="${rec.docLink}" target="_blank" rel="noopener noreferrer" class="details-rec-doc">📖 参考ドキュメント →</a>` : ''}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                // 該当箇所一覧 (この詳細タブでは全件展開、フィルタなしのプレーン表示)
+                const locations = this._collectAllLocations(catKey, check, results);
+                let locationsHtml = '';
+                if (locations.length > 0) {
+                    locationsHtml = `
+                        <div class="details-locations">
+                            <h4>該当箇所一覧 (${locations.length}件)</h4>
+                            <ul class="details-loc-list">
+                                ${locations.map(loc => {
+                                    const label = loc.label || '';
+                                    const isAbs = /^https?:\/\//i.test(label);
+                                    const labelHtml = isAbs
+                                        ? `<a href="${this.escapeHtml(label)}" target="_blank" rel="noopener noreferrer" class="details-loc-url">${this.escapeHtml(label)}</a>`
+                                        : `<code class="details-loc-code">${this.escapeHtml(label)}</code>`;
+                                    const hint = loc.hint ? `<span class="details-loc-hint">${this.escapeHtml(loc.hint)}</span>` : '';
+                                    return `<li>${labelHtml}${hint}</li>`;
+                                }).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="details-category">
+                        <div class="details-category-header">
+                            <h3>${catName}</h3>
+                            <span class="details-category-score ${scoreClass}">${check.score || 0}/100</span>
+                        </div>
+                        ${currentHtml}
+                        ${recsHtml}
+                        ${locationsHtml}
+                    </div>
+                `;
+            }
+
+            // Phase 2-I: カテゴリ内のすべての該当箇所を集約 (重複なし)
+            // 既存の _extractLocations はrec単位だが、ここでは「カテゴリ全体」で集約
+            _collectAllLocations(catKey, check, results) {
+                const da = results.detailedAnalysis;
+                if (!da) return [];
+                const collected = [];
+
+                if (catKey === 'imageAltAttributes' && da.imageAltAttributes && da.imageAltAttributes.specificIssues) {
+                    da.imageAltAttributes.specificIssues.forEach(si => {
+                        if (Array.isArray(si.images)) {
+                            si.images.forEach(img => {
+                                collected.push({
+                                    key: 'img:' + (img.src || '') + ':' + (img.position || ''),
+                                    label: img.src || '(URL不明)',
+                                    hint: img.position ? `画像 ${img.position}番目 / ${si.type || ''}` : (si.type || ''),
+                                });
+                            });
+                        } else if (si.src) {
+                            collected.push({
+                                key: 'img:' + si.src + ':' + (si.position || ''),
+                                label: si.src,
+                                hint: si.position ? `画像 ${si.position}番目 / ${si.type || ''}` : (si.type || ''),
+                            });
+                        }
+                    });
+                }
+                if (catKey === 'internalLinkStructure' && da.internalLinkStructure && da.internalLinkStructure.specificIssues) {
+                    da.internalLinkStructure.specificIssues.forEach(si => {
+                        if (Array.isArray(si.links)) {
+                            si.links.forEach(lnk => {
+                                collected.push({
+                                    key: 'link:' + (lnk.href || '') + ':' + (lnk.position || ''),
+                                    label: lnk.href || '(URL不明)',
+                                    hint: lnk.position ? `リンク ${lnk.position}番目 / ${si.type || ''}` : (si.type || ''),
+                                });
+                            });
+                        }
+                    });
+                }
+                if (catKey === 'headingStructure' && da.headingStructure && da.headingStructure.specificIssues) {
+                    da.headingStructure.specificIssues.forEach(si => {
+                        const txt = si.current || si.heading || si.headingText;
+                        if (txt) {
+                            collected.push({
+                                key: 'heading:' + txt + ':' + (si.position || ''),
+                                label: txt,
+                                hint: si.element ? si.element.toUpperCase() : '',
+                            });
+                        }
+                    });
+                }
+
+                // 重複除去
+                const seen = new Set();
+                return collected.filter(loc => {
+                    if (seen.has(loc.key)) return false;
+                    seen.add(loc.key);
+                    return true;
+                });
             }
 
             displayStructuredData(results) {
