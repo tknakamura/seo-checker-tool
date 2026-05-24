@@ -1,9 +1,19 @@
 /**
  * ページタイプ分析エンジン
  * ページコンテンツを分析してそのページにふさわしい構造化データタイプを自動判定
+ *
+ * Phase 2-C: OPENAI_API_KEY が設定されていれば LLM (gpt-4o-mini) で補正する。
+ * 未設定なら既存ルールベース挙動を完全維持。
  */
+const LlmPageTypeCorrector = require('./llm-page-type-corrector');
+
 class PageTypeAnalyzer {
-  constructor() {
+  constructor(options = {}) {
+    // Phase 2-C: LLM 補正器（オプション）
+    // テスト時は options.llmCorrector でモック注入可能
+    this.llmCorrector = options.llmCorrector !== undefined
+      ? options.llmCorrector
+      : new LlmPageTypeCorrector();
     // ページタイプ別のキーワードパターン
     this.patterns = {
       Article: {
@@ -79,17 +89,100 @@ class PageTypeAnalyzer {
   }
 
   /**
-   * ページタイプを分析
+   * ページタイプを分析（同期版、後方互換のため残す）
+   * 新規コードでは analyzePageAsync を使うこと
    * @param {Object} $ - Cheerioオブジェクト
    * @param {string} url - ページURL
    * @returns {Object} 分析結果
    */
   analyzePage($, url) {
+    return this._analyzeRuleBased($, url);
+  }
+
+  /**
+   * ページタイプを分析（async版、LLM補正を含む）
+   * @param {Object} $ - Cheerioオブジェクト
+   * @param {string} url - ページURL
+   * @returns {Promise<Object>} 分析結果（LLM補正があれば反映済み）
+   */
+  async analyzePageAsync($, url) {
+    const ruleBasedResult = this._analyzeRuleBased($, url);
+    if (!this.llmCorrector || !this.llmCorrector.isEnabled()) {
+      // LLM 無効 → ルールベース結果をそのまま返す（既存挙動と完全互換）
+      return ruleBasedResult;
+    }
+
+    // LLM 補正
+    try {
+      const correction = await this.llmCorrector.correct({
+        url,
+        title: ruleBasedResult.analysisDetails && ruleBasedResult.analysisDetails.pageData && ruleBasedResult.analysisDetails.pageData.title,
+        metaDescription: ruleBasedResult.analysisDetails && ruleBasedResult.analysisDetails.pageData && ruleBasedResult.analysisDetails.pageData.metaDescription,
+        headings: ruleBasedResult.analysisDetails && ruleBasedResult.analysisDetails.pageData && ruleBasedResult.analysisDetails.pageData.headings,
+        bodyText: ruleBasedResult.analysisDetails && ruleBasedResult.analysisDetails.pageData && ruleBasedResult.analysisDetails.pageData.bodyText,
+        ruleBased: {
+          primaryType: ruleBasedResult.primaryType,
+          confidence: ruleBasedResult.confidence,
+        },
+      });
+
+      if (!correction || correction.error) {
+        // LLM 失敗 → ルールベースにフォールバック、warnings に記録
+        return {
+          ...ruleBasedResult,
+          llmCorrection: {
+            applied: false,
+            error: correction ? correction.errorCode : 'LLM_DISABLED',
+            errorMessage: correction ? correction.errorMessage : null,
+          },
+        };
+      }
+
+      // LLM 結果を採用、ルールベース結果は比較情報として保持
+      return {
+        primaryType: correction.primaryType,
+        secondaryTypes: correction.secondaryTypes,
+        confidence: correction.confidence,
+        rawScore: ruleBasedResult.rawScore,
+        allScores: ruleBasedResult.allScores,
+        analysisDetails: {
+          ...ruleBasedResult.analysisDetails,
+          reasoning: correction.reasoning,
+          matchedSignals: correction.matchedSignals,
+        },
+        llmCorrection: {
+          applied: true,
+          source: correction.source,
+          model: correction.model,
+          latencyMs: correction.latencyMs,
+          ruleBasedPrimaryType: ruleBasedResult.primaryType,
+          ruleBasedConfidence: ruleBasedResult.confidence,
+        },
+      };
+    } catch (err) {
+      // 予期せぬ例外 → ルールベース結果にフォールバック
+      console.warn('LLM補正で例外:', err && err.message);
+      return {
+        ...ruleBasedResult,
+        llmCorrection: {
+          applied: false,
+          error: 'LLM_EXCEPTION',
+          errorMessage: err && err.message,
+        },
+      };
+    }
+  }
+
+  /**
+   * ルールベース判定の本体（_analyze関数として切り出し）
+   * @private
+   */
+  _analyzeRuleBased($, url) {
     try {
       const pageData = this.extractPageData($, url);
       const typeScores = this.calculateTypeScores(pageData);
       const detectedTypes = this.getTopTypes(typeScores);
-      
+
       // Phase 1.7: confidence を 0-1 に正規化（旧実装は生スコアで * 100 すると 800% 等になっていた）
       const topScore = typeScores[detectedTypes[0]] || 0;
       // 全タイプスコアの合計を分母にして 0-1 に正規化

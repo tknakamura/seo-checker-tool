@@ -84,21 +84,23 @@ class DetailedAnalyzer {
    * @param {string} url - チェック対象URL
    * @returns {Object} 詳細分析結果
    */
-  analyzeDetails($, url) {
+  // Phase 2-C: LLM 補正のため async 化
+  async analyzeDetails($, url) {
     const pageData = {
       title: $('title').text().trim(),
       metaDescription: $('meta[name="description"]').attr('content') || '',
       bodyText: $('body').text().trim(),
       url: url || ''
     };
-    
+
     const analysis = {
       titleTag: this.analyzeTitleTag($),
       metaDescription: this.analyzeMetaDescription($),
       headingStructure: this.analyzeHeadingStructure($),
       imageAltAttributes: this.analyzeImageAltAttributes($),
       internalLinkStructure: this.analyzeInternalLinkStructure($, url),
-      structuredData: this.analyzeStructuredData($, url, pageData),
+      // Phase 2-C: LLM 補正含む
+      structuredData: await this.analyzeStructuredData($, url, pageData),
       otherSEOElements: this.analyzeOtherSEOElements($, url)
     };
 
@@ -675,8 +677,9 @@ class DetailedAnalyzer {
 
   /**
    * 構造化データの詳細分析（拡張版）
+   * Phase 2-C: LLM 補正のため async 化
    */
-  analyzeStructuredData($, url = '', pageData = {}) {
+  async analyzeStructuredData($, url = '', pageData = {}) {
     const jsonLd = [];
     const microdata = [];
     const rdfa = [];
@@ -698,8 +701,8 @@ class DetailedAnalyzer {
       const recommender = new StructuredDataRecommender();
       const templates = new SchemaTemplates();
 
-      // ページタイプ分析を実行
-      pageTypeAnalysis = pageTypeAnalyzer.analyzePage($, url);
+      // ページタイプ分析を実行（Phase 2-C: LLM 補正対応）
+      pageTypeAnalysis = await pageTypeAnalyzer.analyzePageAsync($, url);
       
       // JSON-LD検索
       $('script[type="application/ld+json"]').each((i, elem) => {

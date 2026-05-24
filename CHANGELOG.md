@@ -1,5 +1,85 @@
 # Changelog
 
+## [2.7.0] - 2026-05-24 — Phase 2-C: LLM ページタイプ補正 (OpenAI gpt-4o-mini)
+
+中村さんからの実運用フィードバック: `ads.mercari.com` が `LocalBusiness` と誤判定される件を解消。
+ルールベース判定だけでは捉えきれない「BtoB サービス LP」「ブランドサイト」「広告掲載案内」などの**意味的なページタイプ判定**を、OpenAI GPT-4o-mini で補正できるようになりました。
+
+### 🎯 解決した課題
+
+- `ads.mercari.com` のような **BtoB サービス LP** が、本文に含まれる「お問い合わせ」「住所」「営業時間」のキーワードに引きずられて誤って `LocalBusiness` と判定されていた
+- ルールベースの 10 タイプ (Article/Product/LocalBusiness/Recipe/Event/FAQ/HowTo/Review/JobPosting/Course) に分類できないページタイプが多数存在
+  - `Service` / `WebPage` / `AboutPage` / `ContactPage` / `Organization` / `SoftwareApplication` 等
+- 「内容分析による判定」としか説明できず、ユーザーが納得感を持てない
+
+### ✨ 新機能: LLM ページタイプ補正
+
+#### 🆕 `llm-page-type-corrector.js` (新規モジュール)
+- OpenAI Chat Completions API (gpt-4o-mini) を `fetch` で直接呼び出す軽量実装 (依存追加なし)
+- システムプロンプトで schema.org 仕様と判定ルールを教え込み、JSON のみ出力させる
+  - `response_format: { type: 'json_object' }` で構造化レスポンス保証
+  - `temperature: 0` で同入力→同出力を保証
+- 出力フィールド:
+  - `primaryType`: schema.org の主タイプ
+  - `secondaryTypes`: 候補タイプ
+  - `confidence`: 0.0-1.0
+  - `reasoning`: 日本語1-2文の判定根拠
+  - `matchedSignals`: 判定の決め手となったシグナル配列
+
+#### 🛡️ 安全装置 (本番運用前提の設計)
+- **API キー未設定なら完全に既存ルールベース挙動を維持** (`isEnabled()` で判定)
+- **タイムアウト 8秒** で失敗 → ルールベースにフォールバック
+- **HTTP エラー / JSON パース失敗** → ルールベースにフォールバック
+- **メモリ LRU キャッシュ** (100エントリ / 24時間) で連続診断のコスト削減
+- **入力サニタイズ**:
+  - サイズ制限 (title 200字 / meta 400字 / body 1000字 / heading 15個×100字)
+  - 制御文字除去
+  - `system:` / `assistant:` / `developer:` のプロンプトインジェクション無効化
+- **プロセス内キャッシュ** (Render 再起動でリセットされる、許容)
+
+### 🔄 `page-type-analyzer.js` の async 化
+- `analyzePage()` (同期版) は後方互換のため**そのまま残す**
+- `analyzePageAsync()` (新規) で LLM 補正を含む判定
+- 既存呼び出し (`index.js`, `detailed-analyzer.js`) を非同期化
+  - `SEOChecker.checkStructuredData()` も async に
+  - `DetailedAnalyzer.analyzeDetails()` / `analyzeStructuredData()` も async に
+
+### 🎨 UI 拡張 (`public/index.html`)
+- ページタイプ分析カードに:
+  - 🆕 **AI バッジ** (紫グラデーション) で LLM 判定であることを明示
+  - 🆕 **「判定の決め手」** チップで根拠を視覚化
+  - 🆕 **ルールベース判定との並列比較**: AI が上書きした場合に旧判定を脚注表示
+- 既存の Phase 1.7 デザイン体系を踏襲
+
+### 🧪 テスト
+- `__tests__/phase-2c-llm-page-type.test.js` 新規 (22項目)
+  - 基本動作 (isEnabled, correct の null返却)
+  - 正常系 (JSON パース / コードフェンス対応)
+  - エラー処理 (401 / network error / 壊れた JSON / 必須フィールド欠落 / 範囲外 confidence)
+  - LRU キャッシュ (ヒット / サイズ超過時の最古削除)
+  - 入力サニタイズ (長さ制限 / プロンプトインジェクション中和 / 制御文字 / headings 配列)
+  - PageTypeAnalyzer 統合 (LLM成功 / 無効 / 失敗 / 例外スロー)
+  - **後方互換性**: OPENAI_API_KEY 未設定で既存挙動完全一致
+- Phase 1.8 のテストを async 対応に更新 (`await` を許容する正規表現)
+- 全テスト **353/353 PASS** (regression なし)
+
+### 💰 コスト試算
+- gpt-4o-mini: $0.15/1M input tokens, $0.60/1M output tokens
+- 1診断あたり約 1,500 input + 200 output tokens ≒ **$0.0004 (0.06円)**
+- 月1,000診断で約 **60円**、月10,000診断で約 **600円**
+- Render env var `OPENAI_API_KEY` に **ハードリミット $20/月推奨**
+
+### 📦 環境変数
+- `OPENAI_API_KEY`: OpenAI API キー (本番のみで設定、ローカル/CIでは未設定で既存挙動)
+
+### 📦 Breaking Changes
+なし。LLM が有効でも無効でも `pageTypeAnalysis` オブジェクトの主要フィールド (`primaryType`, `confidence`, `secondaryTypes`) は同じ形式。`llmCorrection` は **追加** フィールドで optional。
+
+### 📦 version bump
+`2.6.0` → `2.7.0` (minor: 新機能 + 既存挙動完全互換)
+
+---
+
 ## [2.6.0] - 2026-05-24 — Phase 1.8: 不要タブ削除 (UI シンプル化)
 
 中村さんからの実運用フィードバック: 「具体的な箇所 / 詳細レポート / Markdownレポート の3タブは不要」を反映。タブを **7個 → 4個** に集約し、Claw らしいシンプル設計を徹底。

@@ -520,7 +520,8 @@ class SEOChecker {
           headingStructure: this.checkHeadingStructure($),
           imageAltAttributes: this.checkImageAltAttributes($),
           internalLinkStructure: this.checkInternalLinkStructure($, url || ''),
-          structuredData: this.checkStructuredData($, url || '', {
+          // Phase 2-C: structuredData は async (LLM補正含む) になったため await
+          structuredData: await this.checkStructuredData($, url || '', {
             title: titleTagResult.current,
             metaDescription: metaDescriptionResult.current,
             bodyText: $('body').text().trim(),
@@ -558,7 +559,8 @@ class SEOChecker {
       // Phase 1.8: 「具体的な箇所」タブは廃止したが、内部ロジックは保持。
       // 将来サマリーに統合したい場合や、別エンドポイントから参照したい場合に備える。
       // 不要なクライアントは slim:true パラメータで除外可能。
-      results.detailedAnalysis = this.detailedAnalyzer.analyzeDetails($, url || '');
+      // Phase 2-C: analyzeDetails が async になったため await
+      results.detailedAnalysis = await this.detailedAnalyzer.analyzeDetails($, url || '');
 
       // 詳細レポート生成
       // Phase 1.8: 「詳細レポート」タブは廃止したが、generateDetailedReport の出力 (quickWins,
@@ -1144,7 +1146,8 @@ class SEOChecker {
   /**
    * 構造化データのチェック（拡張版：ページタイプ判定と推奨機能付き）
    */
-  checkStructuredData($, url = '', pageData = {}) {
+  // Phase 2-C: LLM補正のため async 化
+  async checkStructuredData($, url = '', pageData = {}) {
     const jsonLd = [];
     const microdata = [];
     const rdfa = [];
@@ -1182,8 +1185,8 @@ class SEOChecker {
       rdfa: rdfa
     };
 
-    // 新機能：ページタイプ分析
-    const pageTypeAnalysis = this.pageTypeAnalyzer.analyzePage($, url);
+    // 新機能：ページタイプ分析（Phase 2-C: LLM 補正対応）
+    const pageTypeAnalysis = await this.pageTypeAnalyzer.analyzePageAsync($, url);
     
     // 新機能：適切な構造化データの推奨
     const structuredDataRecommendations = this.structuredDataRecommender.generateRecommendations(

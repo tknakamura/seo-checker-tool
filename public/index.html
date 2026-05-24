@@ -585,11 +585,50 @@
             border-radius: 999px;
             font-weight: 500;
         }
+        /* Phase 2-C: AI 判定バッジ */
+        .page-type-ai-badge {
+            font-size: 0.7rem;
+            color: white;
+            background: linear-gradient(135deg, #6d28d9, #4338ca);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+        }
         .page-type-details {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 14px;
         }
+        /* Phase 2-C: 判定の決め手は横幅広めで表示 */
+        .page-type-detail-wide {
+            grid-column: 1 / -1;
+        }
+        .page-type-signals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 2px;
+        }
+        .page-type-signal-chip {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid var(--accent-border);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+        }
+        .page-type-rulebased-note {
+            margin-top: 14px;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--text-subtle);
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .page-type-rulebased-note strong { color: var(--text); }
         .page-type-detail {
             display: flex;
             flex-direction: column;
@@ -1767,13 +1806,26 @@
                     // Phase 1.7: 100超の保険 (page-type-analyzer 側で正規化済みだが旧データに備える)
                     const confidence = Math.min(100, Math.max(0, Math.round((analysis.confidence || 0) * 100)));
                     
-                    // Phase 1.7: シンプル&構造的なヘッダーカード
+                    // Phase 2-C: LLM 補正情報を表示
+                    const llmInfo = structuredDataCheck.pageTypeAnalysis.llmCorrection;
+                    const isLlm = llmInfo && llmInfo.applied === true;
+                    const aiBadge = isLlm
+                        ? '<span class="page-type-ai-badge" title="OpenAI GPT-4o-mini による判定">AI</span>'
+                        : '';
+                    // 判定根拠: LLM があればその reasoning、なければルールベースの根拠
+                    const reasoningText = (analysis.analysisDetails && analysis.analysisDetails.reasoning)
+                        || this.getAnalysisReason(analysis);
+                    // 判定の決め手 (LLM のみ提供)
+                    const matchedSignals = (analysis.analysisDetails && analysis.analysisDetails.matchedSignals) || [];
+
+                    // Phase 1.7 + 2-C: シンプル&構造的なヘッダーカード
                     html += `
                         <div class="page-type-analysis">
                             <div class="page-type-header">
                                 <span class="page-type-label">ページタイプ分析</span>
                                 <h3 class="page-type-judgment">${this.escapeHtml(this.getPageTypeDisplayName(analysis.primaryType))}</h3>
                                 <span class="page-type-confidence-badge" title="判定の信頼度">信頼度 ${confidence}%</span>
+                                ${aiBadge}
                             </div>
                             <div class="page-type-details">
                                 <div class="page-type-detail">
@@ -1788,9 +1840,22 @@
                                 ` : ''}
                                 <div class="page-type-detail">
                                     <span class="page-type-detail-label">分析根拠</span>
-                                    <span class="page-type-detail-value">${this.escapeHtml(this.getAnalysisReason(analysis))}</span>
+                                    <span class="page-type-detail-value">${this.escapeHtml(reasoningText)}</span>
                                 </div>
+                                ${matchedSignals.length > 0 ? `
+                                    <div class="page-type-detail page-type-detail-wide">
+                                        <span class="page-type-detail-label">判定の決め手</span>
+                                        <div class="page-type-signals">
+                                            ${matchedSignals.map(s => `<span class="page-type-signal-chip">${this.escapeHtml(s)}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
                             </div>
+                            ${isLlm && llmInfo.ruleBasedPrimaryType && llmInfo.ruleBasedPrimaryType !== analysis.primaryType ? `
+                                <div class="page-type-rulebased-note">
+                                    ルールベースの判定は <strong>${this.escapeHtml(this.getPageTypeDisplayName(llmInfo.ruleBasedPrimaryType))}</strong> (信頼度 ${Math.round((llmInfo.ruleBasedConfidence || 0) * 100)}%)。AI 判定がこれを上書きしました。
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }
