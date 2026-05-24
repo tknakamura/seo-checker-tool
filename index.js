@@ -2424,6 +2424,41 @@ app.get('/api/version', (req, res) => {
   res.json(getVersionInfo());
 });
 
+// Phase 2-E: LLM コンテンツ書き換え提案エンドポイント
+// 既存の SEO チェック結果から「タイトル/メタディスクリプション/H1/リンクテキスト/alt属性」
+// の改善案を 3 つ提案する。OPENAI_API_KEY 必須。
+const LlmContentRewriter = require('./llm-content-rewriter');
+let _contentRewriter = null;
+function getContentRewriter() {
+  if (!_contentRewriter) _contentRewriter = new LlmContentRewriter();
+  return _contentRewriter;
+}
+
+app.post('/api/llm/suggest', async (req, res) => {
+  try {
+    const rewriter = getContentRewriter();
+    if (!rewriter.isEnabled()) {
+      return sendApiError(res, 503, 'AI 提案機能は利用できません (OPENAI_API_KEY 未設定)', 'LLM_DISABLED');
+    }
+    const { target, currentValue, pageContext } = req.body || {};
+    if (!target) {
+      return sendApiError(res, 400, 'target は必須です', 'MISSING_TARGET');
+    }
+    if (!LlmContentRewriter.SUPPORTED_TARGETS.includes(target)) {
+      return sendApiError(res, 400, `target は ${LlmContentRewriter.SUPPORTED_TARGETS.join('/')} のいずれか`, 'UNSUPPORTED_TARGET');
+    }
+    const result = await rewriter.rewrite({ target, currentValue: currentValue || '', pageContext: pageContext || {} });
+    if (result.error) {
+      const status = result.errorCode === 'LLM_DISABLED' ? 503 : 502;
+      return sendApiError(res, status, result.errorMessage, result.errorCode);
+    }
+    return sendApiSuccess(res, result);
+  } catch (error) {
+    logger.error(`AI 書き換え提案エラー: ${error.message}`);
+    return sendApiError(res, 500, error.message, 'INTERNAL_ERROR');
+  }
+});
+
 // 分析履歴一覧（MONGODB_URI 設定時のみ有効）
 app.get('/api/history', async (req, res) => {
   if (!isDBConnected()) {
