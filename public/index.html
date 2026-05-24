@@ -750,6 +750,114 @@
             color: inherit;
         }
 
+        /* Phase 2-G: 該当箇所ごとの個別 AI 書き換えボタン */
+        .rec-locations .loc-with-llm {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 6px;
+            padding: 8px 0 10px;
+        }
+        .rec-locations .loc-with-llm .loc-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+        .loc-individual-llm {
+            margin-top: 2px;
+        }
+        .loc-llm-btn {
+            background: linear-gradient(135deg, #6d28d9, #4338ca);
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity .15s ease;
+            box-shadow: 0 1px 3px rgba(109, 40, 217, 0.15);
+        }
+        .loc-llm-btn:hover { opacity: 0.92; }
+        .loc-llm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .loc-llm-result {
+            margin-top: 8px;
+        }
+        .loc-llm-result .llm-loading {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-style: italic;
+            padding: 6px 0;
+        }
+        .loc-llm-result .llm-error {
+            color: var(--critical);
+            background: var(--critical-bg);
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            border: 1px solid #fecaca;
+        }
+        .loc-llm-suggestions h6 {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin: 6px 0;
+        }
+        .loc-llm-suggestion {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+            margin-bottom: 6px;
+        }
+        .loc-llm-suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .loc-llm-suggestion-num {
+            font-size: 0.68rem;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+        .loc-llm-suggestion-copy {
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            background: var(--bg);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text);
+            font-weight: 500;
+        }
+        .loc-llm-suggestion-copy:hover { background: var(--surface-2); }
+        .loc-llm-suggestion-copy.copied {
+            background: var(--good-bg);
+            color: var(--good);
+            border-color: #a7f3d0;
+        }
+        .loc-llm-suggestion-text {
+            font-size: 0.88rem;
+            color: var(--text);
+            line-height: 1.5;
+            padding: 6px 8px;
+            background: var(--surface);
+            border-radius: 4px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        .loc-llm-suggestion-reason {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
         .hint {
             font-size: 0.82rem;
             color: var(--text-muted);
@@ -1969,6 +2077,10 @@
                             const SHOW_LIMIT = 5;
                             const visibleItems = locations.slice(0, SHOW_LIMIT);
                             const hiddenItems = locations.slice(SHOW_LIMIT);
+                            // Phase 2-G: link/image タイプは個別 AI 書き換えボタンを設置
+                            const individualLlmTarget = llmTarget && (llmTarget.target === 'linkText' || llmTarget.target === 'altText')
+                                ? llmTarget.target
+                                : null;
                             const renderItem = (loc) => {
                                 const hintHtml = loc.hint ? `<span class="loc-hint">${this.escapeHtml(loc.hint)}</span>` : '';
                                 // URL は新タブで開けるリンクに、それ以外はテキスト
@@ -1979,6 +2091,24 @@
                                     labelHtml = isAbsolute
                                         ? `<a href="${this.escapeHtml(loc.label)}" target="_blank" rel="noopener noreferrer" class="loc-url" title="${this.escapeHtml(loc.label)}">${this.escapeHtml(loc.label)}</a>`
                                         : `<code class="loc-url">${this.escapeHtml(loc.label)}</code>`;
+                                    // Phase 2-G: 該当 link/image に個別 AI 書き換えボタン
+                                    if (individualLlmTarget && (loc.type === 'link' || loc.type === 'image')) {
+                                        const locData = {
+                                            type: loc.type,
+                                            href: loc.type === 'link' ? loc.label : undefined,
+                                            src: loc.type === 'image' ? loc.label : undefined,
+                                            position: loc.hint ? this._extractPosition(loc.hint) : null,
+                                            currentText: loc.currentText || loc.currentAlt || '',
+                                        };
+                                        const locDataAttr = this.escapeHtml(JSON.stringify(locData));
+                                        return `<li class="loc-with-llm">
+                                            <div class="loc-row">${labelHtml}${hintHtml}</div>
+                                            <div class="loc-individual-llm" data-target="${individualLlmTarget}" data-location="${locDataAttr}">
+                                                <button type="button" class="loc-llm-btn">✨ この項目を AI に書き換えてもらう</button>
+                                                <div class="loc-llm-result" hidden></div>
+                                            </div>
+                                        </li>`;
+                                    }
                                 } else if (loc.type === 'structured-missing') {
                                     // 不足スキーマ: バッジ風に表示
                                     labelHtml = `<span class="loc-label loc-missing-schema">${this.escapeHtml(loc.label)}</span>`;
@@ -2053,6 +2183,112 @@
                 this.attachLlmSuggestHandlers();
                 // Phase 2-E.2: 該当箇所「他N件を表示」トグル
                 this.attachLocationToggles();
+                // Phase 2-G: 該当箇所ごとの個別 AI 書き換えボタン
+                this.attachIndividualLlmHandlers();
+            }
+
+            // Phase 2-G: 該当箇所ごとの個別 AI 書き換えボタンのイベントバインド
+            attachIndividualLlmHandlers() {
+                document.querySelectorAll('.loc-llm-btn').forEach(btn => {
+                    if (btn.dataset.bound === '1') return;
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const wrap = btn.closest('.loc-individual-llm');
+                        if (!wrap) return;
+                        const target = wrap.dataset.target;
+                        let locationData;
+                        try {
+                            locationData = JSON.parse(wrap.dataset.location);
+                        } catch (_) {
+                            locationData = null;
+                        }
+                        const resultBox = wrap.querySelector('.loc-llm-result');
+
+                        btn.disabled = true;
+                        const origLabel = btn.textContent;
+                        btn.textContent = '⏳ AI に問い合わせ中...';
+                        resultBox.hidden = false;
+                        resultBox.innerHTML = '<p class="llm-loading">AI がこの項目専用の書き換え案を考えています…</p>';
+
+                        try {
+                            const res = await fetch('/api/llm/suggest', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    target,
+                                    currentValue: locationData ? (locationData.currentText || '') : '',
+                                    pageContext: this._lastPageContext || {},
+                                    specificLocation: locationData,
+                                }),
+                            });
+                            const data = await res.json();
+                            if (!data.success) {
+                                resultBox.innerHTML = '<p class="llm-error">' + this.escapeHtml(data.error || 'AI 提案の取得に失敗しました') + '</p>';
+                                btn.disabled = false;
+                                btn.textContent = '✨ 再試行';
+                                return;
+                            }
+                            const suggestions = (data.data && data.data.suggestions) || [];
+                            if (suggestions.length === 0) {
+                                resultBox.innerHTML = '<p class="llm-error">AI から提案を取得できませんでした</p>';
+                                btn.disabled = false;
+                                btn.textContent = '✨ 再試行';
+                                return;
+                            }
+                            let html = '<div class="loc-llm-suggestions">';
+                            html += '<h6>この項目専用の AI 提案 (' + suggestions.length + '件)</h6>';
+                            suggestions.forEach((s, i) => {
+                                html += `
+                                    <div class="loc-llm-suggestion">
+                                        <div class="loc-llm-suggestion-header">
+                                            <span class="loc-llm-suggestion-num">提案 ${i + 1}</span>
+                                            <button type="button" class="loc-llm-suggestion-copy" data-copy="${this.escapeHtml(s.text)}">コピー</button>
+                                        </div>
+                                        <div class="loc-llm-suggestion-text">${this.escapeHtml(s.text)}</div>
+                                        <div class="loc-llm-suggestion-reason">${this.escapeHtml(s.reason)}</div>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                            resultBox.innerHTML = html;
+
+                            // コピー機能
+                            resultBox.querySelectorAll('.loc-llm-suggestion-copy').forEach(copyBtn => {
+                                copyBtn.addEventListener('click', async (ev) => {
+                                    ev.stopPropagation();
+                                    const text = copyBtn.dataset.copy || '';
+                                    try {
+                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                            await navigator.clipboard.writeText(text);
+                                        } else {
+                                            const ta = document.createElement('textarea');
+                                            ta.value = text;
+                                            document.body.appendChild(ta);
+                                            ta.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(ta);
+                                        }
+                                        const orig = copyBtn.textContent;
+                                        copyBtn.textContent = 'コピー済み';
+                                        copyBtn.classList.add('copied');
+                                        setTimeout(() => {
+                                            copyBtn.textContent = orig;
+                                            copyBtn.classList.remove('copied');
+                                        }, 1500);
+                                    } catch (_) {}
+                                });
+                            });
+
+                            btn.textContent = '✨ もう一度提案を取得';
+                            btn.disabled = false;
+                        } catch (err) {
+                            resultBox.innerHTML = '<p class="llm-error">通信エラー: ' + this.escapeHtml(err.message || 'unknown') + '</p>';
+                            btn.disabled = false;
+                            btn.textContent = '✨ 再試行';
+                        }
+                    });
+                });
             }
 
             // Phase 2-E.2: 該当箇所の '他N件を表示' トグル
@@ -2383,6 +2619,13 @@
                     h = ((h << 5) - h + s.charCodeAt(i)) | 0;
                 }
                 return h;
+            }
+
+            // Phase 2-G: ヒント文字列 'リンク 38番目' から数値抽出
+            _extractPosition(hint) {
+                if (!hint) return null;
+                const m = String(hint).match(/(\d+)/);
+                return m ? parseInt(m[1], 10) : null;
             }
 
             // Phase 2-E: AI 書き換え提案ボタンのイベントバインド

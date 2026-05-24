@@ -2440,14 +2440,20 @@ app.post('/api/llm/suggest', async (req, res) => {
     if (!rewriter.isEnabled()) {
       return sendApiError(res, 503, 'AI 提案機能は利用できません (OPENAI_API_KEY 未設定)', 'LLM_DISABLED');
     }
-    const { target, currentValue, pageContext } = req.body || {};
+    const { target, currentValue, pageContext, specificLocation } = req.body || {};
     if (!target) {
       return sendApiError(res, 400, 'target は必須です', 'MISSING_TARGET');
     }
     if (!LlmContentRewriter.SUPPORTED_TARGETS.includes(target)) {
       return sendApiError(res, 400, `target は ${LlmContentRewriter.SUPPORTED_TARGETS.join('/')} のいずれか`, 'UNSUPPORTED_TARGET');
     }
-    const result = await rewriter.rewrite({ target, currentValue: currentValue || '', pageContext: pageContext || {} });
+    // Phase 2-G: specificLocation も渡す (該当箇所単位での個別最適化)
+    const result = await rewriter.rewrite({
+      target,
+      currentValue: currentValue || '',
+      pageContext: pageContext || {},
+      specificLocation: specificLocation || null,
+    });
     if (result.error) {
       const status = result.errorCode === 'LLM_DISABLED' ? 503 : 502;
       return sendApiError(res, status, result.errorMessage, result.errorCode);
