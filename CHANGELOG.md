@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.3.2] - 2026-05-24 — chore: Render プランを Standard (2GB) に IaC 化
+
+### 🔧 Render プラン昇格: starter → standard
+- **背景**: `ads.mercari.com` 等の重い SPA を Advanced 診断すると、Chromium の `page.content()` で
+  インスタンス全体のメモリが 512 MB 上限を超え OOM → HTTP 502 + 再起動が連発していた
+- **heap ログで判明した事実** (PR #11 の観測ログより):
+  - Node heap は 43 MB のみ（Node 側は余裕）
+  - `page.content()` で **17,365,277 文字** の HTML を取得（約 17 MB）
+  - 切れ位置は `page.content()` 呼び出し中の Chromium 側メモリスパイク
+- **対処**: Render ダッシュボードで **Standard ($25/mo, 2 GB RAM)** に昇格
+- **検証結果** (昇格後):
+  - `ads.mercari.com` Advanced 診断: **HTTP 200** (旧 502)
+  - heap 推移: 43 → 76 → 89 → 98 → 83 MB（再起動なし）
+  - SEO 53 / AIO 9 / 総合 31 で正常にスコア返却
+
+### 🔧 `render.yaml` に `plan: standard` を記録
+- ダッシュボード変更を IaC に反映（旧 `plan: free` は実態と乖離していた）
+
+### 📦 Breaking Changes
+なし。インフラ変更のみ。
+
+### 📦 version bump
+`2.3.1` → `2.3.2` (patch: IaC のみ)
+
+---
+
 ## [2.3.1] - 2026-05-24 — Phase 1.5.1: 重いSPA診断の OOM 切れ対策（メモ化 + heap 観測ログ）
 
 ### 🐛 発覚した問題

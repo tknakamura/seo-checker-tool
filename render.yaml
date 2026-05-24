@@ -8,7 +8,10 @@ services:
   - type: web
     name: mercari-seo-checker
     env: node
-    plan: free
+    # Phase 1.5.1: Puppeteer + Chromium + 重いSPA (ads.mercari.com 等) は
+    # starter (512MB) では OOM 502 になる。Standard (2GB) が必須。
+    # 2026-05-24 にダッシュボードで starter → standard に昇格済み。
+    plan: standard
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
