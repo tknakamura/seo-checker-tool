@@ -555,11 +555,16 @@ class SEOChecker {
       results.aioRecommendations = aioResults.recommendations;
 
       // 詳細分析の実行
+      // Phase 1.8: 「具体的な箇所」タブは廃止したが、内部ロジックは保持。
+      // 将来サマリーに統合したい場合や、別エンドポイントから参照したい場合に備える。
+      // 不要なクライアントは slim:true パラメータで除外可能。
       results.detailedAnalysis = this.detailedAnalyzer.analyzeDetails($, url || '');
 
       // 詳細レポート生成
+      // Phase 1.8: 「詳細レポート」タブは廃止したが、generateDetailedReport の出力 (quickWins,
+      // priorityAnalysis, implementationPlan, expectedImpact) は将来サマリーに統合する候補。
       results.detailedReport = this.enhancedReporter.generateDetailedReport(results);
-      
+
       // 簡潔な推奨アクション生成
       results.conciseRecommendations = this.enhancedReporter.generateConciseRecommendations(results);
 
@@ -2216,42 +2221,9 @@ app.post('/api/check/seo', async (req, res) => {
   }
 });
 
-// レポート生成エンドポイント
-app.post('/api/report/seo', async (req, res) => {
-  try {
-    const validation = validateSeoRequest(req.body);
-    if (!validation.valid) {
-      return sendApiError(res, 400, validation.error, validation.code);
-    }
-    const { url, html, waitForJS = false, sessionId, userId } = req.body;
-    const checker = new SEOChecker();
-    const results = await checker.checkSEO(url, html, waitForJS);
-    await saveAnalysisHistory(results, { url, html, waitForJS, sessionId, userId });
-    const report = checker.generateReport(results);
-    return sendApiSuccess(res, { results, report });
-  } catch (error) {
-    logger.error(`レポート生成エラー: ${error.message}`);
-    return sendApiError(res, 500, error.message, 'REPORT_ERROR');
-  }
-});
-
-// 詳細レポート生成エンドポイント
-app.post('/api/report/detailed', async (req, res) => {
-  try {
-    const validation = validateSeoRequest(req.body);
-    if (!validation.valid) {
-      return sendApiError(res, 400, validation.error, validation.code);
-    }
-    const { url, html, waitForJS = false, sessionId, userId } = req.body;
-    const checker = new SEOChecker();
-    const results = await checker.checkSEO(url, html, waitForJS);
-    await saveAnalysisHistory(results, { url, html, waitForJS, sessionId, userId });
-    return sendApiSuccess(res, { results, detailedReport: results.detailedReport });
-  } catch (error) {
-    logger.error(`詳細レポート生成エラー: ${error.message}`);
-    return sendApiError(res, 500, error.message, 'DETAILED_REPORT_ERROR');
-  }
-});
+// Phase 1.8: '/api/report/seo' と '/api/report/detailed' エンドポイントを削除。
+// 'Markdownレポート' / '詳細レポート' タブの撤去に伴い、これらのAPIも未使用になった。
+// 復活が必要になったら git 履歴 (v2.5.0 以前) から復元すること。
 
 // Phase 2-B: 競合URL比較エンドポイント
 // 2つのURLを並列診断し、自分(primary) vs 競合(competitor) のスコア差分を返す。

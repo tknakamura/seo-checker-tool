@@ -82,8 +82,7 @@
 
         /* ---- Card / Section ---- */
         .form-container,
-        .results-container,
-        .report-section {
+        .results-container {
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -540,250 +539,6 @@
             padding: 12px;
             font-size: 0.9rem;
             margin-bottom: 16px;
-        }
-
-        /* ---- Detailed report blocks ---- */
-        .detailed-report { max-width: 100%; }
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .summary-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px;
-            text-align: center;
-        }
-        .score-large {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: var(--text);
-            margin: 4px 0;
-            letter-spacing: -0.02em;
-        }
-        .grade {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--good);
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 999px;
-            font-weight: 500;
-            font-size: 0.82rem;
-            margin: 8px 0;
-            border: 1px solid var(--border);
-        }
-        .status-critical { background: var(--critical-bg); color: var(--critical); border-color: #fecaca; }
-        .status-warning  { background: var(--high-bg); color: var(--high); border-color: #fde68a; }
-        .status-good     { background: var(--good-bg); color: var(--good); border-color: #a7f3d0; }
-        .status-poor     { background: var(--critical-bg); color: var(--critical); border-color: #fecaca; }
-
-        .quick-wins-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .quick-win-card {
-            background: var(--good-bg);
-            border: 1px solid #a7f3d0;
-            border-left: 3px solid var(--good);
-            border-radius: var(--radius-sm);
-            padding: 12px;
-            font-size: 0.9rem;
-        }
-        .win-meta { display: flex; gap: 12px; margin-top: 4px; font-size: 0.8rem; color: var(--text-muted); }
-
-        .priority-sections { margin-bottom: 20px; }
-        .priority-section {
-            margin-bottom: 14px;
-            padding: 14px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-        }
-        .priority-section.critical { background: var(--critical-bg); border-color: #fecaca; }
-        .priority-section.high     { background: var(--high-bg); border-color: #fde68a; }
-        .priority-section.medium   { background: var(--accent-soft); border-color: var(--accent-border); }
-        .priority-section.low      { background: var(--good-bg); border-color: #a7f3d0; }
-        .priority-item {
-            background: var(--bg);
-            padding: 12px;
-            margin: 6px 0;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            font-size: 0.9rem;
-        }
-        .item-meta { display: flex; gap: 12px; margin: 6px 0; font-size: 0.8rem; color: var(--text-muted); }
-
-        .implementation-phase {
-            margin-bottom: 18px;
-            padding: 16px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-        }
-        .implementation-item {
-            background: var(--bg);
-            padding: 14px;
-            margin: 10px 0;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-        }
-        .implementation-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 14px;
-            margin-top: 10px;
-        }
-        .implementation-guide ol, .implementation-examples ul {
-            margin: 6px 0;
-            padding-left: 1.2rem;
-            font-size: 0.9rem;
-        }
-        .tools-list { display: flex; flex-wrap: wrap; gap: 6px; }
-        .tool-tag {
-            background: var(--accent-soft);
-            color: var(--accent);
-            border: 1px solid var(--accent-border);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.78rem;
-        }
-
-        .impact-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .impact-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 12px;
-            text-align: center;
-        }
-        .impact-card .score {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text);
-            letter-spacing: -0.02em;
-        }
-        .impact-card .score.improvement { color: var(--good); }
-        .benefits ul { margin: 6px 0; padding-left: 1.2rem; font-size: 0.9rem; }
-
-        /* ---- Specific issues ---- */
-        .specific-issues { max-width: 100%; }
-        .specific-issues .description {
-            background: var(--accent-soft);
-            border: 1px solid var(--accent-border);
-            border-left: 3px solid var(--accent);
-            padding: 12px 14px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 18px;
-            font-size: 0.9rem;
-            color: var(--text);
-        }
-        .category-section {
-            margin-bottom: 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-        }
-        .category-section h3 {
-            background: var(--surface);
-            padding: 12px 14px;
-            margin: 0;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-        .specific-issue {
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-            transition: background-color .15s ease;
-        }
-        .specific-issue:hover { background-color: var(--surface); }
-        .specific-issue:last-child { border-bottom: none; }
-        .issue-header {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            padding: 10px 14px;
-        }
-        .issue-type {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.72rem;
-            font-weight: 500;
-            background: var(--surface-2);
-            color: var(--text-muted);
-        }
-        .issue-type.critical, .issue-type.missing { background: var(--critical-bg); color: var(--critical); }
-        .issue-type.high { background: var(--high-bg); color: var(--high); }
-        .issue-location {
-            flex: 1;
-            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            font-size: 0.82rem;
-            color: var(--text-muted);
-        }
-        .issue-description {
-            padding: 0 14px 10px;
-            font-size: 0.88rem;
-            color: var(--text);
-        }
-        .issue-details {
-            padding: 12px 14px;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
-            font-size: 0.88rem;
-        }
-        .issue-fix h4, .issue-current h4 {
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-        .issue-current code {
-            display: block;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            padding: 8px 10px;
-            border-radius: 4px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            font-size: 0.82rem;
-            color: var(--text);
-            word-break: break-all;
-        }
-        .issue-meta { display: flex; gap: 10px; margin-top: 8px; font-size: 0.8rem; color: var(--text-muted); }
-        .meta-item {
-            background: var(--bg);
-            padding: 2px 8px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-        }
-
-        /* ---- Report content (Markdown) ---- */
-        .report-content {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 16px;
-            border-radius: var(--radius-sm);
-            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            font-size: 0.85rem;
-            white-space: pre-wrap;
-            max-height: 500px;
-            overflow-y: auto;
-            color: var(--text);
         }
 
         /* ---- Phase 1.7: 構造化データタブを完全リデザイン ---- */
@@ -1455,9 +1210,6 @@
                 <button class="tab" data-tab="details">SEO詳細</button>
                 <button class="tab" data-tab="aio">AIO詳細</button>
                 <button class="tab" data-tab="structured-data">構造化データ</button>
-                <button class="tab" data-tab="specific">具体的な箇所</button>
-                <button class="tab" data-tab="detailed">詳細レポート</button>
-                <button class="tab" data-tab="report">Markdownレポート</button>
             </div>
 
             <div class="tab-content active" id="summary">
@@ -1474,21 +1226,6 @@
 
             <div class="tab-content" id="structured-data">
                 <div id="structuredDataContent"></div>
-            </div>
-
-            <div class="tab-content" id="specific">
-                <div id="specificContent"></div>
-            </div>
-
-            <div class="tab-content" id="detailed">
-                <div id="detailedContent"></div>
-            </div>
-
-            <div class="tab-content" id="report">
-                <div class="report-section">
-                    <h2>SEOチェックレポート</h2>
-                    <div class="report-content" id="reportContent"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -1751,7 +1488,8 @@
                 summaryContent.innerHTML = html;
 
                 // 他のタブはシンプルに「比較モードでは表示しません」と注意書き
-                ['detailsContent', 'aioContent', 'structuredDataContent', 'specificContent', 'detailedContent', 'reportContent'].forEach(id => {
+                // Phase 1.8: specificContent / detailedContent / reportContent は削除済み
+                ['detailsContent', 'aioContent', 'structuredDataContent'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) {
                         el.innerHTML = '<p class="hint" style="padding:1rem;">比較モードでは「サマリー」タブのみ表示されます。詳細を見たい場合は、比較対象URLを空にして単独で診断してください。</p>';
@@ -1781,32 +1519,6 @@
                 `;
             }
 
-            async generateReport() {
-                const url = document.getElementById('url').value;
-                const html = document.getElementById('html').value;
-                const waitForJS = document.getElementById('waitForJS').checked;
-
-                try {
-                    const response = await fetch('/api/report/seo', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ url, html, waitForJS })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        document.getElementById('reportContent').textContent = data.data.report;
-                    } else {
-                        this.showError('レポート生成中にエラーが発生しました');
-                    }
-                } catch (error) {
-                    this.showError('レポート生成中にネットワークエラーが発生しました');
-                }
-            }
-
             displayResults(results) {
                 // ヘッダのoverallScore要素はPhase 1.2で削除（スコアはサマリーカードのみで表現）
                 const overallEl = document.getElementById('overallScore');
@@ -1824,15 +1536,7 @@
                 // 構造化データ詳細表示
                 this.displayStructuredData(results);
                 
-                // 具体的な箇所表示
-                this.displaySpecificIssues(results);
-                
-                // 詳細レポート表示
-                this.displayDetailedReport(results);
-                
-                // レポート生成
-                this.generateReport();
-                
+                // Phase 1.8: '具体的な箇所' / '詳細レポート' / 'Markdownレポート' タブは削除済み
                 this.showResults();
             }
 
@@ -2420,234 +2124,6 @@
                 return titles[priority] || priority;
             }
 
-            displaySpecificIssues(results) {
-                if (!results.detailedAnalysis) {
-                    document.getElementById('specificContent').innerHTML = '<p>詳細分析結果がありません</p>';
-                    return;
-                }
-
-                const specificContent = document.getElementById('specificContent');
-                const analysis = results.detailedAnalysis;
-                
-                let html = `
-                    <div class="specific-issues">
-                        <h2>具体的な問題箇所</h2>
-                        <p class="description">以下の箇所で具体的な問題が発見されました。各項目をクリックすると詳細な修正方法が表示されます。</p>
-                `;
-
-                // 各カテゴリの具体的な問題を表示
-                const categories = [
-                    { key: 'titleTag', name: 'タイトルタグ', icon: '📝' },
-                    { key: 'metaDescription', name: 'メタディスクリプション', icon: '📄' },
-                    { key: 'headingStructure', name: '見出し構造', icon: '📋' },
-                    { key: 'imageAltAttributes', name: '画像alt属性', icon: '🖼️' },
-                    { key: 'internalLinkStructure', name: '内部リンク構造', icon: '🔗' },
-                    { key: 'structuredData', name: '構造化データ', icon: '🏗️' },
-                    { key: 'otherSEOElements', name: 'その他SEO要素', icon: '⚙️' }
-                ];
-
-                categories.forEach(category => {
-                    const categoryData = analysis[category.key];
-                    if (categoryData && categoryData.specificIssues && categoryData.specificIssues.length > 0) {
-                        html += `
-                            <div class="category-section">
-                                <h3>${category.icon} ${category.name}</h3>
-                                <div class="issues-list">
-                        `;
-
-                        categoryData.specificIssues.forEach((issue, index) => {
-                            html += `
-                                <div class="specific-issue" onclick="toggleIssueDetails('${category.key}_${index}')">
-                                    <div class="issue-header">
-                                        <span class="issue-type ${issue.type}">${this.getIssueTypeLabel(issue.type)}</span>
-                                        <span class="issue-location">${issue.location}</span>
-                                        <span class="toggle-icon">▼</span>
-                                    </div>
-                                    <div class="issue-description">
-                                        ${issue.description}
-                                    </div>
-                                    <div class="issue-details" id="${category.key}_${index}" style="display: none;">
-                                        <div class="issue-fix">
-                                            <h4>修正方法:</h4>
-                                            <p>${issue.fix}</p>
-                                        </div>
-                                        ${issue.current ? `
-                                            <div class="issue-current">
-                                                <h4>現在の値:</h4>
-                                                <code>${issue.current}</code>
-                                            </div>
-                                        ` : ''}
-                                        ${issue.length ? `
-                                            <div class="issue-meta">
-                                                <span class="meta-item">文字数: ${issue.length}</span>
-                                            </div>
-                                        ` : ''}
-                                        ${issue.count ? `
-                                            <div class="issue-meta">
-                                                <span class="meta-item">件数: ${issue.count}</span>
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        });
-
-                        html += `
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-
-                html += `
-                    </div>
-                `;
-                
-                specificContent.innerHTML = html;
-            }
-
-            displayDetailedReport(results) {
-                if (!results.detailedReport) {
-                    document.getElementById('detailedContent').innerHTML = '<p>詳細レポートがありません</p>';
-                    return;
-                }
-
-                const detailedContent = document.getElementById('detailedContent');
-                const report = results.detailedReport;
-                
-                let html = `
-                    <div class="detailed-report">
-                        <div class="report-summary">
-                            <h2>総合評価</h2>
-                            <div class="summary-cards">
-                                <div class="summary-card">
-                                    <h3>総合スコア</h3>
-                                    <div class="score-large">${report.summary.overallScore}/100</div>
-                                    <div class="grade">${report.summary.grades.overall}</div>
-                                </div>
-                                <div class="summary-card">
-                                    <h3>SEOスコア</h3>
-                                    <div class="score-large">${report.summary.seoScore}/100</div>
-                                    <div class="grade">${report.summary.grades.seo}</div>
-                                </div>
-                                <div class="summary-card">
-                                    <h3>AIOスコア</h3>
-                                    <div class="score-large">${report.summary.aioScore}/100</div>
-                                    <div class="grade">${report.summary.grades.aio}</div>
-                                </div>
-                            </div>
-                            <div class="status-badge ${this.getStatusClass(report.summary.status)}">
-                                ${report.summary.status}
-                            </div>
-                        </div>
-
-                        <div class="quick-wins">
-                            <h2>クイックウィン</h2>
-                            <div class="quick-wins-grid">
-                                ${report.summary.quickWins.map(win => `
-                                    <div class="quick-win-card">
-                                        <h4>${win.issue}</h4>
-                                        <div class="win-meta">
-                                            <span class="effort">工数: ${win.effort}</span>
-                                            <span class="impact">影響: ${win.impact}</span>
-                                            <span class="time">時間: ${win.time}</span>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <div class="priority-analysis">
-                            <h2>優先度分析</h2>
-                            <div class="priority-sections">
-                                ${Object.entries(report.priorityAnalysis).map(([priority, items]) => `
-                                    <div class="priority-section ${priority}">
-                                        <h3>${this.getPriorityTitle(priority)} (${items.length}件)</h3>
-                                        ${items.map(item => `
-                                            <div class="priority-item">
-                                                <h4>${this.getCategoryTitle(item.category)}</h4>
-                                                <div class="item-meta">
-                                                    <span class="impact">影響度: ${item.impact}</span>
-                                                    <span class="effort">工数: ${item.effort}</span>
-                                                    <span class="roi">ROI: ${item.roi.toFixed(1)}</span>
-                                                </div>
-                                                <ul class="item-issues">
-                                                    ${item.issues.map(issue => `<li>${issue}</li>`).join('')}
-                                                </ul>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <div class="implementation-plan">
-                            <h2>📋 実装計画</h2>
-                            ${Object.entries(report.implementationPlan).map(([phase, plan]) => `
-                                <div class="implementation-phase">
-                                    <h3>${plan.title} (${plan.duration})</h3>
-                                    <div class="phase-items">
-                                        ${plan.items.map(item => `
-                                            <div class="implementation-item">
-                                                <h4>${item.title}</h4>
-                                                <div class="implementation-details">
-                                                    <div class="implementation-guide">
-                                                        <h5>実装手順:</h5>
-                                                        <ol>
-                                                            ${item.implementation.map(step => `<li>${step}</li>`).join('')}
-                                                        </ol>
-                                                    </div>
-                                                    <div class="implementation-examples">
-                                                        <h5>例:</h5>
-                                                        <ul>
-                                                            ${item.examples.map(example => `<li>${example}</li>`).join('')}
-                                                        </ul>
-                                                    </div>
-                                                    <div class="implementation-tools">
-                                                        <h5>推奨ツール:</h5>
-                                                        <div class="tools-list">
-                                                            ${item.tools.map(tool => `<span class="tool-tag">${tool}</span>`).join('')}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-
-                        <div class="expected-impact">
-                            <h2>期待される効果</h2>
-                            <div class="impact-cards">
-                                <div class="impact-card">
-                                    <h3>現在のスコア</h3>
-                                    <div class="score">${report.expectedImpact.currentScore}/100</div>
-                                </div>
-                                <div class="impact-card">
-                                    <h3>改善後のスコア</h3>
-                                    <div class="score">${report.expectedImpact.potentialScore}/100</div>
-                                </div>
-                                <div class="impact-card">
-                                    <h3>改善幅</h3>
-                                    <div class="score improvement">+${report.expectedImpact.improvement}</div>
-                                </div>
-                            </div>
-                            <div class="benefits">
-                                <h3>期待される効果:</h3>
-                                <ul>
-                                    <li>SEO: オーガニックトラフィック +${report.expectedImpact.expectedBenefits.seo.organicTraffic}%</li>
-                                    <li>ランキング: +${report.expectedImpact.expectedBenefits.seo.rankingImprovement}位向上</li>
-                                    <li>CTR: +${report.expectedImpact.expectedBenefits.seo.clickThroughRate}</li>
-                                    <li>AIO: AI検索での露出 +${report.expectedImpact.expectedBenefits.aio.aiVisibility}%</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                detailedContent.innerHTML = html;
-            }
 
             getScoreClass(score) {
                 if (score >= 90) return 'score-excellent';
@@ -2815,20 +2291,6 @@
             clearForm() {
                 document.getElementById('seoCheckForm').reset();
                 this.hideResults();
-            }
-        }
-
-        // 問題詳細の表示切り替え関数
-        function toggleIssueDetails(issueId) {
-            const details = document.getElementById(issueId);
-            const icon = details.previousElementSibling.querySelector('.toggle-icon');
-            
-            if (details.style.display === 'none') {
-                details.style.display = 'block';
-                icon.textContent = '▲';
-            } else {
-                details.style.display = 'none';
-                icon.textContent = '▼';
             }
         }
 

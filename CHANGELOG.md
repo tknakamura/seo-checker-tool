@@ -1,5 +1,84 @@
 # Changelog
 
+## [2.6.0] - 2026-05-24 — Phase 1.8: 不要タブ削除 (UI シンプル化)
+
+中村さんからの実運用フィードバック: 「具体的な箇所 / 詳細レポート / Markdownレポート の3タブは不要」を反映。タブを **7個 → 4個** に集約し、Claw らしいシンプル設計を徹底。
+
+### 🎯 削除したタブ
+- **具体的な箇所**: SEO詳細とサマリーの推奨アクションで内容ほぼカバー済み、価値が低い
+- **詳細レポート**: 情報過多で読みにくく、サマリーで充足
+- **Markdownレポート**: UIから直接コピーする使い方が想定より少ない
+
+### 🎨 新タブ構成 (4つ)
+1. サマリー (総合スコア + 全推奨アクション一覧)
+2. SEO詳細
+3. AIO詳細
+4. 構造化データ
+
+### 🔧 削除した実装
+
+#### `public/index.html`
+- タブボタン: `data-tab="specific"` / `"detailed"` / `"report"`
+- タブコンテナ: `<div id="specific">` / `id="detailed"` / `id="report"`
+- JSメソッド:
+  - `async generateReport()` (約 30 行) — `/api/report/seo` を叩く処理
+  - `displaySpecificIssues(results)` (約 85 行) — カテゴリ別の問題箇所表示
+  - `displayDetailedReport(results)` (約 142 行) — クイックウィン/優先度分析/実装計画
+- グローバル関数: `function toggleIssueDetails(issueId)`
+- CSS: `.detailed-report` / `.specific-issues` / `.specific-issue` / `.issue-*` /
+  `.report-content` / `.summary-cards` / `.score-large` / `.grade` / `.status-badge` /
+  `.quick-wins-grid` / `.quick-win-card` / `.priority-section` / `.priority-item` /
+  `.implementation-*` / `.tools-list` / `.tool-tag` / `.impact-card` / `.benefits` /
+  `.category-section` / `.win-meta` / `.item-meta` 等 約 8,600 文字相当
+- `displayResults` から3つのメソッド呼び出し
+- 比較モードの「他タブ案内」リストから削除済みIDを除外
+
+#### `index.js`
+- API エンドポイント `app.post('/api/report/seo', ...)`
+- API エンドポイント `app.post('/api/report/detailed', ...)`
+
+#### `openapi.yaml`
+- `/api/report/seo` / `/api/report/detailed` のパス定義
+- `ReportSuccessResponse` / `DetailedReportSuccessResponse` スキーマ定義
+
+### 🔒 内部ロジックは保持
+- `SEOChecker.checkSEO()` 内で `results.detailedAnalysis` / `results.detailedReport` の生成は継続
+- `checker.generateReport()` (Markdown 生成) メソッド本体も保持
+- 理由:
+  - 将来サマリーに「クイックウィン」「実装計画」「期待される効果」を統合する可能性
+  - 外部連携 (内部スクリプトから Markdown レポートを生成して Slack 投稿等) で再利用可能
+- `slim:true` パラメータで詳細データを除外可能（既存仕様維持）
+- 復活が必要なら git 履歴 (v2.5.0 以前) から復元可能
+
+### 🧪 テスト
+- `__tests__/phase-1-8-tab-cleanup.test.js` 新規 (11項目):
+  - 削除対象のタブボタン/コンテナの不在
+  - 削除対象 JS メソッドの不在
+  - 削除対象 API エンドポイントの不在
+  - 4タブ (サマリー/SEO詳細/AIO詳細/構造化データ) の存在
+  - 既存エンドポイント (/api/check/seo, /api/compare, /api/version) の存在
+  - 内部ロジック (detailedAnalysis/detailedReport/generateReport) の維持
+- 全テスト 331/331 PASS (regression なし)
+
+### ✅ 実機検証
+ローカル `https://carenet.com/` 診断:
+- ✅ タブが 4個に削減
+- ✅ サマリー / SEO詳細 / AIO詳細 / 構造化データ が正常表示
+- ✅ 推奨アクション 28件すべて Phase 1.5/1.6 のキャリブレーション結果反映
+- ✅ 削除した `/api/report/*` が 404
+- ✅ 既存 `/api/check/seo` `/api/compare` `/api/version` が 200
+- ✅ フッタ `v2.6.0 · MIT License`
+
+### 📦 Breaking Changes
+- API: `/api/report/seo` `/api/report/detailed` は削除されました。
+  これらを利用していた外部スクリプトがある場合は git 履歴から復元してください。
+- UI: 3タブが消えました。外部から直接タブURLハッシュで遷移していたケースは影響を受けます。
+
+### 📦 version bump
+`2.5.0` → `2.6.0` (minor: UI構成変更 + API削除)
+
+---
+
 ## [2.5.0] - 2026-05-24 — Phase 1.7: 構造化データタブ UI 改善
 
 中村さんから実運用フィードバック「構造化データタブの結果レポートUIが見づらい」とのご指摘を受け、タブ全体を Claw 風に再設計。
