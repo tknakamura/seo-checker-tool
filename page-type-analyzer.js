@@ -90,10 +90,17 @@ class PageTypeAnalyzer {
       const typeScores = this.calculateTypeScores(pageData);
       const detectedTypes = this.getTopTypes(typeScores);
       
+      // Phase 1.7: confidence を 0-1 に正規化（旧実装は生スコアで * 100 すると 800% 等になっていた）
+      const topScore = typeScores[detectedTypes[0]] || 0;
+      // 全タイプスコアの合計を分母にして 0-1 に正規化
+      const totalScore = Object.values(typeScores).reduce((sum, v) => sum + (v || 0), 0);
+      const normalizedConfidence = totalScore > 0 ? Math.min(1, topScore / totalScore) : 0;
+
       return {
         primaryType: detectedTypes[0],
         secondaryTypes: detectedTypes.slice(1, 3),
-        confidence: typeScores[detectedTypes[0]] || 0,
+        confidence: normalizedConfidence,
+        rawScore: topScore, // デバッグ用に生スコアも保持
         allScores: typeScores,
         analysisDetails: {
           pageData: pageData,

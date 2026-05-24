@@ -786,45 +786,335 @@
             color: var(--text);
         }
 
-        /* ---- Structured data view (legacy classes preserved) ---- */
+        /* ---- Phase 1.7: 構造化データタブを完全リデザイン ---- */
         .structured-data-analysis { max-width: 100%; }
+
+        /* ページタイプ分析カード */
         .page-type-analysis {
             background: var(--surface);
             border: 1px solid var(--border);
-            color: var(--text);
-            padding: 20px;
             border-radius: var(--radius);
-            margin-bottom: 18px;
-            text-align: center;
+            padding: 20px 22px;
+            margin-bottom: 24px;
         }
-        .page-type-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
-        .page-type-confidence { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px; }
+        .page-type-header {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .page-type-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+        }
+        .page-type-judgment {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+        .page-type-confidence-badge {
+            margin-left: auto;
+            font-size: 0.78rem;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-weight: 500;
+        }
         .page-type-details {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px;
-            margin-top: 12px;
+            gap: 14px;
         }
-        .recommendation-section, .schema-card {
+        .page-type-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .page-type-detail-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .page-type-detail-value {
+            font-size: 0.92rem;
+            color: var(--text);
+        }
+        .page-type-detail-value.mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.85rem;
+        }
+
+        /* セクションヘッダー（必須/推奨/参考） */
+        .schema-section { margin-bottom: 28px; }
+        .schema-section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+        .schema-section-marker {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            letter-spacing: 0.04em;
+        }
+        .schema-marker-critical { color: var(--critical); background: var(--critical-bg); border-color: #fecaca; }
+        .schema-marker-recommended { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-border); }
+        .schema-marker-optional { color: var(--text-muted); background: var(--surface); }
+
+        /* スキーマカード */
+        .schema-items {
+            display: grid;
+            gap: 10px;
+        }
+        .schema-card {
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 14px;
-            margin-bottom: 12px;
+            overflow: hidden;
+            transition: border-color .15s ease;
         }
-        .schema-name { font-weight: 600; }
+        .schema-card:hover { border-color: var(--border-strong); }
+        .schema-card-header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--bg);
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            color: inherit;
+            text-align: left;
+            flex-wrap: wrap;
+        }
+        .schema-card-header:hover { background: var(--surface); }
+        .schema-card-header:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+            background: var(--surface);
+        }
+        .schema-card-name {
+            font-weight: 600;
+            font-size: 0.98rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--text);
+            margin-right: auto;
+        }
         .schema-priority {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
             font-weight: 500;
             border: 1px solid var(--border);
+            flex-shrink: 0;
         }
         .schema-priority.critical { color: var(--critical); background: var(--critical-bg); border-color: #fecaca; }
         .schema-priority.high     { color: var(--high); background: var(--high-bg); border-color: #fde68a; }
-        .schema-priority.medium   { color: var(--medium); background: var(--medium-bg); }
-        .schema-priority.low      { color: var(--low); background: var(--low-bg); }
+        .schema-priority.medium   { color: var(--medium); background: var(--medium-bg); border-color: var(--border); }
+        .schema-priority.low      { color: var(--low); background: var(--low-bg); border-color: var(--border); }
+        .schema-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+        .schema-meta strong {
+            color: var(--text);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .schema-toggle-icon {
+            color: var(--text-subtle);
+            font-size: 0.75rem;
+            user-select: none;
+            margin-left: 4px;
+        }
+
+        /* スキーマカード本体 */
+        .schema-card-body {
+            padding: 14px 16px 18px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .schema-section-block {
+            margin-bottom: 16px;
+        }
+        .schema-section-block:last-child {
+            margin-bottom: 0;
+        }
+        .schema-block-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .schema-block-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .schema-block-text {
+            font-size: 0.9rem;
+            color: var(--text);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* コードブロック (重要！) */
+        .schema-code {
+            background: #f8f8f8;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            margin: 0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            color: #1f2937;
+            overflow-x: auto;
+            white-space: pre;
+            tab-size: 2;
+        }
+        .schema-code code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+            font-family: inherit;
+        }
+        .schema-copy-btn {
+            padding: 4px 12px;
+            font-size: 0.78rem;
+            background: var(--bg);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text);
+            font-weight: 500;
+            transition: background .15s ease;
+        }
+        .schema-copy-btn:hover { background: var(--surface-2); }
+        .schema-copy-btn.copied {
+            background: var(--good-bg);
+            color: var(--good);
+            border-color: #a7f3d0;
+        }
+
+        /* 検証ツールリスト */
+        .schema-validation-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 6px;
+        }
+        .schema-validation-list li {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            font-size: 0.88rem;
+            padding: 6px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .schema-validation-list a {
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .schema-validation-note {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* 実装メリットリスト */
+        .schema-benefits-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 4px;
+        }
+        .schema-benefits-list li {
+            font-size: 0.88rem;
+            color: var(--text);
+            padding-left: 16px;
+            position: relative;
+        }
+        .schema-benefits-list li::before {
+            content: "·";
+            position: absolute;
+            left: 4px;
+            color: var(--good);
+            font-weight: bold;
+        }
+
+        /* 期待される効果カード (Phase 1.7) */
+        .expected-benefits {
+            margin-top: 24px;
+            padding: 20px 22px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .expected-benefits .schema-section-title {
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+        .benefit-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            text-align: center;
+        }
+        .benefit-percentage {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+        }
+        .benefit-percentage.benefit-positive {
+            color: var(--good);
+        }
+        .benefit-description {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+        @media (max-width: 720px) {
+            .benefits-grid { grid-template-columns: 1fr 1fr; }
+        }
 
         /* ---- Phase 2-B: 比較対象URL欄 ---- */
         .compare-group {
@@ -1770,26 +2060,31 @@
                 // ページタイプ分析結果
                 if (structuredDataCheck.pageTypeAnalysis) {
                     const analysis = structuredDataCheck.pageTypeAnalysis;
-                    const confidence = Math.round(analysis.confidence * 100);
+                    // Phase 1.7: 100超の保険 (page-type-analyzer 側で正規化済みだが旧データに備える)
+                    const confidence = Math.min(100, Math.max(0, Math.round((analysis.confidence || 0) * 100)));
                     
+                    // Phase 1.7: シンプル&構造的なヘッダーカード
                     html += `
                         <div class="page-type-analysis">
-                            <div class="page-type-title">📄 ページタイプ分析結果</div>
-                            <div class="page-type-confidence">判定: ${this.getPageTypeDisplayName(analysis.primaryType)} (信頼度: ${confidence}%)</div>
+                            <div class="page-type-header">
+                                <span class="page-type-label">ページタイプ分析</span>
+                                <h3 class="page-type-judgment">${this.escapeHtml(this.getPageTypeDisplayName(analysis.primaryType))}</h3>
+                                <span class="page-type-confidence-badge" title="判定の信頼度">信頼度 ${confidence}%</span>
+                            </div>
                             <div class="page-type-details">
                                 <div class="page-type-detail">
-                                    <h4>主要タイプ</h4>
-                                    <p>${analysis.primaryType}</p>
+                                    <span class="page-type-detail-label">主要タイプ</span>
+                                    <span class="page-type-detail-value mono">${this.escapeHtml(analysis.primaryType)}</span>
                                 </div>
                                 ${analysis.secondaryTypes && analysis.secondaryTypes.length > 0 ? `
                                     <div class="page-type-detail">
-                                        <h4>候補タイプ</h4>
-                                        <p>${analysis.secondaryTypes.join(', ')}</p>
+                                        <span class="page-type-detail-label">候補タイプ</span>
+                                        <span class="page-type-detail-value mono">${this.escapeHtml(analysis.secondaryTypes.join(', '))}</span>
                                     </div>
                                 ` : ''}
                                 <div class="page-type-detail">
-                                    <h4>分析根拠</h4>
-                                    <p>${this.getAnalysisReason(analysis)}</p>
+                                    <span class="page-type-detail-label">分析根拠</span>
+                                    <span class="page-type-detail-value">${this.escapeHtml(this.getAnalysisReason(analysis))}</span>
                                 </div>
                             </div>
                         </div>
@@ -1806,7 +2101,10 @@
                     if (recommendations.recommendations.missing.length > 0) {
                         html += `
                             <div class="schema-section">
-                                <h3>🚨 必須スキーマ (${recommendations.recommendations.missing.length}件)</h3>
+                                <h3 class="schema-section-title">
+                                    <span class="schema-section-marker schema-marker-critical">必須</span>
+                                    必要なスキーマ (${recommendations.recommendations.missing.length}件)
+                                </h3>
                                 <div class="schema-items">
                         `;
                         
@@ -1825,7 +2123,10 @@
                     if (recommendations.recommendations.improvements.length > 0) {
                         html += `
                             <div class="schema-section">
-                                <h3>⭐ 推奨スキーマ (${recommendations.recommendations.improvements.length}件)</h3>
+                                <h3 class="schema-section-title">
+                                    <span class="schema-section-marker schema-marker-recommended">推奨</span>
+                                    追加すると効果的なスキーマ (${recommendations.recommendations.improvements.length}件)
+                                </h3>
                                 <div class="schema-items">
                         `;
                         
@@ -1844,7 +2145,10 @@
                     if (recommendations.recommendations.optional.length > 0) {
                         html += `
                             <div class="schema-section">
-                                <h3>💡 オプションスキーマ (${recommendations.recommendations.optional.length}件)</h3>
+                                <h3 class="schema-section-title">
+                                    <span class="schema-section-marker schema-marker-optional">参考</span>
+                                    余力があれば追加 (${recommendations.recommendations.optional.length}件)
+                                </h3>
                                 <div class="schema-items">
                         `;
                         
@@ -1861,29 +2165,29 @@
 
                     html += `</div>`; // schema-recommendations
 
-                    // 期待される効果
+                    // 期待される効果 (Phase 1.7: Claw 風に統一)
                     if (recommendations.expectedBenefits) {
                         const benefits = recommendations.expectedBenefits;
                         html += `
                             <div class="expected-benefits">
-                                <h3>📈 期待される効果</h3>
+                                <h3 class="schema-section-title">期待される効果</h3>
                                 <div class="benefits-grid">
                                     <div class="benefit-item">
-                                        <div class="benefit-percentage">${benefits.richSnippets.probability}%</div>
-                                        <div class="benefit-description">${benefits.richSnippets.description}</div>
+                                        <div class="benefit-percentage">${this.escapeHtml(String(benefits.richSnippets.probability))}%</div>
+                                        <div class="benefit-description">${this.escapeHtml(benefits.richSnippets.description)}</div>
                                     </div>
                                     <div class="benefit-item">
-                                        <div class="benefit-percentage">+${benefits.searchRanking.improvement}%</div>
-                                        <div class="benefit-description">${benefits.searchRanking.description}</div>
+                                        <div class="benefit-percentage benefit-positive">+${this.escapeHtml(String(benefits.searchRanking.improvement))}%</div>
+                                        <div class="benefit-description">${this.escapeHtml(benefits.searchRanking.description)}</div>
                                     </div>
                                     <div class="benefit-item">
-                                        <div class="benefit-percentage">+${benefits.clickThroughRate.improvement}%</div>
-                                        <div class="benefit-description">${benefits.clickThroughRate.description}</div>
+                                        <div class="benefit-percentage benefit-positive">+${this.escapeHtml(String(benefits.clickThroughRate.improvement))}%</div>
+                                        <div class="benefit-description">${this.escapeHtml(benefits.clickThroughRate.description)}</div>
                                     </div>
                                     ${benefits.localSearch ? `
                                         <div class="benefit-item">
-                                            <div class="benefit-percentage">+${benefits.localSearch.visibility}%</div>
-                                            <div class="benefit-description">${benefits.localSearch.description}</div>
+                                            <div class="benefit-percentage benefit-positive">+${this.escapeHtml(String(benefits.localSearch.visibility))}%</div>
+                                            <div class="benefit-description">${this.escapeHtml(benefits.localSearch.description)}</div>
                                         </div>
                                     ` : ''}
                                 </div>
@@ -1895,13 +2199,73 @@
                 html += `</div>`; // structured-data-analysis
 
                 structuredDataContent.innerHTML = html;
+                // Phase 1.7: スキーマカードのトグル + コピーボタンを attach
+                this.attachSchemaCardHandlers();
+            }
+
+            // Phase 1.7: スキーマカードの開閉とコードコピー
+            attachSchemaCardHandlers() {
+                document.querySelectorAll('[data-schema-toggle]').forEach(btn => {
+                    if (btn.dataset.bound === '1') return;
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', () => {
+                        const id = btn.dataset.schemaToggle;
+                        const body = document.getElementById('schema-body-' + id);
+                        if (!body) return;
+                        const isOpen = !body.hasAttribute('hidden');
+                        if (isOpen) {
+                            body.setAttribute('hidden', '');
+                            btn.setAttribute('aria-expanded', 'false');
+                            const icon = btn.querySelector('.schema-toggle-icon');
+                            if (icon) icon.textContent = '▼';
+                        } else {
+                            body.removeAttribute('hidden');
+                            btn.setAttribute('aria-expanded', 'true');
+                            const icon = btn.querySelector('.schema-toggle-icon');
+                            if (icon) icon.textContent = '▲';
+                        }
+                    });
+                });
+                document.querySelectorAll('[data-schema-copy]').forEach(btn => {
+                    if (btn.dataset.bound === '1') return;
+                    btn.dataset.bound = '1';
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const id = btn.dataset.schemaCopy;
+                        const codeEl = document.getElementById(id);
+                        if (!codeEl) return;
+                        const text = codeEl.innerText;
+                        try {
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                await navigator.clipboard.writeText(text);
+                            } else {
+                                // フォールバック
+                                const ta = document.createElement('textarea');
+                                ta.value = text;
+                                document.body.appendChild(ta);
+                                ta.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(ta);
+                            }
+                            const orig = btn.textContent;
+                            btn.textContent = 'コピー済み';
+                            btn.classList.add('copied');
+                            setTimeout(() => {
+                                btn.textContent = orig;
+                                btn.classList.remove('copied');
+                            }, 1500);
+                        } catch (err) {
+                            console.error('コピー失敗:', err);
+                        }
+                    });
+                });
             }
 
             generateSchemaItem(item, schemaId, structuredDataCheck) {
                 // 実装例を取得（あれば）
                 let implementationCode = '';
-                if (structuredDataCheck.implementationExamples && 
-                    structuredDataCheck.implementationExamples.templates && 
+                if (structuredDataCheck.implementationExamples &&
+                    structuredDataCheck.implementationExamples.templates &&
                     structuredDataCheck.implementationExamples.templates[item.schema]) {
                     const template = structuredDataCheck.implementationExamples.templates[item.schema];
                     if (template.schema) {
@@ -1909,46 +2273,55 @@
                     }
                 }
 
+                // Phase 1.7: script タグで包んだ完全なスニペットを生成（改行・インデント付き）
+                // 注: 親の script タグ内なので、文字列リテラル中の閉じタグは
+                //     エスケープ ('<' + '/script>') して書かないと HTML パーサが終了してしまう
+                const SCRIPT_OPEN = '<script type="application/ld+json">';
+                const SCRIPT_CLOSE = '<' + '/script>';
+                const fullCodeSnippet = implementationCode
+                    ? SCRIPT_OPEN + '\n' + implementationCode + '\n' + SCRIPT_CLOSE
+                    : '';
+
+                const benefits = this.getImplementationBenefits(item.schema);
+                const time = this.getEstimatedTime(item.schema);
+
                 return `
-                    <div class="schema-item">
-                        <div class="schema-header" onclick="toggleSchemaContent('${schemaId}')">
-                            <div class="schema-type">${item.schema}</div>
-                            <div class="schema-priority ${item.priority}">${this.getPriorityTitle(item.priority)}</div>
-                            ${item.seoValue ? `<div class="schema-seo-value">SEO値: ${item.seoValue}</div>` : ''}
-                            ${this.getEstimatedTime(item.schema) ? `<div class="schema-time">${this.getEstimatedTime(item.schema)}</div>` : ''}
-                        </div>
-                        <div class="schema-content" id="${schemaId}">
-                            <div class="schema-description">
-                                ${item.reason}
-                            </div>
-                            ${implementationCode ? `
-                                <div class="implementation-code" id="code_${schemaId}">
-&lt;script type="application/ld+json"&gt;
-${implementationCode}
-&lt;/script&gt;
+                    <div class="schema-card" data-schema-id="${schemaId}">
+                        <button type="button" class="schema-card-header" data-schema-toggle="${schemaId}" aria-expanded="false" aria-controls="schema-body-${schemaId}">
+                            <span class="schema-card-name">${this.escapeHtml(item.schema)}</span>
+                            <span class="schema-priority ${item.priority}">${this.getPriorityTitle(item.priority)}</span>
+                            ${item.seoValue != null ? `<span class="schema-meta">SEO値 <strong>${item.seoValue}</strong></span>` : ''}
+                            ${time ? `<span class="schema-meta">実装目安 <strong>${this.escapeHtml(time)}</strong></span>` : ''}
+                            <span class="schema-toggle-icon" aria-hidden="true">▼</span>
+                        </button>
+                        <div class="schema-card-body" id="schema-body-${schemaId}" hidden>
+                            ${item.reason ? `
+                                <div class="schema-section-block">
+                                    <div class="schema-block-label">推奨理由</div>
+                                    <p class="schema-block-text">${this.escapeHtml(item.reason)}</p>
                                 </div>
-                                <button class="copy-button" onclick="copyToClipboard('code_${schemaId}')">
-                                    📋 コードをコピー
-                                </button>
                             ` : ''}
-                            <div class="validation-tools">
-                                <h4>🔍 検証ツール</h4>
-                                <div class="validation-tool">
-                                    <span>🔗</span>
-                                    <a href="https://search.google.com/test/rich-results" target="_blank">Google構造化データテストツール</a>
-                                    <span>- Googleでの認識確認</span>
+                            ${fullCodeSnippet ? `
+                                <div class="schema-section-block">
+                                    <div class="schema-block-label-row">
+                                        <span class="schema-block-label">実装コード例</span>
+                                        <button type="button" class="schema-copy-btn" data-schema-copy="code_${schemaId}">コピー</button>
+                                    </div>
+                                    <pre class="schema-code"><code id="code_${schemaId}">${this.escapeHtml(fullCodeSnippet)}</code></pre>
                                 </div>
-                                <div class="validation-tool">
-                                    <span>✅</span>
-                                    <a href="https://validator.schema.org/" target="_blank">Schema.org Validator</a>
-                                    <span>- スキーマ仕様の準拠確認</span>
-                                </div>
+                            ` : ''}
+                            <div class="schema-section-block">
+                                <div class="schema-block-label">検証ツール</div>
+                                <ul class="schema-validation-list">
+                                    <li><a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer">Google リッチリザルトテスト</a><span class="schema-validation-note">Google での認識を確認</span></li>
+                                    <li><a href="https://validator.schema.org/" target="_blank" rel="noopener noreferrer">Schema.org Validator</a><span class="schema-validation-note">仕様準拠を確認</span></li>
+                                </ul>
                             </div>
-                            ${this.getImplementationBenefits(item.schema) ? `
-                                <div class="benefits-list">
-                                    <h5>💰 実装メリット:</h5>
-                                    <ul>
-                                        ${this.getImplementationBenefits(item.schema).map(benefit => `<li>${benefit}</li>`).join('')}
+                            ${benefits && benefits.length > 0 ? `
+                                <div class="schema-section-block">
+                                    <div class="schema-block-label">実装メリット</div>
+                                    <ul class="schema-benefits-list">
+                                        ${benefits.map(b => `<li>${this.escapeHtml(b)}</li>`).join('')}
                                     </ul>
                                 </div>
                             ` : ''}
