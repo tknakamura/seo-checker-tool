@@ -510,71 +510,300 @@ class AIOChecker {
   }
 
   /**
-   * スコア計算メソッド群
+   * スコア計算メソッド群 (Phase 1.6: 区分線形化)
+   *
+   * 旧実装は閾値ベースの加点 (例: wordCount >= 300 で +30) で、
+   * 「閾値を1超えた瞬間に大幅加点」「逆に1足りないと0点」の不連続性があった。
+   * Phase 1.6 で全関数を区分線形 (piecewise linear) に書き換え、
+   * 滑らかに 0〜100 で評価できるようにする。
+   *
+   * SEOChecker.piecewiseLinearScore と同一仕様だが、aio-checker は SEOChecker と
+   * 独立クラスのため、ここでも同じヘルパーを定義する（重複は許容）。
+   */
+
+  /**
+   * 区分線形スコアリングの汎用ヘルパー (Phase 1.6)
+   * @param {number} value - 評価対象の値
+   * @param {Array<{x: number, score: number}>} points - 区分点の配列（x昇順）
+   * @returns {number} 整数化されたスコア (端点では端点 score、中間は線形補間)
+   */
+  piecewiseLinearScore(value, points) {
+    if (!Array.isArray(points) || points.length < 2) return 0;
+    if (typeof value !== 'number' || isNaN(value)) return 0;
+    if (value <= points[0].x) return Math.round(points[0].score);
+    if (value >= points[points.length - 1].x) return Math.round(points[points.length - 1].score);
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      if (value >= a.x && value <= b.x) {
+        const t = (b.x === a.x) ? 0 : (value - a.x) / (b.x - a.x);
+        return Math.round(a.score + (b.score - a.score) * t);
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * コンテンツ包括性スコア (Phase 1.6)
+   *
+   * - wordCount: 800-2000語が理想、極端に短い/長いと減点
+   * - paragraphCount: 段落構成（3-7が理想）
+   * - listCount: 構造化要素として箇条書きが1個以上
+   * - ratio: 見出し当たりの本文密度（200-400が理想）
    */
   calculateComprehensivenessScore(wordCount, paragraphCount, listCount, ratio) {
-    let score = 0;
-    
-    if (wordCount >= 300 && wordCount <= 3000) score += 30;
-    if (paragraphCount >= 3) score += 20;
-    if (listCount > 0) score += 20;
-    if (ratio >= 100 && ratio <= 500) score += 30;
-    
-    return Math.min(score, 100);
+    // wordCount: 35点満点（旧30）
+    const wordScore = this.piecewiseLinearScore(wordCount, [
+      { x: 0,    score: 0 },
+      { x: 100,  score: 8 },
+      { x: 300,  score: 22 },
+      { x: 500,  score: 30 },
+      { x: 800,  score: 35 },   // 理想開始
+      { x: 2000, score: 35 },   // 理想終了
+      { x: 3000, score: 28 },
+      { x: 5000, score: 20 },   // 長すぎ
+      { x: 10000, score: 15 },
+    ]);
+
+    // paragraphCount: 25点満点
+    const paragraphScore = this.piecewiseLinearScore(paragraphCount, [
+      { x: 0, score: 0 },
+      { x: 1, score: 5 },
+      { x: 2, score: 12 },
+      { x: 3, score: 20 },
+      { x: 5, score: 25 },
+      { x: 20, score: 25 },
+    ]);
+
+    // listCount: 15点満点
+    const listScore = this.piecewiseLinearScore(listCount, [
+      { x: 0, score: 0 },
+      { x: 1, score: 10 },
+      { x: 3, score: 15 },
+      { x: 10, score: 15 },
+    ]);
+
+    // ratio (見出し当たりの語数): 25点満点
+    const ratioScore = this.piecewiseLinearScore(ratio, [
+      { x: 0,   score: 0 },
+      { x: 50,  score: 10 },
+      { x: 100, score: 18 },
+      { x: 200, score: 25 },  // 理想開始
+      { x: 400, score: 25 },  // 理想終了
+      { x: 600, score: 20 },
+      { x: 1000, score: 15 },
+    ]);
+
+    return Math.min(wordScore + paragraphScore + listScore + ratioScore, 100);
   }
 
+  /**
+   * 構造化情報スコア (Phase 1.6)
+   * - jsonLd: 1個で大きく加点、複数あればボーナス
+   * - faqElements: FAQ Q&Aペア数
+   * - definitionLists: 定義リスト
+   */
   calculateStructuredInfoScore(structuredData, faqElements, definitionLists) {
-    let score = 0;
-    
-    if (structuredData.jsonLd.length > 0) score += 40;
-    if (faqElements > 0) score += 30;
-    if (definitionLists > 0) score += 30;
-    
-    return Math.min(score, 100);
+    // jsonLd: 40点満点
+    const jsonLdCount = (structuredData.jsonLd && structuredData.jsonLd.length) || 0;
+    const jsonLdScore = this.piecewiseLinearScore(jsonLdCount, [
+      { x: 0, score: 0 },
+      { x: 1, score: 28 },
+      { x: 2, score: 35 },
+      { x: 3, score: 40 },
+      { x: 10, score: 40 },
+    ]);
+
+    // faqElements: 30点満点
+    const faqScore = this.piecewiseLinearScore(faqElements, [
+      { x: 0, score: 0 },
+      { x: 1, score: 18 },
+      { x: 3, score: 26 },
+      { x: 5, score: 30 },
+      { x: 20, score: 30 },
+    ]);
+
+    // definitionLists: 30点満点
+    const defScore = this.piecewiseLinearScore(definitionLists, [
+      { x: 0, score: 0 },
+      { x: 1, score: 18 },
+      { x: 3, score: 26 },
+      { x: 5, score: 30 },
+      { x: 20, score: 30 },
+    ]);
+
+    return Math.min(jsonLdScore + faqScore + defScore, 100);
   }
 
+  /**
+   * 信頼性シグナルスコア (Phase 1.6)
+   * 旧実装は5項目それぞれ20点（あるか/ないかの2択）でON/OFFが粗かった。
+   * Phase 1.6では「複数あるほど信頼性が高まる」項目は段階的に評価する。
+   */
   calculateCredibilityScore(authorInfo, dateInfo, citations, highAuthorityLinks, contactInfo) {
-    let score = 0;
-    
-    if (authorInfo > 0) score += 20;
-    if (dateInfo > 0) score += 20;
-    if (citations > 0) score += 20;
-    if (highAuthorityLinks > 0) score += 20;
-    if (contactInfo > 0) score += 20;
-    
-    return Math.min(score, 100);
+    // authorInfo: 20点満点（あるかないかが本質）
+    const authorScore = this.piecewiseLinearScore(authorInfo, [
+      { x: 0, score: 0 },
+      { x: 1, score: 20 },
+      { x: 5, score: 20 },
+    ]);
+
+    // dateInfo: 20点満点（同じく）
+    const dateScore = this.piecewiseLinearScore(dateInfo, [
+      { x: 0, score: 0 },
+      { x: 1, score: 20 },
+      { x: 5, score: 20 },
+    ]);
+
+    // citations: 20点満点（多いほど良い）
+    const citScore = this.piecewiseLinearScore(citations, [
+      { x: 0, score: 0 },
+      { x: 1, score: 10 },
+      { x: 3, score: 16 },
+      { x: 5, score: 20 },
+      { x: 30, score: 20 },
+    ]);
+
+    // highAuthorityLinks: 20点満点（多いほど良い）
+    const haScore = this.piecewiseLinearScore(highAuthorityLinks, [
+      { x: 0, score: 0 },
+      { x: 1, score: 10 },
+      { x: 3, score: 16 },
+      { x: 5, score: 20 },
+      { x: 30, score: 20 },
+    ]);
+
+    // contactInfo: 20点満点（あるかないか）
+    const contactScore = this.piecewiseLinearScore(contactInfo, [
+      { x: 0, score: 0 },
+      { x: 1, score: 20 },
+      { x: 5, score: 20 },
+    ]);
+
+    return Math.min(authorScore + dateScore + citScore + haScore + contactScore, 100);
   }
 
+  /**
+   * AI検索最適化スコア (Phase 1.6)
+   * - questionPatterns: 疑問形の見出し/本文
+   * - hasComparison: 比較・対比のコンテンツ（boolean）
+   * - stepPatterns: ステップ形式の手順
+   * - numericDataCount: 具体的な数値データ
+   */
   calculateAISearchScore(questionPatterns, hasComparison, stepPatterns, numericDataCount) {
-    let score = 0;
-    
-    if (questionPatterns > 0) score += 25;
-    if (hasComparison) score += 25;
-    if (stepPatterns > 0) score += 25;
-    if (numericDataCount >= 3) score += 25;
-    
-    return Math.min(score, 100);
+    // questionPatterns: 25点満点
+    const qScore = this.piecewiseLinearScore(questionPatterns, [
+      { x: 0, score: 0 },
+      { x: 1, score: 15 },
+      { x: 3, score: 22 },
+      { x: 5, score: 25 },
+      { x: 30, score: 25 },
+    ]);
+
+    // hasComparison: 25点満点（boolean なので 0 or 25）
+    const cScore = hasComparison ? 25 : 0;
+
+    // stepPatterns: 25点満点
+    const sScore = this.piecewiseLinearScore(stepPatterns, [
+      { x: 0, score: 0 },
+      { x: 1, score: 15 },
+      { x: 3, score: 22 },
+      { x: 5, score: 25 },
+      { x: 30, score: 25 },
+    ]);
+
+    // numericDataCount: 25点満点
+    const nScore = this.piecewiseLinearScore(numericDataCount, [
+      { x: 0, score: 0 },
+      { x: 1, score: 10 },
+      { x: 3, score: 20 },
+      { x: 5, score: 25 },
+      { x: 50, score: 25 },
+    ]);
+
+    return Math.min(qScore + cScore + sScore + nScore, 100);
   }
 
+  /**
+   * 自然言語品質スコア (Phase 1.6)
+   * 100点満点から段階的に減点。閾値超えの瞬間に-20ではなく、滑らかに減点する。
+   */
   calculateNaturalLanguageScore(avgSentenceLength, technicalTerms, passiveVoice, conjunctions) {
-    let score = 100;
-    
-    if (avgSentenceLength > 50) score -= 20;
-    if (technicalTerms > 10) score -= 20;
-    if (passiveVoice > 5) score -= 20;
-    if (conjunctions < 3) score -= 20;
-    
-    return Math.max(score, 0);
+    // 文長ペナルティ（最大-25）
+    // 短い文章(30字以下)は減点なし、50字超で減点開始、80字超は大幅減点
+    const lengthPenalty = this.piecewiseLinearScore(avgSentenceLength, [
+      { x: 0,  score: 0 },
+      { x: 30, score: 0 },    // 短文は減点なし
+      { x: 50, score: -15 },  // 標準を超える
+      { x: 80, score: -25 },  // 明らかに長文
+      { x: 200, score: -25 },
+    ]);
+
+    // 専門用語ペナルティ（最大-25）
+    const termPenalty = this.piecewiseLinearScore(technicalTerms, [
+      { x: 0,   score: 0 },
+      { x: 5,   score: 0 },
+      { x: 10,  score: -10 },
+      { x: 20,  score: -25 },
+      { x: 100, score: -25 },
+    ]);
+
+    // 受動態ペナルティ（最大-25）
+    const passivePenalty = this.piecewiseLinearScore(passiveVoice, [
+      { x: 0,  score: 0 },
+      { x: 2,  score: 0 },
+      { x: 5,  score: -10 },
+      { x: 10, score: -25 },
+      { x: 50, score: -25 },
+    ]);
+
+    // 接続詞ペナルティ（最大-25）
+    // 「少ないほど減点」なので x を反転させて適用
+    // conjunctions=0 → -25, 3 → -10, 5+ → 0
+    let conjPenalty;
+    if (conjunctions >= 5) conjPenalty = 0;
+    else if (conjunctions >= 3) conjPenalty = -10 + ((conjunctions - 3) / 2) * 10;
+    else if (conjunctions >= 1) conjPenalty = -25 + ((conjunctions - 1) / 2) * 15;
+    else conjPenalty = -25;
+    conjPenalty = Math.round(conjPenalty);
+
+    const score = 100 + lengthPenalty + termPenalty + passivePenalty + conjPenalty;
+    return Math.max(0, Math.min(100, Math.round(score)));
   }
 
+  /**
+   * コンテキスト関連性スコア (Phase 1.6)
+   * - urlRelevance: URLとコンテンツの一致度 (0.0-1.0)
+   * - relevantInternalLinks: 関連する内部リンク数
+   * - categories: カテゴリ/タグの数
+   */
   calculateContextRelevanceScore(urlRelevance, relevantInternalLinks, categories) {
-    let score = 0;
-    
-    if (urlRelevance >= 0.5) score += 40;
-    if (relevantInternalLinks > 0) score += 30;
-    if (categories > 0) score += 30;
-    
-    return Math.min(score, 100);
+    // urlRelevance: 40点満点
+    const urlScore = this.piecewiseLinearScore(urlRelevance, [
+      { x: 0,   score: 0 },
+      { x: 0.2, score: 15 },
+      { x: 0.5, score: 30 },
+      { x: 0.7, score: 40 },
+      { x: 1.0, score: 40 },
+    ]);
+
+    // relevantInternalLinks: 30点満点
+    const linkScore = this.piecewiseLinearScore(relevantInternalLinks, [
+      { x: 0,  score: 0 },
+      { x: 1,  score: 15 },
+      { x: 3,  score: 25 },
+      { x: 5,  score: 30 },
+      { x: 30, score: 30 },
+    ]);
+
+    // categories: 30点満点
+    const catScore = this.piecewiseLinearScore(categories, [
+      { x: 0,  score: 0 },
+      { x: 1,  score: 20 },
+      { x: 3,  score: 30 },
+      { x: 10, score: 30 },
+    ]);
+
+    return Math.min(urlScore + linkScore + catScore, 100);
   }
 
   calculateAIOOverallScore(checks) {
