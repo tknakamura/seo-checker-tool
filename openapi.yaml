@@ -55,71 +55,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/report/seo:
-    post:
-      tags:
-        - Report
-      summary: SEOレポート生成
-      description: チェック実行とMarkdown形式レポートの生成を行う
-      operationId: reportSeo
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SeoCheckRequest'
-      responses:
-        '200':
-          description: レポート生成成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReportSuccessResponse'
-        '400':
-          description: リクエスト不正
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: サーバーエラー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/report/detailed:
-    post:
-      tags:
-        - Report
-      summary: 詳細レポート取得
-      description: チェック結果と詳細レポートオブジェクトを返す
-      operationId: reportDetailed
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SeoCheckRequest'
-      responses:
-        '200':
-          description: 成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DetailedReportSuccessResponse'
-        '400':
-          description: リクエスト不正
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: サーバーエラー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+  # Phase 1.8: /api/report/seo, /api/report/detailed は UI の 'Markdownレポート' / '詳細レポート'
+  # タブ削除に伴い廃止しました。git 履歴 (v2.5.0 以前) から復元可能です。
 
   /api/history:
     get:
@@ -234,27 +171,7 @@ components:
           type: object
           description: SEOチェック結果（overallScore, checks, aio, conciseRecommendations, detailedAnalysis, detailedReport 等）
 
-    ReportSuccessResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          required:
-            - results
-            - report
-          properties:
-            results:
-              type: object
-              description: SEOチェック結果
-            report:
-              type: string
-              description: Markdown形式のレポート本文
+    # Phase 1.8: ReportSuccessResponse は廃止 (/api/report/seo の撤去に伴い)
 
     AnalysisHistoryItem:
       type: object
@@ -285,24 +202,4 @@ components:
           type: string
           format: date-time
 
-    DetailedReportSuccessResponse:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          required:
-            - results
-            - detailedReport
-          properties:
-            results:
-              type: object
-              description: SEOチェック結果
-            detailedReport:
-              type: object
-              description: 詳細レポートオブジェクト
+    # Phase 1.8: DetailedReportSuccessResponse は廃止 (/api/report/detailed の撤去に伴い)
