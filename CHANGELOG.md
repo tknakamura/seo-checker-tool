@@ -1,5 +1,86 @@
 # Changelog
 
+## [2.5.0] - 2026-05-24 — Phase 1.7: 構造化データタブ UI 改善
+
+中村さんから実運用フィードバック「構造化データタブの結果レポートUIが見づらい」とのご指摘を受け、タブ全体を Claw 風に再設計。
+
+### 🔴 解決した問題
+
+#### 問題1: 信頼度 800% のバグ
+- `page-type-analyzer.js` の `confidence` フィールドが生スコアを返していた
+- UI 側で `confidence * 100` を表示する設計だったため、生スコア 8 が **「信頼度 800%」** として表示されていた
+- 全タイプスコアの合計を分母にして **0-1 に正規化**するよう修正
+
+#### 問題2: JSON-LD コードが改行なし1行で表示
+- `<div class="implementation-code">` に `JSON.stringify(template.schema, null, 2)` の整形済みコードが入っていたが、対応するCSSがなく `white-space: normal` (デフォルト) でレンダリングされて改行が無視されていた
+- `<pre><code>` に変更 + `.schema-code` CSS で `white-space: pre` + ダークではなくライト背景でコード可読性UP
+
+#### 問題3: 各情報のラベルがなく階層が見えない
+- 旧UI: `SEO値: 88` / `1時間` / `LocalBusinessは店舗・事業所情報として必須です` / 長文の `<script>` / `📋 コードをコピー` ボタンが**縦並びの単独行**で構造が見えなかった
+- 新UI: スキーマカードを **折りたたみ式** にし、ヘッダー1行で `スキーマ名 / 優先度 / SEO値 / 実装目安` を整列
+- 展開時は `推奨理由` / `実装コード例` / `検証ツール` / `実装メリット` がそれぞれ **大文字小ラベル付きセクション** に分かれる
+
+#### 問題4: 絵文字過剰でセクション識別困難
+- 旧: `🚨 必須スキーマ` / `⭐ 推奨スキーマ` / `💡 オプションスキーマ` / `📄 ページタイプ分析結果` / `🔍 検証ツール` / `💰 実装メリット` / `🔗` / `✅`
+- 新: バッジ風ラベル `[必須] / [推奨] / [参考]` + 自然な日本語見出し
+  - 「必要なスキーマ」「追加すると効果的なスキーマ」「余力があれば追加」
+- 絵文字を section header から撤去、装飾性は最低限に
+
+### ✨ 実装
+
+#### 🔧 `page-type-analyzer.js`
+- `confidence` を `topScore / totalScore` で 0-1 に正規化
+- `rawScore` フィールドを新規追加（デバッグ用）
+
+#### 🎨 `public/index.html`
+- `generateSchemaItem` を **`<button class="schema-card-header">` ベースのアクセシブルな展開UI** に書き換え
+  - `aria-expanded` / `aria-controls` でARIA同期
+  - `:focus-visible` でキーボードフォーカス表示
+- `displayStructuredData` のページタイプ分析カードを再設計
+  - 横一列の `[ラベル] 判定 [信頼度バッジ]` ヘッダー構造
+  - 3カラムグリッドの詳細表示 (主要タイプ / 候補タイプ / 分析根拠)
+- セクションヘッダーを `<h3 class="schema-section-title">` + `<span class="schema-section-marker">` の構造に
+- 期待される効果カードも統一テーマに揃え、増加分の数値を緑 (`var(--good)`) で強調
+- **JS 文字列リテラル中の `</script>` を `'<' + '/script>'` でエスケープ** （HTML パーサが終了してしまう問題への対処）
+- スキーマカードのトグル/コードコピーハンドラ `attachSchemaCardHandlers()` を新規追加
+  - クリップボードAPI + フォールバック (textarea + execCommand)
+  - 「コピー」→「コピー済み」ボタン状態変化
+
+#### 🆕 新CSS（200行追加）
+- `.schema-card` / `.schema-card-header` / `.schema-card-body`
+- `.schema-code` (ライト背景、等幅、`white-space: pre`)
+- `.schema-copy-btn` / `.schema-copy-btn.copied`
+- `.schema-section-marker` (バッジ風、必須/推奨/参考で色分け)
+- `.schema-validation-list` / `.schema-benefits-list`
+- `.benefits-grid` / `.benefit-item` / `.benefit-percentage.benefit-positive`
+- `.page-type-analysis` を Phase 1.2 デザイントークン体系で再設計
+
+### 🧪 テスト
+- `__tests__/phase-1-7-structured-data.test.js` 新規 (7項目)
+  - confidence の 0-1 正規化
+  - 800%バグの回帰防止
+  - primaryType / secondaryTypes / analysisDetails の維持
+  - `rawScore` フィールドの保持
+  - totalScore=0 の縮退ケース
+- 全テスト 320/320 PASS (regression なし)
+
+### ✅ 実機検証
+
+ローカル `https://ads.mercari.com/` の構造化データタブ:
+- ✅ 信頼度 800% → **100%**
+- ✅ ページタイプ分析が3カラムで整理 (主要タイプ / 候補タイプ / 分析根拠)
+- ✅ スキーマカード(LocalBusiness/Organization/PostalAddress/ContactPoint/OpeningHoursSpecification/GeoCoordinates/Review)が **折りたたみ式** に
+- ✅ 展開時のJSON-LDコードが **インデント保持** で読みやすく
+- ✅ 「期待される効果」が4枚のカードで `75%` `+14%` `+23%` `+40%` と整列
+
+### 📦 Breaking Changes
+なし。`page-type-analyzer.js` の `confidence` 仕様変更は破壊的変更だが、旧UI側の `* 100` はそのまま正しい値を出すようになるだけ。
+
+### 📦 version bump
+`2.4.0` → `2.5.0` (minor: UI大幅改善 + バグ修正)
+
+---
+
 ## [2.4.0] - 2026-05-24 — Phase 1.6: AIO スコア関数の区分線形化
 
 Phase 1.5 で SEO 側を区分線形化したのに続き、AIO 側 6カテゴリのスコア関数も同様に対応。
