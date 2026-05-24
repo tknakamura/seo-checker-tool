@@ -1,5 +1,63 @@
 # Changelog
 
+## [2.11.0] - 2026-05-24 — Phase 2-E.2: 推奨アクションに「該当箇所」一覧表示
+
+中村さん実運用フィードバック「**現状、複数の提案がある際に、該当箇所がわからないことが多いです**」への対応。
+
+### 🎯 解決した課題
+
+例えば「リンクに適切なテキストを追加してください（11件）」と表示されても、**11個のうちどれを直せばよいか分からない**という問題:
+- セレクタは `a[href]` 程度の情報しかない
+- 実際の作業でユーザーが該当箇所を特定できない
+- AI 書き換え提案を出しても、どこに適用するか分からない
+
+実は **`detailedAnalysis` に URL/position/src 等の具体情報が既に蓄積されていた** (Phase 1.8 で UI から非表示になっていた)。これを推奨アクション展開時に活用する。
+
+### ✨ 実装内容
+
+#### 🆕 推奨アクション展開時に「該当箇所 (N件)」セクション追加
+
+対象カテゴリ別の表示:
+
+| カテゴリ | 該当箇所のソース | 表示内容 |
+|---|---|---|
+| 画像 alt 関連 | `detailedAnalysis.imageAltAttributes.specificIssues[].images[]` | `src` (URL クリッカブル) + 「画像 N番目」 |
+| リンクテキスト関連 | `detailedAnalysis.internalLinkStructure.specificIssues[].links[]` | `href` (URL クリッカブル) + 「リンク N番目」 |
+| 見出し関連 | `detailedAnalysis.headingStructure.specificIssues[]` | 該当見出しテキスト + 要素種別 |
+| タイトル | `detailedAnalysis.titleTag.specificIssues[]` | 現在のタイトル + 全角文字数 |
+| メタディスクリプション | `detailedAnalysis.metaDescription.specificIssues[]` | 現在の説明文 + 全角文字数 |
+
+#### 🎨 UI
+
+- 「該当箇所 (N件)」セクションを **AI ボタンと修正例コードの間**に配置
+- 最初の **5件は常に表示**、それ以上は **「他 X 件を表示」ボタン**で展開
+- URL は**新タブで開けるリンク**として描画
+- 各項目に**「N番目」のヒント**（右側に丸いバッジ）
+- 等幅フォントで URL を可読性高く表示
+
+#### 🛠 実装方法
+- 既存 `detailedAnalysis` を活用 (バックエンド変更**ゼロ**)
+- `_extractLocations()` ヘルパー新設で category 別の抽出ロジック
+- `_dedupeLocations()` で重複除去
+- `attachLocationToggles()` で「他N件を表示」のトグル
+
+### ✅ 動作確認
+
+ローカル `carenet.com` 診断:
+- リンクテキスト空 issue: **22件**の該当URL一覧表示
+- 画像 alt なし issue: **3件**の該当画像 src 一覧表示
+- 各 location に「リンク 1番目」「画像 17番目」のヒント
+- 「他 X 件を表示」展開動作 OK
+- 既存テスト **408/408 PASS** (regression なし)
+
+### 📦 Breaking Changes
+なし。視覚的な追加のみ。
+
+### 📦 version bump
+`2.10.1` → `2.11.0` (minor: 新機能、後方互換)
+
+---
+
 ## [2.10.1] - 2026-05-24 — fix(phase-2e.1): AI 書き換えボタンの発見性を改善
 
 中村さん実運用フィードバック「**本番を見ると、AI ボタンクリックがないように見えます**」への対応。
